@@ -5,6 +5,7 @@ import { ApiError } from '../api/client';
 import { deleteUser, getAllUsers } from '../api/users';
 import type { ManagedUser } from '../api/users';
 import { ResetPasswordModal } from '../components/ResetPasswordModal';
+import { Spinner } from '../components/Spinner';
 
 function badgeClass(role: string): string {
   if (role === 'ADMIN') return 'badge badge-admin';
@@ -62,7 +63,7 @@ export function ManageUsersPage() {
       {error && <div className="form-error">{error}</div>}
 
       {loading ? (
-        <div className="empty-state">Loading…</div>
+        <Spinner />
       ) : users.length === 0 ? (
         <div className="empty-state">No users found.</div>
       ) : (

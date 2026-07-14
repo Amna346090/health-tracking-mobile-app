@@ -13,6 +13,7 @@ import type { WeightPoint } from '../components/WeightChart';
 import { getAssignments } from '../api/assignments';
 import type { MedicationAssignment } from '../api/assignments';
 import { AssignMedicationModal } from '../components/AssignMedicationModal';
+import { Spinner } from '../components/Spinner';
 
 const FEELING_EMOJI: Record<string, string> = {
   GREAT: '😄',
@@ -85,7 +86,7 @@ export function PatientDashboardPage() {
       .finally(() => setLoading(false));
   }, [pid]);
 
-  if (loading) return <div className="empty-state">Loading…</div>;
+  if (loading) return <Spinner />;
   if (!patient) return <div className="empty-state">Patient not found.</div>;
 
   const name = `${patient.user.firstName} ${patient.user.lastName}`;

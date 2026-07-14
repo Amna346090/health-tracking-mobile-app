@@ -5,6 +5,7 @@ import { getPatientById } from '../api/patients';
 import type { PatientRow } from '../api/patients';
 import { getPhotos } from '../api/photos';
 import type { Photo } from '../api/photos';
+import { Spinner } from '../components/Spinner';
 
 export function PatientPhotosPage() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -22,7 +23,7 @@ export function PatientPhotosPage() {
       .finally(() => setLoading(false));
   }, [pid]);
 
-  if (loading) return <div className="empty-state">Loading…</div>;
+  if (loading) return <Spinner />;
 
   const name = patient ? `${patient.user.firstName} ${patient.user.lastName}` : 'Patient';
 

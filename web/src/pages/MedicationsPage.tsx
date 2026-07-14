@@ -3,6 +3,7 @@ import { Plus, Pill } from 'lucide-react';
 import { getAllMedications } from '../api/medications';
 import type { Medication } from '../api/medications';
 import { AddMedicationModal } from '../components/AddMedicationModal';
+import { Spinner } from '../components/Spinner';
 
 const FORM_LABEL: Record<string, string> = {
   TABLET: 'Tablet', CAPSULE: 'Capsule', LIQUID: 'Liquid',
@@ -40,7 +41,7 @@ export function MedicationsPage() {
       </div>
 
       {loading ? (
-        <div className="empty-state">Loading…</div>
+        <Spinner />
       ) : medications.length === 0 ? (
         <div className="empty-state">No medications yet. Add one to get started.</div>
       ) : (

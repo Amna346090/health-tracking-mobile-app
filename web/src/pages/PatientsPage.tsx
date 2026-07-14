@@ -5,6 +5,7 @@ import { getAllPatients } from '../api/patients';
 import type { PatientRow } from '../api/patients';
 import { Avatar } from '../components/Avatar';
 import { AddPatientModal } from '../components/AddPatientModal';
+import { Spinner } from '../components/Spinner';
 
 function initialsOf(row: PatientRow): string {
   return (row.user.firstName[0] + row.user.lastName[0]).toUpperCase();
@@ -66,7 +67,7 @@ export function PatientsPage() {
       </div>
 
       {loading ? (
-        <div className="empty-state">Loading…</div>
+        <Spinner />
       ) : filtered.length === 0 ? (
         <div className="empty-state">No patients found.</div>
       ) : (
