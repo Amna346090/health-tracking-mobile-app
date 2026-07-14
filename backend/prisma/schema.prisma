@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  PATIENT
+  STAFF
+  ADMIN
+}
+
+enum FeelingStatus {
+  GREAT
+  GOOD
+  OKAY
+  POOR
+  TERRIBLE
+}
+
+enum DoseStatus {
+  TAKEN
+  MISSED
+  SKIPPED
+}
+
+enum MedicationForm {
+  TABLET
+  CAPSULE
+  LIQUID
+  INJECTION
+  TOPICAL
+  OTHER
+}
+
+enum FoodInstruction {
+  WITH_FOOD
+  WITHOUT_FOOD
+  EITHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum ReminderChannel {
+  PUSH
+  EMAIL
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(PATIENT)
+  firstName    String
+  lastName     String
+  pushToken    String?
+  notifPush    Boolean  @default(true)
+  notifEmail   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  patientProfile    PatientProfile?
+  refreshTokens     RefreshToken[]
+  medicationLogs    MedicationLog[]
+  healthLogsCreated HealthLog[]     @relation("HealthLogCreatedBy")
+  photosUploaded    Photo[]         @relation("PhotoUploadedBy")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── Patient ──────────────────────────────────────────────────────────────────
+
+model PatientProfile {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateOfBirth DateTime @db.Date
+  gender      Gender?
+  healthIssue String?
+  avatarUrl   String?
+  phone       String?
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  medicationAssignments MedicationAssignment[]
+  healthLogs            HealthLog[]
+  photos                Photo[]
+  reminderLogs          ReminderLog[]
+}
+
+// ─── Medication ───────────────────────────────────────────────────────────────
+
+model Medication {
+  id               Int              @id @default(autoincrement())
+  name             String
+  dosage           String
+  form             MedicationForm?
+  quantityPerDose  Int?
+  foodInstruction  FoodInstruction?
+  instructions     String?
+  prescribingNotes String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  assignments MedicationAssignment[]
+}
+
+model MedicationAssignment {
+  id           Int            @id @default(autoincrement())
+  patientId    Int
+  patient      PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  medicationId Int
+  medication   Medication     @relation(fields: [medicationId], references: [id])
+  frequency    String
+  timesOfDay   String[]
+  startDate    DateTime       @db.Date
+  endDate      DateTime?      @db.Date
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  logs         MedicationLog[]
+  reminderLogs ReminderLog[]
+
+  @@index([patientId])
+  @@index([medicationId])
+}
+
+model MedicationLog {
+  id           Int                  @id @default(autoincrement())
+  assignmentId Int
+  assignment   MedicationAssignment @relation(fields: [assignmentId], references: [id])
+  userId       Int
+  user         User                 @relation(fields: [userId], references: [id])
+  status       DoseStatus
+  takenAt      DateTime             @default(now())
+  notes        String?
+
+  @@index([assignmentId])
+  @@index([userId])
+}
+
+// ─── Health ───────────────────────────────────────────────────────────────────
+
+model HealthLog {
+  id          Int            @id @default(autoincrement())
+  patientId   Int
+  patient     PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  date        DateTime       @db.Date
+  weight      Float?
+  height      Float?
+  feeling     FeelingStatus?
+  notes       String?
+  createdById Int
+  createdBy   User           @relation("HealthLogCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+
+  photos Photo[]
+
+  @@index([patientId])
+}
+
+model Photo {
+  id           Int            @id @default(autoincrement())
+  patientId    Int
+  patient      PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  healthLogId  Int?
+  healthLog    HealthLog?     @relation(fields: [healthLogId], references: [id])
+  url          String
+  key          String?
+  caption      String?
+  uploadedById Int
+  uploadedBy   User           @relation("PhotoUploadedBy", fields: [uploadedById], references: [id])
+  uploadedAt   DateTime       @default(now())
+
+  @@index([patientId])
+}
+
+// ─── Reminders ────────────────────────────────────────────────────────────────
+
+model ReminderLog {
+  id           Int                  @id @default(autoincrement())
+  patientId    Int
+  patient      PatientProfile       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  assignmentId Int
+  assignment   MedicationAssignment @relation(fields: [assignmentId], references: [id])
+  scheduledFor DateTime
+  channel      ReminderChannel
+  status       ReminderStatus       @default(PENDING)
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime             @default(now())
+
+  @@unique([assignmentId, scheduledFor, channel])
+  @@index([patientId])
+  @@index([assignmentId])
+}

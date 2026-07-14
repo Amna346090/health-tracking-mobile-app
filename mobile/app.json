@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "VitaTrack",
+    "slug": "health-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "healthtracker",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.healthtracker.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.healthtracker.app"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

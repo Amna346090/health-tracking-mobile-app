@@ -1,0 +1,15 @@
+{
+  "name": "health-tracking-mobile-app",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "mobile"
+  ],
+  "scripts": {
+    "backend": "yarn workspace backend dev",
+    "mobile": "yarn workspace mobile start",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  }
+}

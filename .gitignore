@@ -1,0 +1,18 @@
+node_modules/
+.DS_Store
+*.log
+.env
+
+# build output
+dist/
+build/
+web-build/
+
+# expo
+.expo/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
