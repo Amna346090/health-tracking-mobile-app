@@ -36,7 +36,7 @@ export function LoginPage() {
           <div className="login-visual-mark">
             <Activity size={18} strokeWidth={2.4} />
           </div>
-          <span className="login-visual-brand-text">VitaTrack</span>
+          <span className="login-visual-brand-text">SFLBiotrack</span>
         </div>
 
         <div className="login-visual-copy">

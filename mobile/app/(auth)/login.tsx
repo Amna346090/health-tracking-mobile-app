@@ -60,7 +60,7 @@ export default function LoginScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.logo}>💊</Text>
-            <Text style={styles.title}>VitaTrack</Text>
+            <Text style={styles.title}>SFLBiotrack</Text>
             <Text style={styles.subtitle}>Sign in to continue tracking your health</Text>
           </View>
 

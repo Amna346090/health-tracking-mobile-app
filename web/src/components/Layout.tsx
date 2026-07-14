@@ -24,7 +24,7 @@ export function Layout() {
             <Activity size={17} strokeWidth={2.4} />
           </div>
           <div>
-            <div className="sidebar-brand-text">VitaTrack</div>
+            <div className="sidebar-brand-text">SFLBiotrack</div>
             <div className="sidebar-brand-sub">CRM</div>
           </div>
         </div>

@@ -6,7 +6,7 @@ export async function sendEmail(
   subject: string,
   html: string,
 ): Promise<void> {
-  const FROM = process.env.EMAIL_FROM ?? 'reminders@healthtracker.example';
+  const FROM = process.env.EMAIL_FROM ?? 'reminders@sflbiotrack.example';
 
   if (process.env.RESEND_API_KEY) {
     const { Resend } = await import('resend');

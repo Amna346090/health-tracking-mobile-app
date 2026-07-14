@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "VitaTrack",
-    "slug": "health-tracker",
+    "name": "SFLBiotrack",
+    "slug": "sflbiotrack",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "healthtracker",
+    "scheme": "sflbiotrack",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.healthtracker.app"
+      "bundleIdentifier": "com.sflbiotrack.app"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       },
-      "package": "com.healthtracker.app"
+      "package": "com.sflbiotrack.app"
     },
     "plugins": ["expo-router"],
     "experiments": {
