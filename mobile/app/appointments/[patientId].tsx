@@ -48,6 +48,20 @@ function todayISO() {
   return new Date().toISOString().split('T')[0];
 }
 
+const TOUCH_BASE_PRESETS: { label: string; weeks?: number; months?: number }[] = [
+  { label: '1 week', weeks: 1 },
+  { label: '2 weeks', weeks: 2 },
+  { label: '1 month', months: 1 },
+  { label: '2 months', months: 2 },
+];
+
+function addFromNow(preset: { weeks?: number; months?: number }): Date {
+  const d = new Date();
+  if (preset.weeks) d.setDate(d.getDate() + preset.weeks * 7);
+  if (preset.months) d.setMonth(d.getMonth() + preset.months);
+  return d;
+}
+
 function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
@@ -90,6 +104,13 @@ export default function AppointmentsScreen() {
     setTime('09:00');
     setReason('');
     setShowForm(true);
+  }
+
+  function applyPreset(preset: { weeks?: number; months?: number }) {
+    const d = addFromNow(preset);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    setDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+    setTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
   }
 
   function openRescheduleForm(appointment: Appointment) {
@@ -158,6 +179,21 @@ export default function AppointmentsScreen() {
 
       {showForm && (
         <Card style={styles.formCard}>
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Touch base in…</Text>
+            <View style={styles.presetRow}>
+              {TOUCH_BASE_PRESETS.map((preset) => (
+                <TouchableOpacity
+                  key={preset.label}
+                  style={styles.presetChip}
+                  onPress={() => applyPreset(preset)}
+                >
+                  <Text style={styles.presetChipText}>{preset.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           <View style={styles.row}>
             <View style={styles.half}>
               <DateField label="Date" value={date} onChange={setDate} minimumDate={new Date()} />
@@ -279,6 +315,16 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   field: { gap: spacing.xs },
   fieldLabel: { ...typography.label, color: colors.text.secondary },
+  presetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  presetChip: {
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  presetChipText: { ...typography.label, color: colors.primary, fontWeight: '600' as const },
   input: {
     backgroundColor: colors.bg.input,
     borderWidth: 1,

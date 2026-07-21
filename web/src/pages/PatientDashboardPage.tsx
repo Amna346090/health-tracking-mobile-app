@@ -20,6 +20,7 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { getMessages } from '../api/messages';
 import type { Message } from '../api/messages';
 import { SendMessageModal } from '../components/SendMessageModal';
+import { MessageThread } from '../components/MessageThread';
 import { Spinner } from '../components/Spinner';
 
 const FEELING_EMOJI: Record<string, string> = {
@@ -314,21 +315,8 @@ export function PatientDashboardPage() {
             No messages yet.
           </div>
         ) : (
-          <div className="card-list">
-            {messages.map((m) => (
-              <div key={m.id} className="row">
-                <div className="avatar" style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
-                  <MessageSquare size={16} strokeWidth={2.2} />
-                </div>
-                <div className="row-body">
-                  <div className="row-name">{m.body}</div>
-                  <div className="row-sub">
-                    {m.sender.firstName} {m.sender.lastName} · {formatWhen(m.createdAt)}
-                    {!m.readAt && ' · Unread'}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="card">
+            <MessageThread messages={messages} />
           </div>
         )}
       </div>

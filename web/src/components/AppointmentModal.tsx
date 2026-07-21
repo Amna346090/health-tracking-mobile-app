@@ -18,6 +18,21 @@ function toLocalInputValue(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const TOUCH_BASE_PRESETS: { label: string; weeks?: number; months?: number }[] = [
+  { label: '1 week', weeks: 1 },
+  { label: '2 weeks', weeks: 2 },
+  { label: '1 month', months: 1 },
+  { label: '2 months', months: 2 },
+];
+
+function addFromNow(preset: { weeks?: number; months?: number }): Date {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  if (preset.weeks) d.setDate(d.getDate() + preset.weeks * 7);
+  if (preset.months) d.setMonth(d.getMonth() + preset.months);
+  return d;
+}
+
 export function AppointmentModal({ patientId, appointment, onClose, onSaved }: Props) {
   const isEdit = !!appointment;
   const [scheduledFor, setScheduledFor] = useState(
@@ -67,6 +82,22 @@ export function AppointmentModal({ patientId, appointment, onClose, onSaved }: P
     >
       <form onSubmit={handleSubmit}>
         {error && <div className="form-error">{error}</div>}
+
+        <div className="field">
+          <label>Touch base in…</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {TOUCH_BASE_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setScheduledFor(toLocalInputValue(addFromNow(preset).toISOString()))}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="field">
           <label htmlFor="apt-when">Date &amp; time</label>

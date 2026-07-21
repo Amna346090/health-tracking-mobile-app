@@ -54,10 +54,12 @@ export async function runAppointmentReminderJob(): Promise<void> {
       const body = `You have an appointment on ${when}${appointment.reason ? ` (${appointment.reason})` : ''}`;
       const htmlBody = `<p>${body}</p>`;
 
+      // Appointment/touch-base reminders always go out on both channels — unlike medication
+      // reminders, these aren't gated behind the patient's general notifPush/notifEmail
+      // preference, since reliable appointment reminders are a care-coordination requirement.
       const channels: ReminderChannel[] = [];
-      if (user.notifPush && user.pushToken) channels.push(ReminderChannel.PUSH);
-      if (user.notifEmail) channels.push(ReminderChannel.EMAIL);
-      if (channels.length === 0) continue;
+      if (user.pushToken) channels.push(ReminderChannel.PUSH);
+      channels.push(ReminderChannel.EMAIL);
 
       for (const channel of channels) {
         let logId: number;
