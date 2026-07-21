@@ -31,6 +31,16 @@ import {
   getPatientTimeline,
   getPatientSummary,
 } from '../controllers/timeline.controller';
+import {
+  getAppointments,
+  createAppointment,
+  updateAppointment,
+} from '../controllers/appointment.controller';
+import {
+  listMessages,
+  sendMessage,
+  markRead,
+} from '../controllers/message.controller';
 
 const router = Router();
 
@@ -69,5 +79,15 @@ router.post('/:patientId/photos', savePhoto);
 // ─── Timeline + Summary ───────────────────────────────────────────────────────
 router.get('/:patientId/timeline', getPatientTimeline);
 router.get('/:patientId/summary',  getPatientSummary);
+
+// ─── Appointment sub-routes ────────────────────────────────────────────────────
+router.get('/:patientId/appointments', getAppointments);
+router.post('/:patientId/appointments', createAppointment);
+router.patch('/:patientId/appointments/:id', updateAppointment);
+
+// ─── Message sub-routes ────────────────────────────────────────────────────────
+router.get('/:patientId/messages', listMessages);
+router.post('/:patientId/messages', requireRoles(Role.STAFF, Role.ADMIN), sendMessage);
+router.patch('/:patientId/messages/:id/read', markRead);
 
 export default router;

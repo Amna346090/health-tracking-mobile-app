@@ -44,13 +44,16 @@ export function useNotifications(isLoggedIn: boolean): void {
       }
     })();
 
-    // Deep-link: tap on notification → open assignment detail
+    // Deep-link: tap on notification → open the relevant detail screen
     responseListenerRef.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data as Record<string, unknown>;
-        const assignmentId = data.assignmentId;
-        if (typeof assignmentId === 'number') {
-          router.push(`/assignment/${assignmentId}`);
+        if (typeof data.assignmentId === 'number') {
+          router.push(`/assignment/${data.assignmentId}`);
+        } else if (typeof data.messageId === 'number' && typeof data.patientId === 'number') {
+          router.push(`/messages/${data.patientId}`);
+        } else if (typeof data.appointmentId === 'number' && typeof data.patientId === 'number') {
+          router.push(`/appointments/${data.patientId}`);
         }
       },
     );

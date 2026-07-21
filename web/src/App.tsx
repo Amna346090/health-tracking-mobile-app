@@ -8,6 +8,7 @@ import { PatientsPage } from './pages/PatientsPage';
 import { PatientDashboardPage } from './pages/PatientDashboardPage';
 import { PatientPhotosPage } from './pages/PatientPhotosPage';
 import { MedicationsPage } from './pages/MedicationsPage';
+import { AppointmentsPage } from './pages/AppointmentsPage';
 import { ManageUsersPage } from './pages/ManageUsersPage';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             <Route path="/patients/:patientId" element={<PatientDashboardPage />} />
             <Route path="/patients/:patientId/photos" element={<PatientPhotosPage />} />
             <Route path="/medications" element={<MedicationsPage />} />
+            <Route path="/appointments" element={<AppointmentsPage />} />
             <Route
               path="/users"
               element={

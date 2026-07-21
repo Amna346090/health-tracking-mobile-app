@@ -49,6 +49,10 @@ function NavigationGuard() {
       <Stack.Screen name="history/[patientId]" options={{ animation: 'slide_from_right' }} />
       {/* Staff CRM patient view */}
       <Stack.Screen name="patient-dashboard/[patientId]" options={{ animation: 'slide_from_right' }} />
+      {/* Appointments — patient request/reschedule, staff read-only */}
+      <Stack.Screen name="appointments/[patientId]" options={{ animation: 'slide_from_right' }} />
+      {/* Messages inbox */}
+      <Stack.Screen name="messages/[patientId]" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }

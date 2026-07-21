@@ -62,6 +62,13 @@ enum ReminderStatus {
   FAILED
 }
 
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 model User {
@@ -77,11 +84,13 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  patientProfile    PatientProfile?
-  refreshTokens     RefreshToken[]
-  medicationLogs    MedicationLog[]
-  healthLogsCreated HealthLog[]     @relation("HealthLogCreatedBy")
-  photosUploaded    Photo[]         @relation("PhotoUploadedBy")
+  patientProfile      PatientProfile?
+  refreshTokens       RefreshToken[]
+  medicationLogs      MedicationLog[]
+  healthLogsCreated   HealthLog[]     @relation("HealthLogCreatedBy")
+  photosUploaded      Photo[]         @relation("PhotoUploadedBy")
+  appointmentsCreated Appointment[]   @relation("AppointmentCreatedBy")
+  messagesSent        Message[]       @relation("MessageSentBy")
 }
 
 model RefreshToken {
@@ -110,10 +119,13 @@ model PatientProfile {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  medicationAssignments MedicationAssignment[]
-  healthLogs            HealthLog[]
-  photos                Photo[]
-  reminderLogs          ReminderLog[]
+  medicationAssignments   MedicationAssignment[]
+  healthLogs              HealthLog[]
+  photos                  Photo[]
+  reminderLogs            ReminderLog[]
+  appointments            Appointment[]
+  appointmentReminderLogs AppointmentReminderLog[]
+  messages                Message[]
 }
 
 // ─── Medication ───────────────────────────────────────────────────────────────
@@ -222,4 +234,59 @@ model ReminderLog {
   @@unique([assignmentId, scheduledFor, channel])
   @@index([patientId])
   @@index([assignmentId])
+}
+
+// ─── Appointments ─────────────────────────────────────────────────────────────
+
+model Appointment {
+  id           Int               @id @default(autoincrement())
+  patientId    Int
+  patient      PatientProfile    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  scheduledFor DateTime
+  reason       String?
+  notes        String?
+  status       AppointmentStatus @default(SCHEDULED)
+  createdById  Int
+  createdBy    User              @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  reminderLogs AppointmentReminderLog[]
+
+  @@index([patientId])
+  @@index([scheduledFor])
+}
+
+model AppointmentReminderLog {
+  id            Int             @id @default(autoincrement())
+  appointmentId Int
+  appointment   Appointment     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId     Int
+  patient       PatientProfile  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  offsetLabel   String
+  channel       ReminderChannel
+  status        ReminderStatus  @default(PENDING)
+  errorMessage  String?
+  sentAt        DateTime?
+  createdAt     DateTime        @default(now())
+
+  @@unique([appointmentId, offsetLabel, channel])
+  @@index([patientId])
+  @@index([appointmentId])
+}
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+model Message {
+  id        Int            @id @default(autoincrement())
+  patientId Int
+  patient   PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  senderId  Int
+  sender    User           @relation("MessageSentBy", fields: [senderId], references: [id])
+  body      String
+  readAt    DateTime?
+  createdAt DateTime       @default(now())
+
+  @@index([patientId])
+  @@index([senderId])
 }

@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { runReminderJob } from '../services/reminder.service';
+import { runAppointmentReminderJob } from '../services/appointmentReminder.service';
 
 let _running = false;
 
@@ -10,6 +11,7 @@ export function startReminderJob(): void {
     _running = true;
     try {
       await runReminderJob();
+      await runAppointmentReminderJob();
     } catch (e) {
       console.error('[reminder job] unhandled error:', e);
     } finally {

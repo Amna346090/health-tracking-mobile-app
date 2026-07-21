@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare } from 'lucide-react';
 import { getPatientById } from '../api/patients';
 import type { PatientRow } from '../api/patients';
 import { Avatar } from '../components/Avatar';
@@ -13,6 +13,13 @@ import type { WeightPoint } from '../components/WeightChart';
 import { getAssignments } from '../api/assignments';
 import type { MedicationAssignment } from '../api/assignments';
 import { AssignMedicationModal } from '../components/AssignMedicationModal';
+import { getAppointments, updateAppointment } from '../api/appointments';
+import type { Appointment } from '../api/appointments';
+import { AppointmentModal } from '../components/AppointmentModal';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { getMessages } from '../api/messages';
+import type { Message } from '../api/messages';
+import { SendMessageModal } from '../components/SendMessageModal';
 import { Spinner } from '../components/Spinner';
 
 const FEELING_EMOJI: Record<string, string> = {
@@ -52,6 +59,19 @@ function TrendIcon({ trend }: { trend: 'UP' | 'DOWN' | 'STABLE' | null }) {
   return null;
 }
 
+const STATUS_LABEL: Record<Appointment['status'], string> = {
+  SCHEDULED: 'Scheduled',
+  RESCHEDULED: 'Rescheduled',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+};
+
+function formatWhen(iso: string): string {
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}
+
 function eventDisplay(event: TimelineEvent): { icon: string; title: string; sub: string } {
   if (event.type === 'MEDICATION_LOG') {
     const icon = event.status === 'TAKEN' ? '✅' : event.status === 'MISSED' ? '❌' : '⏭';
@@ -75,16 +95,37 @@ export function PatientDashboardPage() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [trend, setTrend] = useState<WeightPoint[]>([]);
   const [assignments, setAssignments] = useState<MedicationAssignment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
+  const [appointmentModal, setAppointmentModal] = useState<'new' | Appointment | null>(null);
+  const [cancelingAppointment, setCancelingAppointment] = useState<Appointment | null>(null);
+  const [showSendMessage, setShowSendMessage] = useState(false);
 
   useEffect(() => {
-    Promise.all([getPatientById(pid), getSummary(pid), getTimeline(pid, { limit: 8 }), getWeightTrend(pid, 30), getAssignments(pid)])
-      .then(([p, s, t, w, a]) => { setPatient(p); setSummary(s); setTimeline(t); setTrend(w); setAssignments(a); })
+    Promise.all([
+      getPatientById(pid),
+      getSummary(pid),
+      getTimeline(pid, { limit: 8 }),
+      getWeightTrend(pid, 30),
+      getAssignments(pid),
+      getAppointments(pid),
+      getMessages(pid),
+    ])
+      .then(([p, s, t, w, a, apts, msgs]) => {
+        setPatient(p); setSummary(s); setTimeline(t); setTrend(w); setAssignments(a);
+        setAppointments(apts); setMessages(msgs);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [pid]);
+
+  async function handleMarkCompleted(appointment: Appointment) {
+    const updated = await updateAppointment(pid, appointment.id, { status: 'COMPLETED' });
+    setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+  }
 
   if (loading) return <Spinner />;
   if (!patient) return <div className="empty-state">Patient not found.</div>;
@@ -217,6 +258,81 @@ export function PatientDashboardPage() {
         )}
       </div>
 
+      <div className="section">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 className="section-title" style={{ margin: 0 }}>Appointments</h2>
+          <button className="btn btn-secondary btn-sm" onClick={() => setAppointmentModal('new')}>
+            <Calendar size={13} strokeWidth={2.2} />
+            Schedule Appointment
+          </button>
+        </div>
+        {appointments.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13.5 }}>
+            No appointments yet.
+          </div>
+        ) : (
+          <div className="card-list">
+            {appointments.map((a) => (
+              <div key={a.id} className="row">
+                <div className="avatar" style={{ background: 'var(--color-primary-bg)', color: 'var(--color-primary)' }}>
+                  <Calendar size={16} strokeWidth={2.2} />
+                </div>
+                <div className="row-body">
+                  <div className="row-name">{formatWhen(a.scheduledFor)}</div>
+                  <div className="row-sub">{a.reason || 'No reason given'}</div>
+                </div>
+                <span className={`badge badge-${a.status.toLowerCase()}`}>{STATUS_LABEL[a.status]}</span>
+                {(a.status === 'SCHEDULED' || a.status === 'RESCHEDULED') && (
+                  <div style={{ display: 'flex', gap: 6, marginLeft: 10 }}>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setAppointmentModal(a)}>
+                      Reschedule
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleMarkCompleted(a)}>
+                      Mark completed
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={() => setCancelingAppointment(a)}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="section">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 className="section-title" style={{ margin: 0 }}>Messages</h2>
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowSendMessage(true)}>
+            <MessageSquare size={13} strokeWidth={2.2} />
+            Send Message
+          </button>
+        </div>
+        {messages.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13.5 }}>
+            No messages yet.
+          </div>
+        ) : (
+          <div className="card-list">
+            {messages.map((m) => (
+              <div key={m.id} className="row">
+                <div className="avatar" style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
+                  <MessageSquare size={16} strokeWidth={2.2} />
+                </div>
+                <div className="row-body">
+                  <div className="row-name">{m.body}</div>
+                  <div className="row-sub">
+                    {m.sender.firstName} {m.sender.lastName} · {formatWhen(m.createdAt)}
+                    {!m.readAt && ' · Unread'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {summary && (
         <div className="section">
           <div
@@ -270,6 +386,43 @@ export function PatientDashboardPage() {
           patientId={pid}
           onClose={() => setShowAssign(false)}
           onAssigned={(assignment) => { setAssignments((prev) => [assignment, ...prev]); setShowAssign(false); }}
+        />
+      )}
+
+      {appointmentModal && (
+        <AppointmentModal
+          patientId={pid}
+          appointment={appointmentModal === 'new' ? undefined : appointmentModal}
+          onClose={() => setAppointmentModal(null)}
+          onSaved={(saved) => {
+            setAppointments((prev) =>
+              prev.some((a) => a.id === saved.id)
+                ? prev.map((a) => (a.id === saved.id ? saved : a))
+                : [saved, ...prev].sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime()),
+            );
+            setAppointmentModal(null);
+          }}
+        />
+      )}
+
+      {cancelingAppointment && (
+        <ConfirmModal
+          title="Cancel Appointment"
+          message={`Cancel the appointment on ${formatWhen(cancelingAppointment.scheduledFor)}?`}
+          confirmLabel="Cancel appointment"
+          onClose={() => setCancelingAppointment(null)}
+          onConfirm={async () => {
+            const updated = await updateAppointment(pid, cancelingAppointment.id, { status: 'CANCELLED' });
+            setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+          }}
+        />
+      )}
+
+      {showSendMessage && (
+        <SendMessageModal
+          patientId={pid}
+          onClose={() => setShowSendMessage(false)}
+          onSent={(message) => { setMessages((prev) => [message, ...prev]); setShowSendMessage(false); }}
         />
       )}
     </div>

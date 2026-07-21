@@ -398,6 +398,11 @@ button {
 .badge-staff { background: var(--color-warning-bg); color: var(--color-warning); }
 .badge-patient { background: var(--color-primary-bg); color: var(--color-primary); }
 
+.badge-scheduled { background: var(--color-primary-bg); color: var(--color-primary); }
+.badge-rescheduled { background: var(--color-warning-bg); color: var(--color-warning); }
+.badge-completed { background: var(--color-success-bg); color: var(--color-success); }
+.badge-cancelled { background: var(--color-danger-bg); color: var(--color-danger); }
+
 /* ─── Rows ───────────────────────────────────────────────────────────────── */
 
 .row {

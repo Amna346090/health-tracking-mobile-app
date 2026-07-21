@@ -9,6 +9,7 @@ import medicationRouter from './routes/medication.routes';
 import assignmentRouter from './routes/assignment.routes';
 import photoRouter from './routes/photo.routes';
 import reminderRouter from './routes/reminder.routes';
+import appointmentRouter from './routes/appointment.routes';
 import userRouter from './routes/user.routes';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -26,6 +27,7 @@ app.use('/api/medications', medicationRouter);
 app.use('/api/assignments', assignmentRouter);
 app.use('/api/photos', photoRouter);
 app.use('/api/reminders', reminderRouter);
+app.use('/api/appointments', appointmentRouter);
 app.use('/api/users', userRouter);
 
 app.use(errorHandler);

@@ -11,6 +11,8 @@ import { colors, spacing, typography } from '../../theme';
 import { getTodaySchedule, logDose, type TodayScheduleItem } from '../../api/assignments';
 import { getHealthLogs, type HealthLog } from '../../api/healthLog';
 import { getSummary, type PatientSummary } from '../../api/timeline';
+import { getAppointments, type Appointment } from '../../api/appointments';
+import { getMessages, type Message } from '../../api/messages';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -35,6 +37,8 @@ export default function DashboardScreen() {
   const [schedule,        setSchedule]        = useState<TodayScheduleItem[]>([]);
   const [recentLogs,      setRecentLogs]      = useState<HealthLog[]>([]);
   const [summary,         setSummary]         = useState<PatientSummary | null>(null);
+  const [appointments,    setAppointments]    = useState<Appointment[]>([]);
+  const [messages,        setMessages]        = useState<Message[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [refreshing,      setRefreshing]      = useState(false);
   const [markingId,       setMarkingId]       = useState<number | null>(null);
@@ -43,14 +47,18 @@ export default function DashboardScreen() {
     if (!patientId) return;
     if (isRefresh) setRefreshing(true); else setScheduleLoading(true);
     try {
-      const [scheduleData, logsData, summaryData] = await Promise.all([
+      const [scheduleData, logsData, summaryData, appointmentsData, messagesData] = await Promise.all([
         getTodaySchedule(patientId),
         getHealthLogs(patientId, { limit: 3 }),
         getSummary(patientId),
+        getAppointments(patientId),
+        getMessages(patientId),
       ]);
       setSchedule(scheduleData);
       setRecentLogs(logsData);
       setSummary(summaryData);
+      setAppointments(appointmentsData);
+      setMessages(messagesData);
     } catch {
       // Silently keep the empty state — dashboard shouldn't hard-crash
     } finally {
@@ -78,6 +86,11 @@ export default function DashboardScreen() {
       setMarkingId(null);
     }
   }, []);
+
+  const upcomingAppointments = appointments
+    .filter((a) => (a.status === 'SCHEDULED' || a.status === 'RESCHEDULED') && new Date(a.scheduledFor).getTime() >= Date.now())
+    .sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime());
+  const unreadMessageCount = messages.filter((m) => !m.readAt).length;
 
   const dueCount = schedule.filter((i) => !i.todayLog).length;
   const takenCount = schedule.filter((i) => i.todayLog?.status === 'TAKEN').length;
@@ -227,6 +240,76 @@ export default function DashboardScreen() {
             ))
           )}
         </View>
+
+        {/* ── Upcoming Appointments ── */}
+        {isPatient && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+              <TouchableOpacity onPress={() => patientId && router.push(`/appointments/${patientId}`)}>
+                <Text style={summaryStyles.viewAll}>
+                  {upcomingAppointments.length > 0 ? 'View all →' : 'Request →'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {scheduleLoading ? (
+              <Card style={styles.loadingCard}>
+                <ActivityIndicator color={colors.primary} />
+              </Card>
+            ) : upcomingAppointments.length === 0 ? (
+              <Card>
+                <EmptyState
+                  icon="🗓️"
+                  title="No upcoming appointments"
+                  subtitle="Tap above to request one with your care team."
+                />
+              </Card>
+            ) : (
+              upcomingAppointments.slice(0, 2).map((a) => (
+                <Card key={a.id} style={styles.loadingCard}>
+                  <Text style={{ ...typography.h4, color: colors.text.primary }}>
+                    {new Date(a.scheduledFor).toLocaleString('en-US', {
+                      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                    })}
+                  </Text>
+                  <Text style={{ ...typography.body2, color: colors.text.muted, marginTop: 2 }}>
+                    {a.reason || 'No reason given'}
+                  </Text>
+                </Card>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* ── Messages ── */}
+        {isPatient && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Messages</Text>
+              {unreadMessageCount > 0 && (
+                <Text style={styles.sectionBadge}>{unreadMessageCount} unread</Text>
+              )}
+            </View>
+            <TouchableOpacity onPress={() => patientId && router.push(`/messages/${patientId}`)}>
+              <Card>
+                {messages.length === 0 ? (
+                  <EmptyState
+                    icon="💬"
+                    title="No messages yet"
+                    subtitle="Your care team hasn't sent any messages yet."
+                  />
+                ) : (
+                  <View>
+                    <Text style={{ ...typography.body1, color: colors.text.primary }} numberOfLines={2}>
+                      {messages[0].body}
+                    </Text>
+                    <Text style={summaryStyles.viewAll}>View inbox →</Text>
+                  </View>
+                )}
+              </Card>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── Recent Health Logs ── */}
         <View style={styles.section}>
