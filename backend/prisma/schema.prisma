@@ -69,6 +69,12 @@ enum AppointmentStatus {
   RESCHEDULED
 }
 
+enum TestRequestStatus {
+  PENDING
+  SUBMITTED
+  CANCELLED
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 model User {
@@ -93,6 +99,7 @@ model User {
   messagesSent          Message[]              @relation("MessageSentBy")
   assignmentsPrescribed MedicationAssignment[] @relation("AssignmentPrescribedBy")
   documentsUploaded     Document[]             @relation("DocumentUploadedBy")
+  testRequestsCreated   TestRequest[]          @relation("TestRequestedBy")
 }
 
 model RefreshToken {
@@ -129,6 +136,8 @@ model PatientProfile {
   appointmentReminderLogs AppointmentReminderLog[]
   messages                Message[]
   documents               Document[]
+  testRequests            TestRequest[]
+  testRequestReminderLogs TestRequestReminderLog[]
 }
 
 // ─── Medication ───────────────────────────────────────────────────────────────
@@ -302,8 +311,51 @@ model Document {
   uploadedBy    User           @relation("DocumentUploadedBy", fields: [uploadedById], references: [id])
   uploadedAt    DateTime       @default(now())
 
+  testRequestFulfillments TestRequest[]
+
   @@index([patientId])
   @@index([appointmentId])
+}
+
+// ─── Test/Scan Requests ─────────────────────────────────────────────────────────
+
+model TestRequest {
+  id            Int               @id @default(autoincrement())
+  patientId     Int
+  patient       PatientProfile    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  name          String
+  instructions  String?
+  dueDate       DateTime          @db.Date
+  status        TestRequestStatus @default(PENDING)
+  documentId    Int?
+  document      Document?         @relation(fields: [documentId], references: [id])
+  requestedById Int
+  requestedBy   User              @relation("TestRequestedBy", fields: [requestedById], references: [id])
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  reminderLogs TestRequestReminderLog[]
+
+  @@index([patientId])
+  @@index([dueDate])
+}
+
+model TestRequestReminderLog {
+  id            Int             @id @default(autoincrement())
+  testRequestId Int
+  testRequest   TestRequest     @relation(fields: [testRequestId], references: [id], onDelete: Cascade)
+  patientId     Int
+  patient       PatientProfile  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  offsetLabel   String
+  channel       ReminderChannel
+  status        ReminderStatus  @default(PENDING)
+  errorMessage  String?
+  sentAt        DateTime?
+  createdAt     DateTime        @default(now())
+
+  @@unique([testRequestId, offsetLabel, channel])
+  @@index([patientId])
+  @@index([testRequestId])
 }
 
 // ─── Messages ─────────────────────────────────────────────────────────────────

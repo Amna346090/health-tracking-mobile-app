@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Users, ShieldCheck, LogOut, Activity, KeyRound, Pill, Calendar } from 'lucide-react';
+import { Users, ShieldCheck, LogOut, Activity, KeyRound, Pill, Calendar, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
@@ -41,6 +41,10 @@ export function Layout() {
           <NavLink to="/appointments" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
             <Calendar size={17} strokeWidth={2} />
             Appointments
+          </NavLink>
+          <NavLink to="/test-requests" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+            <ClipboardCheck size={17} strokeWidth={2} />
+            Test/Scan Requests
           </NavLink>
           {user?.role === 'ADMIN' && (
             <NavLink to="/users" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>

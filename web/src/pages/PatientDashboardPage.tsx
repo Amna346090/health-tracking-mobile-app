@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText, ClipboardCheck } from 'lucide-react';
 import { getPatientById } from '../api/patients';
 import type { PatientRow } from '../api/patients';
 import { Avatar } from '../components/Avatar';
@@ -22,6 +22,9 @@ import { getMessages } from '../api/messages';
 import type { Message } from '../api/messages';
 import { SendMessageModal } from '../components/SendMessageModal';
 import { MessageThread } from '../components/MessageThread';
+import { getTestRequests, updateTestRequest } from '../api/testRequests';
+import type { TestRequest } from '../api/testRequests';
+import { TestRequestModal } from '../components/TestRequestModal';
 import { Spinner } from '../components/Spinner';
 
 const FEELING_EMOJI: Record<string, string> = {
@@ -74,6 +77,20 @@ function formatWhen(iso: string): string {
   });
 }
 
+const TEST_REQUEST_STATUS_LABEL: Record<TestRequest['status'], string> = {
+  PENDING: 'Pending',
+  SUBMITTED: 'Submitted',
+  CANCELLED: 'Cancelled',
+};
+
+function isOverdue(req: TestRequest): boolean {
+  return req.status === 'PENDING' && new Date(req.dueDate).getTime() < Date.now();
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function eventDisplay(event: TimelineEvent): { icon: string; title: string; sub: string } {
   if (event.type === 'MEDICATION_LOG') {
     const icon = event.status === 'TAKEN' ? '✅' : event.status === 'MISSED' ? '❌' : '⏭';
@@ -99,12 +116,14 @@ export function PatientDashboardPage() {
   const [assignments, setAssignments] = useState<MedicationAssignment[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [testRequests, setTestRequests] = useState<TestRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
   const [appointmentModal, setAppointmentModal] = useState<'new' | Appointment | null>(null);
   const [cancelingAppointment, setCancelingAppointment] = useState<Appointment | null>(null);
   const [showSendMessage, setShowSendMessage] = useState(false);
+  const [testRequestModal, setTestRequestModal] = useState<'new' | TestRequest | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -115,10 +134,11 @@ export function PatientDashboardPage() {
       getAssignments(pid),
       getAppointments(pid),
       getMessages(pid),
+      getTestRequests(pid),
     ])
-      .then(([p, s, t, w, a, apts, msgs]) => {
+      .then(([p, s, t, w, a, apts, msgs, trs]) => {
         setPatient(p); setSummary(s); setTimeline(t); setTrend(w); setAssignments(a);
-        setAppointments(apts); setMessages(msgs);
+        setAppointments(apts); setMessages(msgs); setTestRequests(trs);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -127,6 +147,11 @@ export function PatientDashboardPage() {
   async function handleMarkCompleted(appointment: Appointment) {
     const updated = await updateAppointment(pid, appointment.id, { status: 'COMPLETED' });
     setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+  }
+
+  async function handleCancelTestRequest(testRequest: TestRequest) {
+    const updated = await updateTestRequest(pid, testRequest.id, { status: 'CANCELLED' });
+    setTestRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
   }
 
   if (loading) return <Spinner />;
@@ -329,6 +354,51 @@ export function PatientDashboardPage() {
         )}
       </div>
 
+      <div className="section">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 className="section-title" style={{ margin: 0 }}>Test/Scan Requests</h2>
+          <button className="btn btn-secondary btn-sm" onClick={() => setTestRequestModal('new')}>
+            <ClipboardCheck size={13} strokeWidth={2.2} />
+            Request Test/Scan
+          </button>
+        </div>
+        {testRequests.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13.5 }}>
+            No test/scan requests yet.
+          </div>
+        ) : (
+          <div className="card-list">
+            {testRequests.map((req) => {
+              const overdue = isOverdue(req);
+              return (
+                <div key={req.id} className="row">
+                  <div className="avatar" style={{ background: 'var(--color-primary-bg)', color: 'var(--color-primary)' }}>
+                    <ClipboardCheck size={16} strokeWidth={2.2} />
+                  </div>
+                  <div className="row-body">
+                    <div className="row-name">{req.name}</div>
+                    <div className="row-sub">Due {formatDate(req.dueDate)}{req.instructions ? ` · ${req.instructions}` : ''}</div>
+                  </div>
+                  <span className={`badge badge-${overdue ? 'overdue' : req.status.toLowerCase()}`}>
+                    {overdue ? 'Overdue' : TEST_REQUEST_STATUS_LABEL[req.status]}
+                  </span>
+                  {req.status === 'PENDING' && (
+                    <div style={{ display: 'flex', gap: 6, marginLeft: 10 }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setTestRequestModal(req)}>
+                        Edit
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleCancelTestRequest(req)}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {summary && (
         <div className="section">
           <div
@@ -430,6 +500,22 @@ export function PatientDashboardPage() {
           patientId={pid}
           onClose={() => setShowSendMessage(false)}
           onSent={(message) => { setMessages((prev) => [message, ...prev]); setShowSendMessage(false); }}
+        />
+      )}
+
+      {testRequestModal && (
+        <TestRequestModal
+          patientId={pid}
+          testRequest={testRequestModal === 'new' ? undefined : testRequestModal}
+          onClose={() => setTestRequestModal(null)}
+          onSaved={(saved) => {
+            setTestRequests((prev) =>
+              prev.some((r) => r.id === saved.id)
+                ? prev.map((r) => (r.id === saved.id ? saved : r))
+                : [saved, ...prev].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
+            );
+            setTestRequestModal(null);
+          }}
         />
       )}
     </div>

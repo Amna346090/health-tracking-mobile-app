@@ -11,6 +11,7 @@ import photoRouter from './routes/photo.routes';
 import documentRouter from './routes/document.routes';
 import reminderRouter from './routes/reminder.routes';
 import appointmentRouter from './routes/appointment.routes';
+import testRequestRouter from './routes/testRequest.routes';
 import userRouter from './routes/user.routes';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -30,6 +31,7 @@ app.use('/api/photos', photoRouter);
 app.use('/api/documents', documentRouter);
 app.use('/api/reminders', reminderRouter);
 app.use('/api/appointments', appointmentRouter);
+app.use('/api/test-requests', testRequestRouter);
 app.use('/api/users', userRouter);
 
 app.use(errorHandler);

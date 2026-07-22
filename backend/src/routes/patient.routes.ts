@@ -48,6 +48,11 @@ import {
   sendMessage,
   markRead,
 } from '../controllers/message.controller';
+import {
+  getTestRequests,
+  createTestRequest,
+  updateTestRequest,
+} from '../controllers/testRequest.controller';
 
 const router = Router();
 
@@ -104,5 +109,10 @@ router.patch('/:patientId/appointments/:id', updateAppointment);
 router.get('/:patientId/messages', listMessages);
 router.post('/:patientId/messages', requireRoles(Role.STAFF, Role.ADMIN), sendMessage);
 router.patch('/:patientId/messages/:id/read', markRead);
+
+// ─── Test/scan request sub-routes ──────────────────────────────────────────────
+router.get('/:patientId/test-requests', getTestRequests);
+router.post('/:patientId/test-requests', requireRoles(Role.STAFF, Role.ADMIN), createTestRequest);
+router.patch('/:patientId/test-requests/:id', updateTestRequest);
 
 export default router;

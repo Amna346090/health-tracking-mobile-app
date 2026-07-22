@@ -13,6 +13,7 @@ import { getHealthLogs, type HealthLog } from '../../api/healthLog';
 import { getSummary, type PatientSummary } from '../../api/timeline';
 import { getAppointments, type Appointment } from '../../api/appointments';
 import { getMessages, type Message } from '../../api/messages';
+import { getTestRequests, type TestRequest } from '../../api/testRequests';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -39,6 +40,7 @@ export default function DashboardScreen() {
   const [summary,         setSummary]         = useState<PatientSummary | null>(null);
   const [appointments,    setAppointments]    = useState<Appointment[]>([]);
   const [messages,        setMessages]        = useState<Message[]>([]);
+  const [testRequests,    setTestRequests]    = useState<TestRequest[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [refreshing,      setRefreshing]      = useState(false);
   const [markingId,       setMarkingId]       = useState<number | null>(null);
@@ -47,18 +49,20 @@ export default function DashboardScreen() {
     if (!patientId) return;
     if (isRefresh) setRefreshing(true); else setScheduleLoading(true);
     try {
-      const [scheduleData, logsData, summaryData, appointmentsData, messagesData] = await Promise.all([
+      const [scheduleData, logsData, summaryData, appointmentsData, messagesData, testRequestsData] = await Promise.all([
         getTodaySchedule(patientId),
         getHealthLogs(patientId, { limit: 3 }),
         getSummary(patientId),
         getAppointments(patientId),
         getMessages(patientId),
+        getTestRequests(patientId),
       ]);
       setSchedule(scheduleData);
       setRecentLogs(logsData);
       setSummary(summaryData);
       setAppointments(appointmentsData);
       setMessages(messagesData);
+      setTestRequests(testRequestsData);
     } catch {
       // Silently keep the empty state — dashboard shouldn't hard-crash
     } finally {
@@ -91,6 +95,7 @@ export default function DashboardScreen() {
     .filter((a) => (a.status === 'SCHEDULED' || a.status === 'RESCHEDULED') && new Date(a.scheduledFor).getTime() >= Date.now())
     .sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime());
   const unreadMessageCount = messages.filter((m) => !m.readAt).length;
+  const openTestRequestCount = testRequests.filter((r) => r.status === 'PENDING').length;
 
   const dueCount = schedule.filter((i) => !i.todayLog).length;
   const takenCount = schedule.filter((i) => i.todayLog?.status === 'TAKEN').length;
@@ -320,6 +325,31 @@ export default function DashboardScreen() {
             <TouchableOpacity onPress={() => patientId && router.push(`/documents/${patientId}`)}>
               <Card>
                 <Text style={summaryStyles.viewAll}>Upload or view your documents →</Text>
+              </Card>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Test/Scan Requests ── */}
+        {isPatient && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Test/Scan Requests</Text>
+              {openTestRequestCount > 0 && (
+                <Text style={styles.sectionBadge}>{openTestRequestCount} open</Text>
+              )}
+            </View>
+            <TouchableOpacity onPress={() => patientId && router.push(`/test-requests/${patientId}`)}>
+              <Card>
+                {testRequests.length === 0 ? (
+                  <EmptyState
+                    icon="🧪"
+                    title="No test/scan requests"
+                    subtitle="Your care team hasn't requested any tests or scans yet."
+                  />
+                ) : (
+                  <Text style={summaryStyles.viewAll}>View requests →</Text>
+                )}
               </Card>
             </TouchableOpacity>
           </View>

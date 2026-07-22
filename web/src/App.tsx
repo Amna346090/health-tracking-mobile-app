@@ -10,6 +10,7 @@ import { PatientPhotosPage } from './pages/PatientPhotosPage';
 import { PatientDocumentsPage } from './pages/PatientDocumentsPage';
 import { MedicationsPage } from './pages/MedicationsPage';
 import { AppointmentsPage } from './pages/AppointmentsPage';
+import { TestRequestsPage } from './pages/TestRequestsPage';
 import { ManageUsersPage } from './pages/ManageUsersPage';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
             <Route path="/patients/:patientId/documents" element={<PatientDocumentsPage />} />
             <Route path="/medications" element={<MedicationsPage />} />
             <Route path="/appointments" element={<AppointmentsPage />} />
+            <Route path="/test-requests" element={<TestRequestsPage />} />
             <Route
               path="/users"
               element={
