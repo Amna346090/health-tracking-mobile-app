@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { DoseStatus, Role } from '@prisma/client';
+import { DoseStatus } from '@prisma/client';
 import * as assignmentService from '../services/assignment.service';
-import { getPatientByUserId } from '../services/patient.service';
+import { assertPatientAccess } from '../middleware/patientAccess';
 import { AppError } from '../middleware/errorHandler';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -10,13 +10,6 @@ function parseId(raw: string): number {
   const id = parseInt(raw, 10);
   if (isNaN(id)) throw new AppError('Invalid ID', 400);
   return id;
-}
-
-/** Throws 403 if a PATIENT user is trying to access another patient's data. */
-async function assertPatientAccess(req: Request, patientId: number): Promise<void> {
-  if (req.user!.role !== Role.PATIENT) return;
-  const own = await getPatientByUserId(req.user!.id);
-  if (!own || own.id !== patientId) throw new AppError('Forbidden', 403);
 }
 
 // ─── Assignment handlers ───────────────────────────────────────────────────────
@@ -43,6 +36,7 @@ export async function getTodaySchedule(req: Request, res: Response, next: NextFu
 export async function createAssignment(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const patientId = parseId(req.params.patientId);
+    await assertPatientAccess(req, patientId);
     const { medicationId, frequency, timesPerDay, timesOfDay, startDate, endDate, refillsAllowed } = req.body;
 
     if (!medicationId || !frequency || !timesOfDay?.length || !startDate) {
@@ -70,6 +64,8 @@ export async function createAssignment(req: Request, res: Response, next: NextFu
 
 export async function updateAssignment(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const patientId = parseId(req.params.patientId);
+    await assertPatientAccess(req, patientId);
     const id = parseId(req.params.id);
     const updated = await assignmentService.updateAssignment(id, req.body);
     res.json({ status: 'ok', data: updated });
@@ -78,6 +74,8 @@ export async function updateAssignment(req: Request, res: Response, next: NextFu
 
 export async function recordRefill(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const patientId = parseId(req.params.patientId);
+    await assertPatientAccess(req, patientId);
     const id = parseId(req.params.id);
     const updated = await assignmentService.recordRefill(id);
     res.json({ status: 'ok', data: updated });
@@ -86,6 +84,8 @@ export async function recordRefill(req: Request, res: Response, next: NextFuncti
 
 export async function deactivateAssignment(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const patientId = parseId(req.params.patientId);
+    await assertPatientAccess(req, patientId);
     const id = parseId(req.params.id);
     await assignmentService.deactivateAssignment(id);
     res.json({ status: 'ok', message: 'Assignment deactivated' });
@@ -100,12 +100,8 @@ export async function getLogs(req: Request, res: Response, next: NextFunction): 
     const limit = Math.min(Number(req.query.limit ?? 30), 100);
     const offset = Number(req.query.offset ?? 0);
 
-    // Patients may only view logs for their own assignments
-    if (req.user!.role === Role.PATIENT) {
-      const assignment = await assignmentService.getAssignmentById(assignmentId);
-      const own = await getPatientByUserId(req.user!.id);
-      if (!own || assignment.patient.id !== own.id) throw new AppError('Forbidden', 403);
-    }
+    const assignment = await assignmentService.getAssignmentById(assignmentId);
+    await assertPatientAccess(req, assignment.patient.id);
 
     const logs = await assignmentService.getLogsForAssignment(assignmentId, limit, offset);
     res.json({ status: 'ok', data: logs });
@@ -125,6 +121,9 @@ export async function createLog(req: Request, res: Response, next: NextFunction)
       });
       return;
     }
+
+    const assignment = await assignmentService.getAssignmentById(assignmentId);
+    await assertPatientAccess(req, assignment.patient.id);
 
     const log = await assignmentService.logDose(
       assignmentId,

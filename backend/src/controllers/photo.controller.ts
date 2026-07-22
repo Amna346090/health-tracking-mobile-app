@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { Role } from '@prisma/client';
 import * as photoService from '../services/photo.service';
-import { getPatientByUserId } from '../services/patient.service';
+import { assertPatientAccess } from '../middleware/patientAccess';
 import { presignUpload, deleteObject } from '../lib/s3';
 import { AppError } from '../middleware/errorHandler';
 
@@ -11,12 +10,6 @@ function parseId(raw: string): number {
   const id = parseInt(raw, 10);
   if (isNaN(id)) throw new AppError('Invalid ID', 400);
   return id;
-}
-
-async function assertPatientAccess(req: Request, patientId: number): Promise<void> {
-  if (req.user!.role !== Role.PATIENT) return;
-  const own = await getPatientByUserId(req.user!.id);
-  if (!own || own.id !== patientId) throw new AppError('Forbidden', 403);
 }
 
 // ─── Patient-scoped handlers ──────────────────────────────────────────────────
@@ -85,12 +78,7 @@ export async function getPhoto(req: Request, res: Response, next: NextFunction):
   try {
     const photoId = parseId(req.params.id);
     const photo   = await photoService.getPhotoById(photoId);
-
-    // Patients can only view their own photos
-    if (req.user!.role === Role.PATIENT) {
-      const own = await getPatientByUserId(req.user!.id);
-      if (!own || photo.patientId !== own.id) throw new AppError('Forbidden', 403);
-    }
+    await assertPatientAccess(req, photo.patientId);
 
     res.json({ status: 'ok', data: photo });
   } catch (err) { next(err); }
@@ -100,12 +88,7 @@ export async function removePhoto(req: Request, res: Response, next: NextFunctio
   try {
     const photoId = parseId(req.params.id);
     const photo   = await photoService.getPhotoById(photoId);
-
-    // Patients can only delete their own photos
-    if (req.user!.role === Role.PATIENT) {
-      const own = await getPatientByUserId(req.user!.id);
-      if (!own || photo.patientId !== own.id) throw new AppError('Forbidden', 403);
-    }
+    await assertPatientAccess(req, photo.patientId);
 
     const { key } = await photoService.deletePhoto(photoId);
 

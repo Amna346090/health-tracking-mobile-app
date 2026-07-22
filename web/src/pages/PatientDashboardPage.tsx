@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText, ClipboardCheck, HeartPulse } from 'lucide-react';
 import { getPatientById, updatePatient } from '../api/patients';
+import { getAllProviders } from '../api/providers';
+import type { Provider } from '../api/providers';
 import type { PatientRow } from '../api/patients';
 import { markContacted } from '../api/touchBase';
 import { Avatar } from '../components/Avatar';
@@ -142,6 +144,7 @@ export function PatientDashboardPage() {
   const [showSendMessage, setShowSendMessage] = useState(false);
   const [testRequestModal, setTestRequestModal] = useState<'new' | TestRequest | null>(null);
   const [markingContacted, setMarkingContacted] = useState(false);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [metricType, setMetricType] = useState<HealthMetricType>('CHOLESTEROL_LDL');
   const [metricTrend, setMetricTrend] = useState<MetricTrendPoint[]>([]);
   const [metricEntries, setMetricEntries] = useState<HealthMetric[]>([]);
@@ -164,6 +167,10 @@ export function PatientDashboardPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [pid]);
+
+  useEffect(() => {
+    getAllProviders().then(setProviders).catch(() => {});
+  }, []);
 
   useEffect(() => {
     Promise.all([getMetricTrend(pid, metricType), getMetrics(pid, metricType)])
@@ -242,6 +249,15 @@ export function PatientDashboardPage() {
             <div>
               <div className="info-item-label">Phone</div>
               <div className="info-item-value">{patient.phone ?? '—'}</div>
+            </div>
+            <div>
+              <div className="info-item-label">Provider</div>
+              <div className="info-item-value">
+                {(() => {
+                  const provider = providers.find((p) => p.id === patient.providerId);
+                  return provider ? `${provider.user.firstName} ${provider.user.lastName}` : 'Unassigned (all staff)';
+                })()}
+              </div>
             </div>
           </div>
         </div>

@@ -16,7 +16,8 @@ export interface TouchBaseSettings {
   updatedAt: string;
 }
 
-export const getTouchBaseQueue = () => api.get<TouchBaseQueueItem[]>('/touch-base/queue');
+export const getTouchBaseQueue = (providerId?: number) =>
+  api.get<TouchBaseQueueItem[]>(`/touch-base/queue${providerId !== undefined ? `?providerId=${providerId}` : ''}`);
 
 export const getTouchBaseSettings = () => api.get<TouchBaseSettings>('/touch-base/settings');
 

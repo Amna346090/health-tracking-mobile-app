@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Modal } from './Modal';
 import { updatePatient } from '../api/patients';
 import type { PatientRow, Gender } from '../api/patients';
+import { getAllProviders } from '../api/providers';
+import type { Provider } from '../api/providers';
 import { ApiError } from '../api/client';
 
 interface Props {
@@ -19,8 +21,14 @@ export function EditPatientModal({ patient, onClose, onSaved }: Props) {
   const [healthIssue, setHealthIssue] = useState(patient.healthIssue ?? '');
   const [phone, setPhone] = useState(patient.phone ?? '');
   const [address, setAddress] = useState(patient.address ?? '');
+  const [providerId, setProviderId] = useState(patient.providerId ? String(patient.providerId) : '');
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getAllProviders().then(setProviders).catch(() => {});
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -35,6 +43,7 @@ export function EditPatientModal({ patient, onClose, onSaved }: Props) {
         healthIssue: healthIssue.trim() || null,
         phone: phone.trim() || null,
         address: address.trim() || null,
+        providerId: providerId ? Number(providerId) : null,
       });
       onSaved(updated);
     } catch (err) {
@@ -87,9 +96,19 @@ export function EditPatientModal({ patient, onClose, onSaved }: Props) {
           <input id="ep-healthIssue" value={healthIssue} onChange={(e) => setHealthIssue(e.target.value)} />
         </div>
 
-        <div className="field" style={{ marginBottom: 0 }}>
+        <div className="field">
           <label htmlFor="ep-address">Address</label>
           <input id="ep-address" value={address} onChange={(e) => setAddress(e.target.value)} />
+        </div>
+
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label htmlFor="ep-provider">Assigned provider</label>
+          <select id="ep-provider" value={providerId} onChange={(e) => setProviderId(e.target.value)}>
+            <option value="">— Unassigned (visible to all staff) —</option>
+            {providers.map((p) => (
+              <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}</option>
+            ))}
+          </select>
         </div>
 
         <div className="modal-actions">

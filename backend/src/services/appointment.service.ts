@@ -51,6 +51,8 @@ export interface CreateAppointmentInput {
   scheduledFor: string;
   reason?: string | null;
   notes?: string | null;
+  providerId?: number | null;
+  durationMinutes?: number | null;
   createdById: number;
 }
 
@@ -67,6 +69,8 @@ export async function createAppointment(data: CreateAppointmentInput) {
       scheduledFor,
       reason: data.reason ?? null,
       notes: data.notes ?? null,
+      providerId: data.providerId ?? null,
+      durationMinutes: data.durationMinutes ?? null,
       createdById: data.createdById,
       status: AppointmentStatus.SCHEDULED,
     },
@@ -78,6 +82,8 @@ export interface UpdateAppointmentInput {
   reason?: string | null;
   notes?: string | null;
   status?: AppointmentStatus;
+  providerId?: number | null;
+  durationMinutes?: number | null;
 }
 
 export async function updateAppointment(id: number, data: UpdateAppointmentInput) {
@@ -98,6 +104,8 @@ export async function updateAppointment(id: number, data: UpdateAppointmentInput
       ...(data.notes !== undefined && { notes: data.notes }),
       ...(data.status !== undefined && { status: data.status }),
       ...(wasRescheduled && data.status === undefined && { status: AppointmentStatus.RESCHEDULED }),
+      ...(data.providerId !== undefined && { providerId: data.providerId }),
+      ...(data.durationMinutes !== undefined && { durationMinutes: data.durationMinutes }),
     },
   });
 

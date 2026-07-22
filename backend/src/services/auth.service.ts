@@ -62,6 +62,9 @@ export async function register(input: RegisterInput) {
           },
         },
       }),
+      ...(role === Role.STAFF && {
+        provider: { create: {} },
+      }),
     },
     select: {
       ...SAFE_USER_SELECT,

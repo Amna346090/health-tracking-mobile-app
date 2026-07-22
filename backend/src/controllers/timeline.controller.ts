@@ -1,17 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { Role } from '@prisma/client';
-import prisma from '../lib/prisma';
 import { getTimeline, getSummary } from '../services/timeline.service';
-import { AppError } from '../middleware/errorHandler';
-
-async function assertPatientAccess(req: Request, patientId: number): Promise<void> {
-  if (req.user!.role !== Role.PATIENT) return;
-  const profile = await prisma.patientProfile.findUnique({
-    where:  { userId: req.user!.id },
-    select: { id: true },
-  });
-  if (!profile || profile.id !== patientId) throw new AppError('Forbidden', 403);
-}
+import { assertPatientAccess } from '../middleware/patientAccess';
 
 export async function getPatientTimeline(
   req: Request,

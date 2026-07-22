@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { HealthMetricType, Role } from '@prisma/client';
+import { HealthMetricType } from '@prisma/client';
 import * as healthMetricService from '../services/healthMetric.service';
-import { getPatientByUserId } from '../services/patient.service';
+import { assertPatientAccess } from '../middleware/patientAccess';
 import { AppError } from '../middleware/errorHandler';
 
 const VALID_TYPES: HealthMetricType[] = [
@@ -13,12 +13,6 @@ function parseId(raw: string): number {
   const id = parseInt(raw, 10);
   if (isNaN(id)) throw new AppError('Invalid ID', 400);
   return id;
-}
-
-async function assertPatientAccess(req: Request, patientId: number): Promise<void> {
-  if (req.user!.role !== Role.PATIENT) return;
-  const own = await getPatientByUserId(req.user!.id);
-  if (!own || own.id !== patientId) throw new AppError('Forbidden', 403);
 }
 
 export async function listMetrics(req: Request, res: Response, next: NextFunction): Promise<void> {

@@ -91,6 +91,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   patientProfile        PatientProfile?
+  provider              Provider?
   refreshTokens         RefreshToken[]
   medicationLogs        MedicationLog[]
   healthLogsCreated     HealthLog[]            @relation("HealthLogCreatedBy")
@@ -129,6 +130,8 @@ model PatientProfile {
   address                String?
   lastContactAt          DateTime?
   touchBaseThresholdDays Int?
+  providerId             Int?
+  provider               Provider? @relation(fields: [providerId], references: [id])
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
@@ -144,6 +147,8 @@ model PatientProfile {
   testRequestReminderLogs TestRequestReminderLog[]
   notifications           Notification[]
   healthMetrics           HealthMetric[]
+
+  @@index([providerId])
 }
 
 // ─── Medication ───────────────────────────────────────────────────────────────
@@ -264,23 +269,27 @@ model ReminderLog {
 // ─── Appointments ─────────────────────────────────────────────────────────────
 
 model Appointment {
-  id           Int               @id @default(autoincrement())
-  patientId    Int
-  patient      PatientProfile    @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  scheduledFor DateTime
-  reason       String?
-  notes        String?
-  status       AppointmentStatus @default(SCHEDULED)
-  createdById  Int
-  createdBy    User              @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id              Int               @id @default(autoincrement())
+  patientId       Int
+  patient         PatientProfile    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  scheduledFor    DateTime
+  reason          String?
+  notes           String?
+  status          AppointmentStatus @default(SCHEDULED)
+  providerId      Int?
+  provider        Provider?         @relation(fields: [providerId], references: [id])
+  durationMinutes Int?
+  createdById     Int
+  createdBy       User              @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   reminderLogs AppointmentReminderLog[]
   documents    Document[]
 
   @@index([patientId])
   @@index([scheduledFor])
+  @@index([providerId])
 }
 
 model AppointmentReminderLog {
@@ -435,4 +444,20 @@ model HealthMetric {
 
   @@index([patientId])
   @@index([patientId, type])
+}
+
+// ─── Providers ──────────────────────────────────────────────────────────────────
+
+model Provider {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  npi         String?
+  credentials String?
+  specialty   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patients     PatientProfile[]
+  appointments Appointment[]
 }

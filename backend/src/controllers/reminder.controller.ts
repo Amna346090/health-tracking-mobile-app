@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { Role } from '@prisma/client';
-import prisma from '../lib/prisma';
 import { getReminderLogs } from '../services/reminder.service';
-import { AppError } from '../middleware/errorHandler';
+import { assertPatientAccess } from '../middleware/patientAccess';
 
 export async function listReminderLogs(
   req: Request,
@@ -16,16 +14,7 @@ export async function listReminderLogs(
       return;
     }
 
-    // Patients may only view their own logs
-    if (req.user!.role === Role.PATIENT) {
-      const profile = await prisma.patientProfile.findUnique({
-        where:  { userId: req.user!.id },
-        select: { id: true },
-      });
-      if (!profile || profile.id !== patientId) {
-        throw new AppError('Forbidden', 403);
-      }
-    }
+    await assertPatientAccess(req, patientId);
 
     const limit  = Math.min(Number(req.query.limit  ?? 50), 100);
     const offset = Number(req.query.offset ?? 0);

@@ -14,6 +14,7 @@ import appointmentRouter from './routes/appointment.routes';
 import testRequestRouter from './routes/testRequest.routes';
 import notificationRouter from './routes/notification.routes';
 import touchBaseRouter from './routes/touchBase.routes';
+import providerRouter from './routes/provider.routes';
 import userRouter from './routes/user.routes';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -36,6 +37,7 @@ app.use('/api/appointments', appointmentRouter);
 app.use('/api/test-requests', testRequestRouter);
 app.use('/api/notifications', notificationRouter);
 app.use('/api/touch-base', touchBaseRouter);
+app.use('/api/providers', providerRouter);
 app.use('/api/users', userRouter);
 
 app.use(errorHandler);

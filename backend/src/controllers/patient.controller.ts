@@ -1,10 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
 import { Role } from '@prisma/client';
 import * as patientService from '../services/patient.service';
+import { getProviderByUserId } from '../services/provider.service';
+import { assertPatientAccess } from '../middleware/patientAccess';
 
 export async function getAllPatients(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patients = await patientService.getAllPatients();
+    let providerId: number | undefined;
+
+    if (req.user!.role === Role.STAFF) {
+      // STAFF always see their own panel (+ unassigned patients, via getAllPatients' own filter logic) — never explicitly overridable.
+      const provider = await getProviderByUserId(req.user!.id);
+      providerId = provider?.id;
+    } else if (req.user!.role === Role.ADMIN && typeof req.query.providerId === 'string') {
+      // ADMIN can filter by any provider for reporting ("Dr. X's patients due for recall").
+      const parsed = parseInt(req.query.providerId, 10);
+      if (!isNaN(parsed)) providerId = parsed;
+    }
+
+    const patients = await patientService.getAllPatients({ providerId });
     res.json({ status: 'ok', data: patients });
   } catch (err) {
     next(err);
@@ -32,14 +46,11 @@ export async function getPatientById(req: Request, res: Response, next: NextFunc
       return;
     }
 
+    await assertPatientAccess(req, id);
+
     const profile = await patientService.getPatientById(id);
     if (!profile) {
       res.status(404).json({ status: 'error', message: 'Patient not found' });
-      return;
-    }
-
-    if (req.user!.role === Role.PATIENT && profile.userId !== req.user!.id) {
-      res.status(403).json({ status: 'error', message: 'Forbidden' });
       return;
     }
 
@@ -57,13 +68,7 @@ export async function updatePatient(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    if (req.user!.role === Role.PATIENT) {
-      const profile = await patientService.getPatientById(id);
-      if (!profile || profile.userId !== req.user!.id) {
-        res.status(403).json({ status: 'error', message: 'Forbidden' });
-        return;
-      }
-    }
+    await assertPatientAccess(req, id);
 
     const updated = await patientService.updatePatient(id, req.body);
     res.json({ status: 'ok', data: updated });

@@ -17,6 +17,7 @@ import { getWeightTrend, type FeelingStatus, type WeightDataPoint } from '../../
 import { Avatar } from '../../components/Avatar';
 import { WeightChart } from '../../components/WeightChart';
 import { markContacted } from '../../api/touchBase';
+import { getAllProviders, type Provider } from '../../api/providers';
 
 interface PatientMeta {
   id: number;
@@ -26,6 +27,7 @@ interface PatientMeta {
   healthIssue: string | null;
   avatarUrl: string | null;
   lastContactAt: string | null;
+  providerId: number | null;
 }
 
 function formatLastContact(iso: string | null): string {
@@ -171,6 +173,7 @@ export default function PatientDashboardScreen() {
   const pid = Number(patientId);
 
   const [patient,  setPatient]  = useState<PatientMeta | null>(null);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [summary,  setSummary]  = useState<PatientSummary | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [trend,    setTrend]    = useState<WeightDataPoint[]>([]);
@@ -188,6 +191,10 @@ export default function PatientDashboardScreen() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [pid]);
+
+  useEffect(() => {
+    getAllProviders().then(setProviders).catch(() => {});
+  }, []);
 
   async function handleMarkContacted() {
     setMarkingContacted(true);
@@ -259,6 +266,13 @@ export default function PatientDashboardScreen() {
             </View>
             <View style={crmStyles.infoCard}>
               <InfoItem label="Last contact" value={formatLastContact(patient.lastContactAt)} />
+              <InfoItem
+                label="Provider"
+                value={(() => {
+                  const provider = providers.find((p) => p.id === patient.providerId);
+                  return provider ? `${provider.user.firstName} ${provider.user.lastName}` : 'Unassigned (all staff)';
+                })()}
+              />
             </View>
           </View>
         )}

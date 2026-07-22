@@ -9,6 +9,8 @@ export interface Appointment {
   reason: string | null;
   notes: string | null;
   status: AppointmentStatus;
+  providerId: number | null;
+  durationMinutes: number | null;
   createdById: number;
   createdAt: string;
   updatedAt: string;
@@ -37,6 +39,8 @@ export interface CreateAppointmentInput {
   scheduledFor: string;
   reason?: string | null;
   notes?: string | null;
+  providerId?: number | null;
+  durationMinutes?: number | null;
 }
 
 export const createAppointment = (patientId: number, data: CreateAppointmentInput) =>
@@ -47,6 +51,8 @@ export interface UpdateAppointmentInput {
   reason?: string | null;
   notes?: string | null;
   status?: AppointmentStatus;
+  providerId?: number | null;
+  durationMinutes?: number | null;
 }
 
 export const updateAppointment = (patientId: number, id: number, data: UpdateAppointmentInput) =>

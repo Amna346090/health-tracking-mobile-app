@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { Role } from '@prisma/client';
 import * as documentService from '../services/document.service';
-import { getPatientByUserId } from '../services/patient.service';
+import { assertPatientAccess } from '../middleware/patientAccess';
 import { presignUpload, deleteObject } from '../lib/s3';
 import { AppError } from '../middleware/errorHandler';
 
@@ -11,12 +10,6 @@ function parseId(raw: string): number {
   const id = parseInt(raw, 10);
   if (isNaN(id)) throw new AppError('Invalid ID', 400);
   return id;
-}
-
-async function assertPatientAccess(req: Request, patientId: number): Promise<void> {
-  if (req.user!.role !== Role.PATIENT) return;
-  const own = await getPatientByUserId(req.user!.id);
-  if (!own || own.id !== patientId) throw new AppError('Forbidden', 403);
 }
 
 // ─── Patient-scoped handlers ──────────────────────────────────────────────────
@@ -87,11 +80,7 @@ export async function getDocument(req: Request, res: Response, next: NextFunctio
   try {
     const id = parseId(req.params.id);
     const document = await documentService.getDocumentById(id);
-
-    if (req.user!.role === Role.PATIENT) {
-      const own = await getPatientByUserId(req.user!.id);
-      if (!own || document.patientId !== own.id) throw new AppError('Forbidden', 403);
-    }
+    await assertPatientAccess(req, document.patientId);
 
     res.json({ status: 'ok', data: document });
   } catch (err) { next(err); }
@@ -100,9 +89,12 @@ export async function getDocument(req: Request, res: Response, next: NextFunctio
 export async function updateDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = parseId(req.params.id);
+    const document = await documentService.getDocumentById(id);
+    await assertPatientAccess(req, document.patientId);
+
     const { tag, appointmentId } = req.body as { tag?: string | null; appointmentId?: number | null };
-    const document = await documentService.updateDocument(id, { tag, appointmentId });
-    res.json({ status: 'ok', data: document });
+    const updated = await documentService.updateDocument(id, { tag, appointmentId });
+    res.json({ status: 'ok', data: updated });
   } catch (err) { next(err); }
 }
 
@@ -110,11 +102,7 @@ export async function removeDocument(req: Request, res: Response, next: NextFunc
   try {
     const id = parseId(req.params.id);
     const document = await documentService.getDocumentById(id);
-
-    if (req.user!.role === Role.PATIENT) {
-      const own = await getPatientByUserId(req.user!.id);
-      if (!own || document.patientId !== own.id) throw new AppError('Forbidden', 403);
-    }
+    await assertPatientAccess(req, document.patientId);
 
     const { key } = await documentService.deleteDocument(id);
 

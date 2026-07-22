@@ -40,6 +40,7 @@ export function AppointmentModal({ patientId, appointment, onClose, onSaved }: P
   );
   const [reason, setReason] = useState(appointment?.reason ?? '');
   const [notes, setNotes] = useState(appointment?.notes ?? '');
+  const [durationMinutes, setDurationMinutes] = useState(appointment?.durationMinutes ? String(appointment.durationMinutes) : '30');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -55,16 +56,19 @@ export function AppointmentModal({ patientId, appointment, onClose, onSaved }: P
     setLoading(true);
     try {
       const isoScheduledFor = new Date(scheduledFor).toISOString();
+      const parsedDuration = durationMinutes.trim() ? Number(durationMinutes) : null;
       const saved = isEdit
         ? await updateAppointment(patientId, appointment!.id, {
             scheduledFor: isoScheduledFor,
             reason: reason.trim() || null,
             notes: notes.trim() || null,
+            durationMinutes: parsedDuration,
           })
         : await createAppointment(patientId, {
             scheduledFor: isoScheduledFor,
             reason: reason.trim() || null,
             notes: notes.trim() || null,
+            durationMinutes: parsedDuration,
           });
       onSaved(saved);
     } catch (err) {
@@ -110,14 +114,27 @@ export function AppointmentModal({ patientId, appointment, onClose, onSaved }: P
           />
         </div>
 
-        <div className="field">
-          <label htmlFor="apt-reason">Reason</label>
-          <input
-            id="apt-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g. Follow-up checkup"
-          />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="apt-reason">Reason</label>
+            <input
+              id="apt-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Follow-up checkup"
+            />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="apt-duration">Duration (min)</label>
+            <input
+              id="apt-duration"
+              type="number"
+              min={5}
+              step={5}
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="field" style={{ marginBottom: 0 }}>

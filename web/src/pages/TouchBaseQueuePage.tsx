@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { HeartPulse } from 'lucide-react';
 import { getTouchBaseQueue, markContacted } from '../api/touchBase';
 import type { TouchBaseQueueItem } from '../api/touchBase';
+import { getAllProviders } from '../api/providers';
+import type { Provider } from '../api/providers';
+import { useAuth } from '../context/AuthContext';
 import { Spinner } from '../components/Spinner';
 import { ApiError } from '../api/client';
 
@@ -14,17 +17,26 @@ function daysSince(iso: string | null): string {
 
 export function TouchBaseQueuePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [queue, setQueue] = useState<TouchBaseQueueItem[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [providerFilter, setProviderFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [contactingId, setContactingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function load() {
-    setLoading(true);
-    getTouchBaseQueue().then(setQueue).catch(() => {}).finally(() => setLoading(false));
-  }
+  useEffect(() => {
+    if (isAdmin) getAllProviders().then(setProviders).catch(() => {});
+  }, [isAdmin]);
 
-  useEffect(load, []);
+  useEffect(() => {
+    setLoading(true);
+    getTouchBaseQueue(providerFilter ? Number(providerFilter) : undefined)
+      .then(setQueue)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [providerFilter]);
 
   async function handleMarkContacted(patientId: number) {
     setError(null);
@@ -47,6 +59,14 @@ export function TouchBaseQueuePage() {
           <h1 className="page-title">Touch-Base Queue</h1>
           <p className="page-subtitle">{queue.length} patient{queue.length !== 1 ? 's' : ''} overdue or nearing their touch-base threshold</p>
         </div>
+        {isAdmin && (
+          <select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} style={{ maxWidth: 220 }}>
+            <option value="">All providers</option>
+            {providers.map((p) => (
+              <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}'s panel</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {error && <div className="form-error">{error}</div>}

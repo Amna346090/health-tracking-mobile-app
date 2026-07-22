@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { FeelingStatus, Role } from '@prisma/client';
+import { FeelingStatus } from '@prisma/client';
 import * as healthLogService from '../services/healthLog.service';
-import { getPatientByUserId } from '../services/patient.service';
+import { assertPatientAccess } from '../middleware/patientAccess';
 import { AppError } from '../middleware/errorHandler';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -13,15 +13,6 @@ function parseId(raw: string): number {
 }
 
 const VALID_FEELINGS = new Set<string>(['GREAT', 'GOOD', 'OKAY', 'POOR', 'TERRIBLE']);
-
-/**
- * For PATIENT role: throws 403 if the requested patientId is not their own profile.
- */
-async function assertPatientAccess(req: Request, patientId: number): Promise<void> {
-  if (req.user!.role !== Role.PATIENT) return;
-  const own = await getPatientByUserId(req.user!.id);
-  if (!own || own.id !== patientId) throw new AppError('Forbidden', 403);
-}
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 

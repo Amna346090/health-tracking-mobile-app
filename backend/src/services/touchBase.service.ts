@@ -5,6 +5,7 @@ const PATIENT_USER_SELECT = {
   id: true,
   lastContactAt: true,
   touchBaseThresholdDays: true,
+  providerId: true,
   createdAt: true,
   user: { select: { firstName: true, lastName: true, email: true } },
 } as const;
@@ -20,10 +21,20 @@ export interface TouchBaseQueueItem {
   user: { firstName: string; lastName: string; email: string };
 }
 
+export interface TouchBaseQueueFilters {
+  providerId?: number;
+}
+
 /** Patients who are overdue (past their threshold) or nearing it (within NEARING_WINDOW_DAYS). */
-export async function getOverdueOrNearingPatients(): Promise<TouchBaseQueueItem[]> {
+export async function getOverdueOrNearingPatients(filters: TouchBaseQueueFilters = {}): Promise<TouchBaseQueueItem[]> {
   const settings = await getTouchBaseSettings();
-  const patients = await prisma.patientProfile.findMany({ select: PATIENT_USER_SELECT });
+  const patients = await prisma.patientProfile.findMany({
+    // Unassigned patients stay visible alongside whichever provider's queue is being filtered.
+    where: filters.providerId !== undefined
+      ? { OR: [{ providerId: filters.providerId }, { providerId: null }] }
+      : undefined,
+    select: PATIENT_USER_SELECT,
+  });
 
   const now = Date.now();
   const nearingCutoff = now + NEARING_WINDOW_DAYS * 24 * 60 * 60 * 1000;

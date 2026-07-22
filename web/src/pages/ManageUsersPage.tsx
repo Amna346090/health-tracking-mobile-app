@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Trash2, KeyRound } from 'lucide-react';
+import { Trash2, KeyRound, IdCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { deleteUser, getAllUsers } from '../api/users';
 import type { ManagedUser } from '../api/users';
+import { getAllProviders } from '../api/providers';
+import type { Provider } from '../api/providers';
 import { ResetPasswordModal } from '../components/ResetPasswordModal';
+import { EditProviderModal } from '../components/EditProviderModal';
 import { Spinner } from '../components/Spinner';
 
 function badgeClass(role: string): string {
@@ -20,11 +23,13 @@ export function ManageUsersPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resetTarget, setResetTarget] = useState<ManagedUser | null>(null);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
 
   function load() {
     setLoading(true);
-    getAllUsers()
-      .then(setUsers)
+    Promise.all([getAllUsers(), getAllProviders()])
+      .then(([u, p]) => { setUsers(u); setProviders(p); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }
@@ -82,6 +87,15 @@ export function ManageUsersPage() {
                 <span className={badgeClass(u.role)}>{u.role}</span>
                 {!isSelf && (
                   <div style={{ display: 'flex', gap: 8 }}>
+                    {u.role === 'STAFF' && (() => {
+                      const provider = providers.find((p) => p.userId === u.id);
+                      return provider ? (
+                        <button className="btn btn-secondary btn-sm" onClick={() => setEditingProvider(provider)}>
+                          <IdCard size={13} strokeWidth={2.2} />
+                          Provider Info
+                        </button>
+                      ) : null;
+                    })()}
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => setResetTarget(u)}
@@ -110,6 +124,17 @@ export function ManageUsersPage() {
           userId={resetTarget.id}
           userName={`${resetTarget.firstName} ${resetTarget.lastName}`}
           onClose={() => setResetTarget(null)}
+        />
+      )}
+
+      {editingProvider && (
+        <EditProviderModal
+          provider={editingProvider}
+          onClose={() => setEditingProvider(null)}
+          onSaved={(updated) => {
+            setProviders((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+            setEditingProvider(null);
+          }}
         />
       )}
     </div>

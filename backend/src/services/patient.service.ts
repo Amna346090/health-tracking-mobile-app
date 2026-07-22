@@ -12,8 +12,16 @@ const USER_SELECT = {
   updatedAt: true,
 } as const;
 
-export async function getAllPatients() {
+export interface GetAllPatientsFilters {
+  providerId?: number;
+}
+
+export async function getAllPatients(filters: GetAllPatientsFilters = {}) {
+  const { providerId } = filters;
   return prisma.patientProfile.findMany({
+    // Unassigned patients (providerId: null) stay visible alongside whichever
+    // provider's panel is being filtered — the confirmed safe default.
+    where: providerId !== undefined ? { OR: [{ providerId }, { providerId: null }] } : undefined,
     include: { user: { select: USER_SELECT } },
     orderBy: { createdAt: 'desc' },
   });
@@ -43,10 +51,11 @@ interface UpdatePatientInput {
   phone?: string | null;
   address?: string | null;
   touchBaseThresholdDays?: number | null;
+  providerId?: number | null;
 }
 
 export async function updatePatient(id: number, input: UpdatePatientInput) {
-  const { firstName, lastName, dateOfBirth, gender, healthIssue, avatarUrl, phone, address, touchBaseThresholdDays } = input;
+  const { firstName, lastName, dateOfBirth, gender, healthIssue, avatarUrl, phone, address, touchBaseThresholdDays, providerId } = input;
 
   if (dateOfBirth !== undefined && isNaN(new Date(dateOfBirth).getTime())) {
     throw new AppError('Invalid dateOfBirth format', 400);
@@ -79,6 +88,7 @@ export async function updatePatient(id: number, input: UpdatePatientInput) {
         ...(phone !== undefined && { phone }),
         ...(address !== undefined && { address }),
         ...(touchBaseThresholdDays !== undefined && { touchBaseThresholdDays }),
+        ...(providerId !== undefined && { providerId }),
       },
       include: { user: { select: USER_SELECT } },
     });

@@ -21,11 +21,13 @@ export interface PatientRow {
   address: string | null;
   lastContactAt: string | null;
   touchBaseThresholdDays: number | null;
+  providerId: number | null;
   createdAt: string;
   user: PatientUser;
 }
 
-export const getAllPatients = () => api.get<PatientRow[]>('/patients');
+export const getAllPatients = (providerId?: number) =>
+  api.get<PatientRow[]>(`/patients${providerId !== undefined ? `?providerId=${providerId}` : ''}`);
 
 export const getPatientById = (id: number) => api.get<PatientRow>(`/patients/${id}`);
 
@@ -61,6 +63,7 @@ export interface UpdatePatientInput {
   phone?: string | null;
   address?: string | null;
   touchBaseThresholdDays?: number | null;
+  providerId?: number | null;
 }
 
 export const updatePatient = (id: number, data: UpdatePatientInput) =>

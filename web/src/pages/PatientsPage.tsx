@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Search, ChevronRight, UserPlus } from 'lucide-react';
 import { getAllPatients } from '../api/patients';
 import type { PatientRow } from '../api/patients';
+import { getAllProviders } from '../api/providers';
+import type { Provider } from '../api/providers';
+import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { AddPatientModal } from '../components/AddPatientModal';
 import { Spinner } from '../components/Spinner';
@@ -22,17 +25,26 @@ function ageFromDob(iso: string): number {
 
 export function PatientsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [patients, setPatients] = useState<PatientRow[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [providerFilter, setProviderFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
 
   useEffect(() => {
-    getAllPatients()
+    if (isAdmin) getAllProviders().then(setProviders).catch(() => {});
+  }, [isAdmin]);
+
+  useEffect(() => {
+    setLoading(true);
+    getAllPatients(providerFilter ? Number(providerFilter) : undefined)
       .then(setPatients)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [providerFilter]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -56,14 +68,24 @@ export function PatientsPage() {
         </button>
       </div>
 
-      <div className="search-wrap">
-        <Search size={16} strokeWidth={2} />
-        <input
-          className="search-input"
-          placeholder="Search patients…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <div className="search-wrap" style={{ flex: 1, marginBottom: 0 }}>
+          <Search size={16} strokeWidth={2} />
+          <input
+            className="search-input"
+            placeholder="Search patients…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        {isAdmin && (
+          <select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} style={{ maxWidth: 220 }}>
+            <option value="">All providers</option>
+            {providers.map((p) => (
+              <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}'s panel</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {loading ? (
