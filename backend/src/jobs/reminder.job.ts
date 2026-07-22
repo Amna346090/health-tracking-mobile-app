@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { runReminderJob } from '../services/reminder.service';
 import { runAppointmentReminderJob } from '../services/appointmentReminder.service';
 import { runTestRequestReminderJob } from '../services/testRequestReminder.service';
+import { runTouchBaseReminderJob } from '../services/touchBaseReminder.service';
 
 let _running = false;
 
@@ -14,6 +15,7 @@ export function startReminderJob(): void {
       await runReminderJob();
       await runAppointmentReminderJob();
       await runTestRequestReminderJob();
+      await runTouchBaseReminderJob();
     } catch (e) {
       console.error('[reminder job] unhandled error:', e);
     } finally {

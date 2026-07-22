@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText, ClipboardCheck } from 'lucide-react';
-import { getPatientById } from '../api/patients';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText, ClipboardCheck, HeartPulse } from 'lucide-react';
+import { getPatientById, updatePatient } from '../api/patients';
 import type { PatientRow } from '../api/patients';
+import { markContacted } from '../api/touchBase';
 import { Avatar } from '../components/Avatar';
 import { EditPatientModal } from '../components/EditPatientModal';
 import { getSummary, getTimeline } from '../api/timeline';
@@ -77,6 +78,14 @@ function formatWhen(iso: string): string {
   });
 }
 
+const TOUCH_BASE_THRESHOLD_PRESETS: { label: string; days: number }[] = [
+  { label: '1 week', days: 7 },
+  { label: '2 weeks', days: 14 },
+  { label: '1 month', days: 30 },
+  { label: '2 months', days: 60 },
+  { label: '3 months', days: 90 },
+];
+
 const TEST_REQUEST_STATUS_LABEL: Record<TestRequest['status'], string> = {
   PENDING: 'Pending',
   SUBMITTED: 'Submitted',
@@ -124,6 +133,7 @@ export function PatientDashboardPage() {
   const [cancelingAppointment, setCancelingAppointment] = useState<Appointment | null>(null);
   const [showSendMessage, setShowSendMessage] = useState(false);
   const [testRequestModal, setTestRequestModal] = useState<'new' | TestRequest | null>(null);
+  const [markingContacted, setMarkingContacted] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -152,6 +162,21 @@ export function PatientDashboardPage() {
   async function handleCancelTestRequest(testRequest: TestRequest) {
     const updated = await updateTestRequest(pid, testRequest.id, { status: 'CANCELLED' });
     setTestRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+  }
+
+  async function handleMarkContacted() {
+    setMarkingContacted(true);
+    try {
+      const updated = await markContacted(pid);
+      setPatient(updated);
+    } finally {
+      setMarkingContacted(false);
+    }
+  }
+
+  async function handleSetThreshold(days: number | null) {
+    const updated = await updatePatient(pid, { touchBaseThresholdDays: days });
+    setPatient(updated);
   }
 
   if (loading) return <Spinner />;
@@ -201,6 +226,49 @@ export function PatientDashboardPage() {
               <div className="info-item-label">Phone</div>
               <div className="info-item-value">{patient.phone ?? '—'}</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 className="section-title" style={{ margin: 0 }}>Touch-Base</h2>
+          <button className="btn btn-secondary btn-sm" disabled={markingContacted} onClick={handleMarkContacted}>
+            <HeartPulse size={13} strokeWidth={2.2} />
+            {markingContacted ? 'Saving…' : 'Mark as contacted'}
+          </button>
+        </div>
+        <div className="card">
+          <div className="info-grid">
+            <div>
+              <div className="info-item-label">Last contact</div>
+              <div className="info-item-value">
+                {patient.lastContactAt ? formatWhen(patient.lastContactAt) : 'Never'}
+              </div>
+            </div>
+            <div>
+              <div className="info-item-label">Threshold</div>
+              <div className="info-item-value">
+                {patient.touchBaseThresholdDays ? `${patient.touchBaseThresholdDays} days (custom)` : 'Global default'}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
+            {TOUCH_BASE_THRESHOLD_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                className={`btn btn-sm ${patient.touchBaseThresholdDays === preset.days ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => handleSetThreshold(preset.days)}
+              >
+                {preset.label}
+              </button>
+            ))}
+            <button
+              className={`btn btn-sm ${patient.touchBaseThresholdDays === null ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => handleSetThreshold(null)}
+            >
+              Use default
+            </button>
           </div>
         </div>
       </div>

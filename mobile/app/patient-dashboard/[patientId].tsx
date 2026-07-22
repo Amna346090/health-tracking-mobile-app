@@ -16,6 +16,7 @@ import { FEELING_EMOJI } from '../../components/FeelingPicker';
 import { getWeightTrend, type FeelingStatus, type WeightDataPoint } from '../../api/healthLog';
 import { Avatar } from '../../components/Avatar';
 import { WeightChart } from '../../components/WeightChart';
+import { markContacted } from '../../api/touchBase';
 
 interface PatientMeta {
   id: number;
@@ -24,6 +25,12 @@ interface PatientMeta {
   gender: string | null;
   healthIssue: string | null;
   avatarUrl: string | null;
+  lastContactAt: string | null;
+}
+
+function formatLastContact(iso: string | null): string {
+  if (!iso) return 'Never';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function ageFromDob(iso: string): number {
@@ -168,6 +175,7 @@ export default function PatientDashboardScreen() {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [trend,    setTrend]    = useState<WeightDataPoint[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [markingContacted, setMarkingContacted] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -180,6 +188,16 @@ export default function PatientDashboardScreen() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [pid]);
+
+  async function handleMarkContacted() {
+    setMarkingContacted(true);
+    try {
+      const result = await markContacted(pid);
+      setPatient((prev) => (prev ? { ...prev, lastContactAt: result.lastContactAt } : prev));
+    } finally {
+      setMarkingContacted(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -226,6 +244,21 @@ export default function PatientDashboardScreen() {
               <InfoItem label="Age" value={`${ageFromDob(patient.dateOfBirth)}`} />
               <InfoItem label="Gender" value={formatGender(patient.gender) ?? '—'} />
               <InfoItem label="Health issue" value={patient.healthIssue ?? '—'} />
+            </View>
+          </View>
+        )}
+
+        {/* Touch-base */}
+        {patient && (
+          <View style={crmStyles.section}>
+            <View style={crmStyles.sectionRow}>
+              <Text style={crmStyles.sectionTitle}>TOUCH-BASE</Text>
+              <TouchableOpacity onPress={handleMarkContacted} disabled={markingContacted}>
+                <Text style={crmStyles.viewAll}>{markingContacted ? 'Saving…' : 'Mark as contacted'}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={crmStyles.infoCard}>
+              <InfoItem label="Last contact" value={formatLastContact(patient.lastContactAt)} />
             </View>
           </View>
         )}

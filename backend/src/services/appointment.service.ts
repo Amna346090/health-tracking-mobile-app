@@ -90,7 +90,7 @@ export async function updateAppointment(id: number, data: UpdateAppointmentInput
   const scheduledFor = data.scheduledFor !== undefined ? new Date(data.scheduledFor) : undefined;
   if (scheduledFor) scheduledFor.setSeconds(0, 0);
 
-  return prisma.appointment.update({
+  const updated = await prisma.appointment.update({
     where: { id },
     data: {
       ...(scheduledFor !== undefined && { scheduledFor }),
@@ -100,4 +100,14 @@ export async function updateAppointment(id: number, data: UpdateAppointmentInput
       ...(wasRescheduled && data.status === undefined && { status: AppointmentStatus.RESCHEDULED }),
     },
   });
+
+  // A completed appointment counts as staff contact — resets the touch-base countdown.
+  if (data.status === AppointmentStatus.COMPLETED) {
+    await prisma.patientProfile.update({
+      where: { id: exists.patientId },
+      data: { lastContactAt: new Date() },
+    });
+  }
+
+  return updated;
 }

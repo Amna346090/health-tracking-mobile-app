@@ -11,6 +11,8 @@ import { PatientDocumentsPage } from './pages/PatientDocumentsPage';
 import { MedicationsPage } from './pages/MedicationsPage';
 import { AppointmentsPage } from './pages/AppointmentsPage';
 import { TestRequestsPage } from './pages/TestRequestsPage';
+import { TouchBaseQueuePage } from './pages/TouchBaseQueuePage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ManageUsersPage } from './pages/ManageUsersPage';
 
 function App() {
@@ -33,11 +35,20 @@ function App() {
             <Route path="/medications" element={<MedicationsPage />} />
             <Route path="/appointments" element={<AppointmentsPage />} />
             <Route path="/test-requests" element={<TestRequestsPage />} />
+            <Route path="/touch-base" element={<TouchBaseQueuePage />} />
             <Route
               path="/users"
               element={
                 <AdminRoute>
                   <ManageUsersPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <AdminRoute>
+                  <SettingsPage />
                 </AdminRoute>
               }
             />

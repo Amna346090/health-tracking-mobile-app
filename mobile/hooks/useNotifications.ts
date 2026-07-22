@@ -56,6 +56,8 @@ export function useNotifications(isLoggedIn: boolean): void {
           router.push(`/appointments/${data.patientId}`);
         } else if (typeof data.testRequestId === 'number' && typeof data.patientId === 'number') {
           router.push(`/test-requests/${data.patientId}`);
+        } else if (data.type === 'TOUCH_BASE_DUE' && typeof data.patientId === 'number') {
+          router.push(`/patient-dashboard/${data.patientId}`);
         }
       },
     );

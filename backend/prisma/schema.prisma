@@ -100,6 +100,7 @@ model User {
   assignmentsPrescribed MedicationAssignment[] @relation("AssignmentPrescribedBy")
   documentsUploaded     Document[]             @relation("DocumentUploadedBy")
   testRequestsCreated   TestRequest[]          @relation("TestRequestedBy")
+  notifications         Notification[]
 }
 
 model RefreshToken {
@@ -116,17 +117,19 @@ model RefreshToken {
 // ─── Patient ──────────────────────────────────────────────────────────────────
 
 model PatientProfile {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dateOfBirth DateTime @db.Date
-  gender      Gender?
-  healthIssue String?
-  avatarUrl   String?
-  phone       String?
-  address     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                     Int       @id @default(autoincrement())
+  userId                 Int       @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateOfBirth            DateTime  @db.Date
+  gender                 Gender?
+  healthIssue            String?
+  avatarUrl              String?
+  phone                  String?
+  address                String?
+  lastContactAt          DateTime?
+  touchBaseThresholdDays Int?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   medicationAssignments   MedicationAssignment[]
   healthLogs              HealthLog[]
@@ -138,6 +141,7 @@ model PatientProfile {
   documents               Document[]
   testRequests            TestRequest[]
   testRequestReminderLogs TestRequestReminderLog[]
+  notifications           Notification[]
 }
 
 // ─── Medication ───────────────────────────────────────────────────────────────
@@ -372,4 +376,28 @@ model Message {
 
   @@index([patientId])
   @@index([senderId])
+}
+
+// ─── Touch-base alerts / notification center ───────────────────────────────────
+
+model TouchBaseSettings {
+  id                   Int      @id @default(1)
+  defaultThresholdDays Int      @default(30)
+  updatedAt            DateTime @updatedAt
+}
+
+model Notification {
+  id        Int             @id @default(autoincrement())
+  userId    Int
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  patientId Int?
+  patient   PatientProfile? @relation(fields: [patientId], references: [id])
+  readAt    DateTime?
+  createdAt DateTime        @default(now())
+
+  @@index([userId])
+  @@index([patientId])
 }

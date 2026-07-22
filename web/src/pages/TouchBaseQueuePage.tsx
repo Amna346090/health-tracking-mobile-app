@@ -1,0 +1,92 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { HeartPulse } from 'lucide-react';
+import { getTouchBaseQueue, markContacted } from '../api/touchBase';
+import type { TouchBaseQueueItem } from '../api/touchBase';
+import { Spinner } from '../components/Spinner';
+import { ApiError } from '../api/client';
+
+function daysSince(iso: string | null): string {
+  if (!iso) return 'Never contacted';
+  const days = Math.round((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
+  return `${days} day${days !== 1 ? 's' : ''} ago`;
+}
+
+export function TouchBaseQueuePage() {
+  const navigate = useNavigate();
+  const [queue, setQueue] = useState<TouchBaseQueueItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [contactingId, setContactingId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function load() {
+    setLoading(true);
+    getTouchBaseQueue().then(setQueue).catch(() => {}).finally(() => setLoading(false));
+  }
+
+  useEffect(load, []);
+
+  async function handleMarkContacted(patientId: number) {
+    setError(null);
+    setContactingId(patientId);
+    try {
+      await markContacted(patientId);
+      setQueue((prev) => prev.filter((item) => item.id !== patientId));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not mark as contacted.');
+    } finally {
+      setContactingId(null);
+    }
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <p className="page-eyebrow">Care team</p>
+          <h1 className="page-title">Touch-Base Queue</h1>
+          <p className="page-subtitle">{queue.length} patient{queue.length !== 1 ? 's' : ''} overdue or nearing their touch-base threshold</p>
+        </div>
+      </div>
+
+      {error && <div className="form-error">{error}</div>}
+
+      {loading ? (
+        <Spinner />
+      ) : queue.length === 0 ? (
+        <div className="empty-state">No patients overdue or nearing their touch-base threshold. 🎉</div>
+      ) : (
+        <div className="card-list">
+          {queue.map((item) => (
+            <div key={item.id} className="row">
+              <div
+                className="avatar row-clickable"
+                style={{ background: 'var(--color-primary-bg)', color: 'var(--color-primary)' }}
+                onClick={() => navigate(`/patients/${item.id}`)}
+              >
+                <HeartPulse size={16} strokeWidth={2.2} />
+              </div>
+              <div className="row-body row-clickable" onClick={() => navigate(`/patients/${item.id}`)}>
+                <div className="row-name">{item.user.firstName} {item.user.lastName}</div>
+                <div className="row-sub">
+                  Last contact: {daysSince(item.lastContactAt)} · Threshold: {item.thresholdDays} days
+                </div>
+              </div>
+              <span className={`badge badge-${item.overdue ? 'overdue' : 'pending'}`}>
+                {item.overdue ? 'Overdue' : 'Nearing'}
+              </span>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ marginLeft: 10 }}
+                disabled={contactingId === item.id}
+                onClick={() => handleMarkContacted(item.id)}
+              >
+                {contactingId === item.id ? 'Saving…' : 'Mark as contacted'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

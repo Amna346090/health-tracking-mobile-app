@@ -12,6 +12,8 @@ import documentRouter from './routes/document.routes';
 import reminderRouter from './routes/reminder.routes';
 import appointmentRouter from './routes/appointment.routes';
 import testRequestRouter from './routes/testRequest.routes';
+import notificationRouter from './routes/notification.routes';
+import touchBaseRouter from './routes/touchBase.routes';
 import userRouter from './routes/user.routes';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -32,6 +34,8 @@ app.use('/api/documents', documentRouter);
 app.use('/api/reminders', reminderRouter);
 app.use('/api/appointments', appointmentRouter);
 app.use('/api/test-requests', testRequestRouter);
+app.use('/api/notifications', notificationRouter);
+app.use('/api/touch-base', touchBaseRouter);
 app.use('/api/users', userRouter);
 
 app.use(errorHandler);

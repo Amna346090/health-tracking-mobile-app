@@ -42,10 +42,11 @@ interface UpdatePatientInput {
   avatarUrl?: string | null;
   phone?: string | null;
   address?: string | null;
+  touchBaseThresholdDays?: number | null;
 }
 
 export async function updatePatient(id: number, input: UpdatePatientInput) {
-  const { firstName, lastName, dateOfBirth, gender, healthIssue, avatarUrl, phone, address } = input;
+  const { firstName, lastName, dateOfBirth, gender, healthIssue, avatarUrl, phone, address, touchBaseThresholdDays } = input;
 
   if (dateOfBirth !== undefined && isNaN(new Date(dateOfBirth).getTime())) {
     throw new AppError('Invalid dateOfBirth format', 400);
@@ -77,8 +78,37 @@ export async function updatePatient(id: number, input: UpdatePatientInput) {
         ...(avatarUrl !== undefined && { avatarUrl }),
         ...(phone !== undefined && { phone }),
         ...(address !== undefined && { address }),
+        ...(touchBaseThresholdDays !== undefined && { touchBaseThresholdDays }),
       },
       include: { user: { select: USER_SELECT } },
     });
+  });
+}
+
+// ─── Touch-base ───────────────────────────────────────────────────────────────
+
+export async function markContacted(patientId: number) {
+  const profile = await prisma.patientProfile.findUnique({ where: { id: patientId } });
+  if (!profile) throw new AppError('Patient not found', 404);
+  return prisma.patientProfile.update({
+    where: { id: patientId },
+    data: { lastContactAt: new Date() },
+    include: { user: { select: USER_SELECT } },
+  });
+}
+
+export async function getTouchBaseSettings() {
+  return prisma.touchBaseSettings.upsert({
+    where: { id: 1 },
+    create: { id: 1 },
+    update: {},
+  });
+}
+
+export async function updateTouchBaseSettings(defaultThresholdDays: number) {
+  return prisma.touchBaseSettings.upsert({
+    where: { id: 1 },
+    create: { id: 1, defaultThresholdDays },
+    update: { defaultThresholdDays },
   });
 }

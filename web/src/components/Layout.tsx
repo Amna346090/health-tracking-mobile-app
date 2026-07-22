@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Users, ShieldCheck, LogOut, Activity, KeyRound, Pill, Calendar, ClipboardCheck } from 'lucide-react';
+import { Users, ShieldCheck, LogOut, Activity, KeyRound, Pill, Calendar, ClipboardCheck, HeartPulse, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { NotificationBell } from './NotificationBell';
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -46,10 +47,20 @@ export function Layout() {
             <ClipboardCheck size={17} strokeWidth={2} />
             Test/Scan Requests
           </NavLink>
+          <NavLink to="/touch-base" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+            <HeartPulse size={17} strokeWidth={2} />
+            Touch-Base Queue
+          </NavLink>
           {user?.role === 'ADMIN' && (
             <NavLink to="/users" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
               <ShieldCheck size={17} strokeWidth={2} />
               Manage Users
+            </NavLink>
+          )}
+          {user?.role === 'ADMIN' && (
+            <NavLink to="/settings" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+              <Settings size={17} strokeWidth={2} />
+              Settings
             </NavLink>
           )}
         </nav>
@@ -61,6 +72,9 @@ export function Layout() {
               <div className="sidebar-user-name">{user?.firstName} {user?.lastName}</div>
               <div className="sidebar-user-role">{user?.role.toLowerCase()}</div>
             </div>
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <NotificationBell />
           </div>
           <button className="sidebar-signout" onClick={() => setShowChangePassword(true)} style={{ marginBottom: 8 }}>
             <KeyRound size={14} strokeWidth={2.2} />

@@ -19,6 +19,8 @@ export interface PatientRow {
   avatarUrl: string | null;
   phone: string | null;
   address: string | null;
+  lastContactAt: string | null;
+  touchBaseThresholdDays: number | null;
   createdAt: string;
   user: PatientUser;
 }
@@ -58,6 +60,7 @@ export interface UpdatePatientInput {
   healthIssue?: string | null;
   phone?: string | null;
   address?: string | null;
+  touchBaseThresholdDays?: number | null;
 }
 
 export const updatePatient = (id: number, data: UpdatePatientInput) =>

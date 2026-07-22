@@ -53,6 +53,7 @@ import {
   createTestRequest,
   updateTestRequest,
 } from '../controllers/testRequest.controller';
+import { markContacted } from '../controllers/touchBase.controller';
 
 const router = Router();
 
@@ -114,5 +115,8 @@ router.patch('/:patientId/messages/:id/read', markRead);
 router.get('/:patientId/test-requests', getTestRequests);
 router.post('/:patientId/test-requests', requireRoles(Role.STAFF, Role.ADMIN), createTestRequest);
 router.patch('/:patientId/test-requests/:id', updateTestRequest);
+
+// ─── Touch-base ─────────────────────────────────────────────────────────────────
+router.post('/:patientId/contact', requireRoles(Role.STAFF, Role.ADMIN), markContacted);
 
 export default router;
