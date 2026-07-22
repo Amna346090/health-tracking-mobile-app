@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText } from 'lucide-react';
 import { getPatientById } from '../api/patients';
 import type { PatientRow } from '../api/patients';
 import { Avatar } from '../components/Avatar';
@@ -341,6 +341,17 @@ export function PatientDashboardPage() {
           </div>
         </div>
       )}
+
+      <div className="section">
+        <div
+          className="card row-clickable"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}
+          onClick={() => navigate(`/patients/${pid}/documents`)}
+        >
+          <FileText size={16} color="var(--color-text-muted)" />
+          View documents
+        </div>
+      </div>
 
       <div className="section">
         <h2 className="section-title">Recent Activity</h2>

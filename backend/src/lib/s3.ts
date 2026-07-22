@@ -28,10 +28,12 @@ const EXPIRES_IN = 900; // 15 minutes
 
 // ─── Key helpers ──────────────────────────────────────────────────────────────
 
-function generateKey(patientId: number, originalName: string): string {
+function generateKey(patientId: number, originalName: string, folder?: string): string {
   const ext  = originalName.split('.').pop()?.toLowerCase() ?? 'jpg';
   const rand = crypto.randomUUID();
-  return `patients/${patientId}/${rand}.${ext}`;
+  return folder
+    ? `patients/${patientId}/${folder}/${rand}.${ext}`
+    : `patients/${patientId}/${rand}.${ext}`;
 }
 
 export function publicUrl(key: string): string {
@@ -47,8 +49,9 @@ export async function presignUpload(
   patientId: number,
   filename: string,
   contentType: string,
+  folder?: string,
 ): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
-  const key = generateKey(patientId, filename);
+  const key = generateKey(patientId, filename, folder);
   const cmd = new PutObjectCommand({
     Bucket:      BUCKET(),
     Key:         key,

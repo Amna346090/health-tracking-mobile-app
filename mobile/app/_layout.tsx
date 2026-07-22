@@ -53,6 +53,8 @@ function NavigationGuard() {
       <Stack.Screen name="appointments/[patientId]" options={{ animation: 'slide_from_right' }} />
       {/* Messages inbox */}
       <Stack.Screen name="messages/[patientId]" options={{ animation: 'slide_from_right' }} />
+      {/* Document uploads */}
+      <Stack.Screen name="documents/[patientId]" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }

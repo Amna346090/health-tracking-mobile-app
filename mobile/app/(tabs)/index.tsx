@@ -311,6 +311,20 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {/* ── Documents ── */}
+        {isPatient && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Documents</Text>
+            </View>
+            <TouchableOpacity onPress={() => patientId && router.push(`/documents/${patientId}`)}>
+              <Card>
+                <Text style={summaryStyles.viewAll}>Upload or view your documents →</Text>
+              </Card>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Recent Health Logs ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

@@ -92,6 +92,7 @@ model User {
   appointmentsCreated   Appointment[]          @relation("AppointmentCreatedBy")
   messagesSent          Message[]              @relation("MessageSentBy")
   assignmentsPrescribed MedicationAssignment[] @relation("AssignmentPrescribedBy")
+  documentsUploaded     Document[]             @relation("DocumentUploadedBy")
 }
 
 model RefreshToken {
@@ -127,6 +128,7 @@ model PatientProfile {
   appointments            Appointment[]
   appointmentReminderLogs AppointmentReminderLog[]
   messages                Message[]
+  documents               Document[]
 }
 
 // ─── Medication ───────────────────────────────────────────────────────────────
@@ -260,6 +262,7 @@ model Appointment {
   updatedAt    DateTime          @updatedAt
 
   reminderLogs AppointmentReminderLog[]
+  documents    Document[]
 
   @@index([patientId])
   @@index([scheduledFor])
@@ -279,6 +282,26 @@ model AppointmentReminderLog {
   createdAt     DateTime        @default(now())
 
   @@unique([appointmentId, offsetLabel, channel])
+  @@index([patientId])
+  @@index([appointmentId])
+}
+
+// ─── Documents ────────────────────────────────────────────────────────────────
+
+model Document {
+  id            Int            @id @default(autoincrement())
+  patientId     Int
+  patient       PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointmentId Int?
+  appointment   Appointment?   @relation(fields: [appointmentId], references: [id])
+  fileType      String
+  tag           String?
+  url           String
+  key           String?
+  uploadedById  Int
+  uploadedBy    User           @relation("DocumentUploadedBy", fields: [uploadedById], references: [id])
+  uploadedAt    DateTime       @default(now())
+
   @@index([patientId])
   @@index([appointmentId])
 }

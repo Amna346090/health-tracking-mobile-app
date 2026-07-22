@@ -30,6 +30,11 @@ import {
   savePhoto,
 } from '../controllers/photo.controller';
 import {
+  getPresignedUrl as getDocumentPresignedUrl,
+  listDocuments,
+  createDocument,
+} from '../controllers/document.controller';
+import {
   getPatientTimeline,
   getPatientSummary,
 } from '../controllers/timeline.controller';
@@ -79,6 +84,12 @@ router.delete('/:patientId/health-logs/:logId', deleteLog);
 router.post('/:patientId/photos/presign', getPresignedUrl);
 router.get('/:patientId/photos', listPhotos);
 router.post('/:patientId/photos', savePhoto);
+
+// ─── Document sub-routes ───────────────────────────────────────────────────────
+// /presign must come before /:documentId (string vs numeric)
+router.post('/:patientId/documents/presign', getDocumentPresignedUrl);
+router.get('/:patientId/documents', listDocuments);
+router.post('/:patientId/documents', createDocument);
 
 // ─── Timeline + Summary ───────────────────────────────────────────────────────
 router.get('/:patientId/timeline', getPatientTimeline);
