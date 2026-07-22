@@ -13,7 +13,9 @@ import {
   createAssignment,
   updateAssignment,
   deactivateAssignment,
+  recordRefill,
 } from '../controllers/assignment.controller';
+import { downloadPrescription } from '../controllers/prescription.controller';
 import {
   listLogs,
   getLog,
@@ -60,6 +62,8 @@ router.get('/:patientId/assignments', getAssignments);
 router.post('/:patientId/assignments', requireRoles(Role.STAFF, Role.ADMIN), createAssignment);
 router.patch('/:patientId/assignments/:id', requireRoles(Role.STAFF, Role.ADMIN), updateAssignment);
 router.delete('/:patientId/assignments/:id', requireRoles(Role.STAFF, Role.ADMIN), deactivateAssignment);
+router.post('/:patientId/assignments/:id/refill', requireRoles(Role.STAFF, Role.ADMIN), recordRefill);
+router.get('/:patientId/assignments/:id/prescription.pdf', downloadPrescription);
 
 // ─── Health-log sub-routes ────────────────────────────────────────────────────
 // /trend must come before /:logId on the health-logs segment

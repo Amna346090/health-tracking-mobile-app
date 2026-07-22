@@ -67,3 +67,23 @@ export const api = {
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
+
+/** Downloads a binary response (e.g. a PDF) and triggers a browser save, bypassing the JSON envelope `api.*` expects. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: _accessToken ? { Authorization: `Bearer ${_accessToken}` } : {},
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError((body as { message?: string }).message ?? `HTTP ${res.status}`, res.status);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

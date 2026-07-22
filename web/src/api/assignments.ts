@@ -6,15 +6,21 @@ export interface MedicationAssignment {
   patientId: number;
   medicationId: number;
   frequency: string;
+  timesPerDay: number | null;
   timesOfDay: string[];
   startDate: string;
   endDate: string | null;
+  refillsAllowed: number | null;
+  refillsUsed: number;
+  prescribedById: number | null;
   active: boolean;
   createdAt: string;
   medication: {
     id: number;
     name: string;
     dosage: string;
+    doseAmount: number | null;
+    doseUnit: string | null;
     form: MedicationForm | null;
     quantityPerDose: number | null;
     foodInstruction: FoodInstruction | null;
@@ -28,10 +34,18 @@ export const getAssignments = (patientId: number, activeOnly = true) =>
 export interface CreateAssignmentInput {
   medicationId: number;
   frequency: string;
+  timesPerDay?: number;
   timesOfDay: string[];
   startDate: string;
   endDate?: string | null;
+  refillsAllowed?: number;
 }
 
 export const createAssignment = (patientId: number, data: CreateAssignmentInput) =>
   api.post<MedicationAssignment>(`/patients/${patientId}/assignments`, data);
+
+export const recordRefill = (patientId: number, id: number) =>
+  api.post<MedicationAssignment>(`/patients/${patientId}/assignments/${id}/refill`);
+
+export const prescriptionPdfPath = (patientId: number, id: number) =>
+  `/patients/${patientId}/assignments/${id}/prescription.pdf`;

@@ -84,13 +84,14 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  patientProfile      PatientProfile?
-  refreshTokens       RefreshToken[]
-  medicationLogs      MedicationLog[]
-  healthLogsCreated   HealthLog[]     @relation("HealthLogCreatedBy")
-  photosUploaded      Photo[]         @relation("PhotoUploadedBy")
-  appointmentsCreated Appointment[]   @relation("AppointmentCreatedBy")
-  messagesSent        Message[]       @relation("MessageSentBy")
+  patientProfile        PatientProfile?
+  refreshTokens         RefreshToken[]
+  medicationLogs        MedicationLog[]
+  healthLogsCreated     HealthLog[]            @relation("HealthLogCreatedBy")
+  photosUploaded        Photo[]                @relation("PhotoUploadedBy")
+  appointmentsCreated   Appointment[]          @relation("AppointmentCreatedBy")
+  messagesSent          Message[]              @relation("MessageSentBy")
+  assignmentsPrescribed MedicationAssignment[] @relation("AssignmentPrescribedBy")
 }
 
 model RefreshToken {
@@ -134,6 +135,8 @@ model Medication {
   id               Int              @id @default(autoincrement())
   name             String
   dosage           String
+  doseAmount       Float?
+  doseUnit         String?
   form             MedicationForm?
   quantityPerDose  Int?
   foodInstruction  FoodInstruction?
@@ -146,18 +149,23 @@ model Medication {
 }
 
 model MedicationAssignment {
-  id           Int            @id @default(autoincrement())
-  patientId    Int
-  patient      PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  medicationId Int
-  medication   Medication     @relation(fields: [medicationId], references: [id])
-  frequency    String
-  timesOfDay   String[]
-  startDate    DateTime       @db.Date
-  endDate      DateTime?      @db.Date
-  active       Boolean        @default(true)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id             Int            @id @default(autoincrement())
+  patientId      Int
+  patient        PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  medicationId   Int
+  medication     Medication     @relation(fields: [medicationId], references: [id])
+  frequency      String
+  timesPerDay    Int?
+  timesOfDay     String[]
+  startDate      DateTime       @db.Date
+  endDate        DateTime?      @db.Date
+  refillsAllowed Int?
+  refillsUsed    Int            @default(0)
+  prescribedById Int?
+  prescribedBy   User?          @relation("AssignmentPrescribedBy", fields: [prescribedById], references: [id])
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   logs         MedicationLog[]
   reminderLogs ReminderLog[]

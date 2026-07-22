@@ -7,6 +7,8 @@ export interface Medication {
   id: number;
   name: string;
   dosage: string;
+  doseAmount: number | null;
+  doseUnit: string | null;
   form: MedicationForm | null;
   quantityPerDose: number | null;
   foodInstruction: FoodInstruction | null;
@@ -20,6 +22,8 @@ export const getAllMedications = () => api.get<Medication[]>('/medications');
 export interface CreateMedicationInput {
   name: string;
   dosage: string;
+  doseAmount?: number;
+  doseUnit?: string;
   form?: MedicationForm;
   quantityPerDose?: number;
   foodInstruction?: FoodInstruction;

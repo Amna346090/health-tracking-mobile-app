@@ -13,6 +13,8 @@ interface Props {
 export function AddMedicationModal({ onClose, onCreated }: Props) {
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
+  const [doseAmount, setDoseAmount] = useState('');
+  const [doseUnit, setDoseUnit] = useState('');
   const [form, setForm] = useState<MedicationForm | ''>('');
   const [quantityPerDose, setQuantityPerDose] = useState('');
   const [foodInstruction, setFoodInstruction] = useState<FoodInstruction | ''>('');
@@ -26,9 +28,12 @@ export function AddMedicationModal({ onClose, onCreated }: Props) {
     setLoading(true);
     try {
       const quantity = quantityPerDose.trim() ? parseInt(quantityPerDose.trim(), 10) : undefined;
+      const amount = doseAmount.trim() ? parseFloat(doseAmount.trim()) : undefined;
       const med = await createMedication({
         name: name.trim(),
         dosage: dosage.trim(),
+        doseAmount: amount && !isNaN(amount) ? amount : undefined,
+        doseUnit: doseUnit.trim() || undefined,
         form: form || undefined,
         quantityPerDose: quantity && !isNaN(quantity) ? quantity : undefined,
         foodInstruction: foodInstruction || undefined,
@@ -55,6 +60,25 @@ export function AddMedicationModal({ onClose, onCreated }: Props) {
         <div className="field">
           <label htmlFor="am-dosage">Dosage</label>
           <input id="am-dosage" value={dosage} onChange={(e) => setDosage(e.target.value)} placeholder="e.g. 500mg" required />
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="am-doseAmount">Dose amount</label>
+            <input
+              id="am-doseAmount"
+              type="number"
+              step="any"
+              min={0}
+              value={doseAmount}
+              onChange={(e) => setDoseAmount(e.target.value)}
+              placeholder="e.g. 500"
+            />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="am-doseUnit">Dose unit</label>
+            <input id="am-doseUnit" value={doseUnit} onChange={(e) => setDoseUnit(e.target.value)} placeholder="e.g. mg" />
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

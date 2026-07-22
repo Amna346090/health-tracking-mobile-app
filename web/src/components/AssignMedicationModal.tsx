@@ -9,6 +9,14 @@ import { ApiError } from '../api/client';
 
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'As needed', 'Weekly'];
 
+const FREQUENCY_TIMES_PER_DAY: Record<string, number | ''> = {
+  'Once daily': 1,
+  'Twice daily': 2,
+  'Three times daily': 3,
+  'As needed': '',
+  'Weekly': '',
+};
+
 interface Props {
   patientId: number;
   onClose: () => void;
@@ -19,9 +27,11 @@ export function AssignMedicationModal({ patientId, onClose, onAssigned }: Props)
   const [medications, setMedications] = useState<Medication[]>([]);
   const [medicationId, setMedicationId] = useState('');
   const [frequency, setFrequency] = useState(FREQUENCIES[0]);
+  const [timesPerDay, setTimesPerDay] = useState<string>(String(FREQUENCY_TIMES_PER_DAY[FREQUENCIES[0]]));
   const [timesOfDay, setTimesOfDay] = useState('08:00');
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState('');
+  const [refillsAllowed, setRefillsAllowed] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -40,12 +50,16 @@ export function AssignMedicationModal({ patientId, onClose, onAssigned }: Props)
 
     setLoading(true);
     try {
+      const parsedTimesPerDay = timesPerDay.trim() ? parseInt(timesPerDay.trim(), 10) : undefined;
+      const parsedRefills = refillsAllowed.trim() ? parseInt(refillsAllowed.trim(), 10) : undefined;
       const assignment = await createAssignment(patientId, {
         medicationId: Number(medicationId),
         frequency,
+        timesPerDay: parsedTimesPerDay && !isNaN(parsedTimesPerDay) ? parsedTimesPerDay : undefined,
         timesOfDay: timesOfDay.split(',').map((t) => t.trim()).filter(Boolean),
         startDate,
         endDate: endDate.trim() || null,
+        refillsAllowed: parsedRefills && !isNaN(parsedRefills) ? parsedRefills : undefined,
       });
       onAssigned(assignment);
     } catch (err) {
@@ -70,11 +84,31 @@ export function AssignMedicationModal({ patientId, onClose, onAssigned }: Props)
           </select>
         </div>
 
-        <div className="field">
-          <label htmlFor="asn-frequency">Frequency</label>
-          <select id="asn-frequency" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
-          </select>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="asn-frequency">Frequency</label>
+            <select
+              id="asn-frequency"
+              value={frequency}
+              onChange={(e) => {
+                setFrequency(e.target.value);
+                setTimesPerDay(String(FREQUENCY_TIMES_PER_DAY[e.target.value] ?? ''));
+              }}
+            >
+              {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label htmlFor="asn-timesPerDay">Times per day</label>
+            <input
+              id="asn-timesPerDay"
+              type="number"
+              min={0}
+              value={timesPerDay}
+              onChange={(e) => setTimesPerDay(e.target.value)}
+              placeholder="e.g. 2"
+            />
+          </div>
         </div>
 
         <div className="field">
@@ -92,10 +126,22 @@ export function AssignMedicationModal({ patientId, onClose, onAssigned }: Props)
             <label htmlFor="asn-start">Start date</label>
             <input id="asn-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
           </div>
-          <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+          <div className="field" style={{ flex: 1 }}>
             <label htmlFor="asn-end">End date (optional)</label>
             <input id="asn-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
+        </div>
+
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label htmlFor="asn-refills">Refills allowed (optional)</label>
+          <input
+            id="asn-refills"
+            type="number"
+            min={0}
+            value={refillsAllowed}
+            onChange={(e) => setRefillsAllowed(e.target.value)}
+            placeholder="e.g. 3"
+          />
         </div>
 
         <div className="modal-actions">

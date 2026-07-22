@@ -1,3 +1,5 @@
+import * as FileSystem from 'expo-file-system';
+
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
 // Module-level token store — avoids circular dependency between context ↔ client.
@@ -66,3 +68,15 @@ export const api = {
   patch:  <T>(path: string, body?: unknown)      => request<T>(path, { method: 'PATCH',  body: JSON.stringify(body) }),
   delete: <T>(path: string)                      => request<T>(path, { method: 'DELETE' }),
 };
+
+/** Downloads a binary response (e.g. a PDF) to a local file with the auth header attached. Returns the local file URI. */
+export async function downloadFile(path: string, localFilename: string): Promise<string> {
+  const fileUri = `${FileSystem.cacheDirectory}${localFilename}`;
+  const result = await FileSystem.downloadAsync(`${BASE_URL}${path}`, fileUri, {
+    headers: _accessToken ? { Authorization: `Bearer ${_accessToken}` } : {},
+  });
+  if (result.status !== 200) {
+    throw new ApiError(`Download failed (HTTP ${result.status})`, result.status);
+  }
+  return result.uri;
+}

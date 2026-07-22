@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown } from 'lucide-react';
 import { getPatientById } from '../api/patients';
 import type { PatientRow } from '../api/patients';
 import { Avatar } from '../components/Avatar';
@@ -10,9 +10,10 @@ import type { PatientSummary, TimelineEvent } from '../api/timeline';
 import { getWeightTrend } from '../api/healthLog';
 import { WeightChart } from '../components/WeightChart';
 import type { WeightPoint } from '../components/WeightChart';
-import { getAssignments } from '../api/assignments';
+import { getAssignments, prescriptionPdfPath } from '../api/assignments';
 import type { MedicationAssignment } from '../api/assignments';
 import { AssignMedicationModal } from '../components/AssignMedicationModal';
+import { downloadFile } from '../api/client';
 import { getAppointments, updateAppointment } from '../api/appointments';
 import type { Appointment } from '../api/appointments';
 import { AppointmentModal } from '../components/AppointmentModal';
@@ -253,6 +254,13 @@ export function PatientDashboardPage() {
                   <div className="row-name">{a.medication.name} · {a.medication.dosage}</div>
                   <div className="row-sub">{a.frequency} · {a.timesOfDay.join(', ')}</div>
                 </div>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => downloadFile(prescriptionPdfPath(pid, a.id), `${a.medication.name}-prescription.pdf`)}
+                >
+                  <FileDown size={13} strokeWidth={2.2} />
+                  PDF
+                </button>
               </div>
             ))}
           </div>

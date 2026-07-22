@@ -17,15 +17,20 @@ export interface MedicationAssignment {
   patientId: number;
   medicationId: number;
   frequency: string;
+  timesPerDay: number | null;
   timesOfDay: string[];
   startDate: string;
   endDate: string | null;
+  refillsAllowed: number | null;
+  refillsUsed: number;
   active: boolean;
   createdAt: string;
   medication: {
     id: number;
     name: string;
     dosage: string;
+    doseAmount: number | null;
+    doseUnit: string | null;
     form: string | null;
     quantityPerDose: number | null;
     foodInstruction: string | null;
@@ -59,6 +64,10 @@ export function createAssignment(
   },
 ): Promise<MedicationAssignment> {
   return api.post<MedicationAssignment>(`/patients/${patientId}/assignments`, data);
+}
+
+export function prescriptionPdfPath(patientId: number, id: number): string {
+  return `/patients/${patientId}/assignments/${id}/prescription.pdf`;
 }
 
 export function getLogsForAssignment(

@@ -84,9 +84,12 @@ export interface CreateAssignmentInput {
   patientId: number;
   medicationId: number;
   frequency: string;
+  timesPerDay?: number;
   timesOfDay: string[];
   startDate: string;
   endDate?: string | null;
+  refillsAllowed?: number;
+  prescribedById?: number;
 }
 
 export async function createAssignment(data: CreateAssignmentInput) {
@@ -102,9 +105,12 @@ export async function createAssignment(data: CreateAssignmentInput) {
       patientId: data.patientId,
       medicationId: data.medicationId,
       frequency: data.frequency,
+      timesPerDay: data.timesPerDay ?? null,
       timesOfDay: data.timesOfDay,
       startDate: new Date(data.startDate),
       endDate: data.endDate ? new Date(data.endDate) : null,
+      refillsAllowed: data.refillsAllowed ?? null,
+      prescribedById: data.prescribedById ?? null,
       active: true,
     },
     include: { medication: { select: MEDICATION_SELECT } },
@@ -115,9 +121,11 @@ export async function updateAssignment(
   id: number,
   data: Partial<{
     frequency: string;
+    timesPerDay: number | null;
     timesOfDay: string[];
     startDate: string;
     endDate: string | null;
+    refillsAllowed: number | null;
     active: boolean;
   }>,
 ) {
@@ -128,13 +136,28 @@ export async function updateAssignment(
     where: { id },
     data: {
       ...(data.frequency !== undefined && { frequency: data.frequency }),
+      ...(data.timesPerDay !== undefined && { timesPerDay: data.timesPerDay }),
       ...(data.timesOfDay !== undefined && { timesOfDay: data.timesOfDay }),
       ...(data.startDate !== undefined && { startDate: new Date(data.startDate) }),
       ...(data.endDate !== undefined && {
         endDate: data.endDate ? new Date(data.endDate) : null,
       }),
+      ...(data.refillsAllowed !== undefined && { refillsAllowed: data.refillsAllowed }),
       ...(data.active !== undefined && { active: data.active }),
     },
+    include: { medication: { select: MEDICATION_SELECT } },
+  });
+}
+
+export async function recordRefill(id: number) {
+  const assignment = await prisma.medicationAssignment.findUnique({ where: { id } });
+  if (!assignment) throw new AppError('Assignment not found', 404);
+  if (assignment.refillsAllowed === null || assignment.refillsUsed >= assignment.refillsAllowed) {
+    throw new AppError('No refills remaining', 400);
+  }
+  return prisma.medicationAssignment.update({
+    where: { id },
+    data: { refillsUsed: assignment.refillsUsed + 1 },
     include: { medication: { select: MEDICATION_SELECT } },
   });
 }

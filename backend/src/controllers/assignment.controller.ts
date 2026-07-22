@@ -43,7 +43,7 @@ export async function getTodaySchedule(req: Request, res: Response, next: NextFu
 export async function createAssignment(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const patientId = parseId(req.params.patientId);
-    const { medicationId, frequency, timesOfDay, startDate, endDate } = req.body;
+    const { medicationId, frequency, timesPerDay, timesOfDay, startDate, endDate, refillsAllowed } = req.body;
 
     if (!medicationId || !frequency || !timesOfDay?.length || !startDate) {
       res.status(400).json({
@@ -57,9 +57,12 @@ export async function createAssignment(req: Request, res: Response, next: NextFu
       patientId,
       medicationId: Number(medicationId),
       frequency,
+      timesPerDay: timesPerDay !== undefined ? Number(timesPerDay) : undefined,
       timesOfDay,
       startDate,
       endDate: endDate ?? null,
+      refillsAllowed: refillsAllowed !== undefined ? Number(refillsAllowed) : undefined,
+      prescribedById: req.user!.id,
     });
     res.status(201).json({ status: 'ok', data: assignment });
   } catch (err) { next(err); }
@@ -69,6 +72,14 @@ export async function updateAssignment(req: Request, res: Response, next: NextFu
   try {
     const id = parseId(req.params.id);
     const updated = await assignmentService.updateAssignment(id, req.body);
+    res.json({ status: 'ok', data: updated });
+  } catch (err) { next(err); }
+}
+
+export async function recordRefill(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = parseId(req.params.id);
+    const updated = await assignmentService.recordRefill(id);
     res.json({ status: 'ok', data: updated });
   } catch (err) { next(err); }
 }

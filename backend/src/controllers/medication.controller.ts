@@ -20,7 +20,7 @@ export async function getMedicationById(req: Request, res: Response, next: NextF
 
 export async function createMedication(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, dosage, form, quantityPerDose, foodInstruction, instructions, prescribingNotes } = req.body;
+    const { name, dosage, doseAmount, doseUnit, form, quantityPerDose, foodInstruction, instructions, prescribingNotes } = req.body;
     if (!name?.trim() || !dosage?.trim()) {
       res.status(400).json({ status: 'error', message: 'name and dosage are required' });
       return;
@@ -32,6 +32,8 @@ export async function createMedication(req: Request, res: Response, next: NextFu
     const med = await medicationService.createMedication({
       name: name.trim(),
       dosage: dosage.trim(),
+      doseAmount,
+      doseUnit,
       form,
       quantityPerDose,
       foodInstruction,
@@ -46,7 +48,7 @@ export async function updateMedication(req: Request, res: Response, next: NextFu
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ status: 'error', message: 'Invalid medication ID' }); return; }
-    const { name, dosage, form, quantityPerDose, foodInstruction, instructions, prescribingNotes } = req.body;
+    const { name, dosage, doseAmount, doseUnit, form, quantityPerDose, foodInstruction, instructions, prescribingNotes } = req.body;
     if (quantityPerDose !== undefined && (!Number.isInteger(quantityPerDose) || quantityPerDose < 1)) {
       res.status(400).json({ status: 'error', message: 'quantityPerDose must be a positive integer' });
       return;
@@ -54,6 +56,8 @@ export async function updateMedication(req: Request, res: Response, next: NextFu
     const med = await medicationService.updateMedication(id, {
       name,
       dosage,
+      doseAmount,
+      doseUnit,
       form,
       quantityPerDose,
       foodInstruction,

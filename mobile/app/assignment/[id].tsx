@@ -10,6 +10,7 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { DoseStatusBadge } from '../../components/DoseStatusBadge';
@@ -18,9 +19,11 @@ import {
   getLogsForAssignment,
   logDose,
   getAssignments,
+  prescriptionPdfPath,
   type MedicationAssignment,
   type MedicationLog,
 } from '../../api/assignments';
+import { downloadFile } from '../../api/client';
 import { useAuth } from '../../context/auth';
 
 function formatDateTime(iso: string): string {
@@ -43,6 +46,7 @@ export default function AssignmentDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load the assignment from patient assignments list (patient can only see their own)
@@ -89,6 +93,22 @@ export default function AssignmentDetailScreen() {
       setMarking(false);
     }
   }, [assignmentId, loadLogs]);
+
+  const handleDownloadPrescription = useCallback(async () => {
+    if (!user?.patientProfile?.id) return;
+    setDownloading(true);
+    try {
+      const path = prescriptionPdfPath(user.patientProfile.id, assignmentId);
+      const fileUri = await downloadFile(path, `prescription-${assignmentId}.pdf`);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
+      }
+    } catch (e) {
+      Alert.alert('Could not download prescription', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  }, [assignmentId, user?.patientProfile?.id]);
 
   if (loading) {
     return (
@@ -151,6 +171,20 @@ export default function AssignmentDetailScreen() {
             <Text style={styles.infoText}>{assignment.medication.instructions}</Text>
           </View>
         )}
+
+        {/* Download prescription */}
+        <TouchableOpacity
+          style={[styles.downloadBtn, downloading && styles.markBtnDisabled]}
+          onPress={handleDownloadPrescription}
+          disabled={downloading}
+          activeOpacity={0.8}
+        >
+          {downloading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Text style={styles.downloadBtnText}>Download Prescription</Text>
+          )}
+        </TouchableOpacity>
 
         {/* Mark as taken button */}
         {!todayLogged && (
@@ -239,6 +273,17 @@ const styles = StyleSheet.create({
   },
   markBtnDisabled: { opacity: 0.6 },
   markBtnText: { ...typography.body1, fontWeight: '600' as const, color: colors.text.inverse },
+
+  downloadBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  downloadBtnText: { ...typography.body1, fontWeight: '600' as const, color: colors.primary },
 
   todayDoneCard: {
     backgroundColor: colors.successBg,
