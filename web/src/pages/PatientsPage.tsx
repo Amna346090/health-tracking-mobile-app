@@ -79,7 +79,7 @@ export function PatientsPage() {
           />
         </div>
         {isAdmin && (
-          <select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} style={{ maxWidth: 220 }}>
+          <select className="select-filter" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} style={{ maxWidth: 220 }}>
             <option value="">All providers</option>
             {providers.map((p) => (
               <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}'s panel</option>

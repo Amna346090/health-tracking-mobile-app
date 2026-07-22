@@ -34,13 +34,14 @@ export function MessageThread({ messages }: Props) {
         const label = dayLabel(m.createdAt);
         const showDivider = label !== lastDay;
         lastDay = label;
+        const isStaffSide = m.sender.role !== 'PATIENT';
 
         return (
           <div key={m.id}>
             {showDivider && (
               <div className="message-day-divider"><span>{label}</span></div>
             )}
-            <div className="message-bubble">
+            <div className={`message-bubble ${isStaffSide ? 'message-bubble-staff' : 'message-bubble-patient'}`}>
               <div className="message-bubble-header">
                 <span className="message-bubble-sender">{m.sender.firstName} {m.sender.lastName}</span>
                 {!m.readAt && <span className="message-unread-dot" title="Unread" />}

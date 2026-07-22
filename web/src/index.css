@@ -806,13 +806,22 @@ button {
 }
 
 .message-bubble {
-  background: var(--color-warning-bg);
   border-radius: var(--radius-md);
-  border-top-left-radius: 4px;
   padding: 10px 14px;
   max-width: 80%;
-  align-self: flex-start;
   position: relative;
+}
+
+.message-bubble-patient {
+  background: var(--color-warning-bg);
+  border-top-left-radius: 4px;
+  align-self: flex-start;
+}
+
+.message-bubble-staff {
+  background: var(--gradient-primary);
+  border-top-right-radius: 4px;
+  align-self: flex-end;
 }
 
 .message-bubble-header {
@@ -822,10 +831,16 @@ button {
   margin-bottom: 3px;
 }
 
-.message-bubble-sender {
+.message-bubble-patient .message-bubble-sender {
   font-size: 12px;
   font-weight: 700;
   color: var(--color-warning);
+}
+
+.message-bubble-staff .message-bubble-sender {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .message-unread-dot {
@@ -836,16 +851,33 @@ button {
   flex-shrink: 0;
 }
 
-.message-bubble-body {
+.message-bubble-staff .message-unread-dot {
+  background: #fff;
+}
+
+.message-bubble-patient .message-bubble-body {
   font-size: 13.5px;
   color: var(--color-text-primary);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.message-bubble-time {
+.message-bubble-staff .message-bubble-body {
+  font-size: 13.5px;
+  color: #fff;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-bubble-patient .message-bubble-time {
   font-size: 11px;
   color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.message-bubble-staff .message-bubble-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
   margin-top: 4px;
 }
 
@@ -875,6 +907,25 @@ button {
 }
 
 .search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.select-filter {
+  height: 42px;
+  padding: 0 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: var(--color-bg-card);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.select-filter:focus {
   outline: none;
   border-color: var(--color-primary);
 }
