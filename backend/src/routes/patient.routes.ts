@@ -54,6 +54,12 @@ import {
   updateTestRequest,
 } from '../controllers/testRequest.controller';
 import { markContacted } from '../controllers/touchBase.controller';
+import {
+  listMetrics,
+  getTrend,
+  createMetric,
+  deleteMetric,
+} from '../controllers/healthMetric.controller';
 
 const router = Router();
 
@@ -118,5 +124,12 @@ router.patch('/:patientId/test-requests/:id', updateTestRequest);
 
 // ─── Touch-base ─────────────────────────────────────────────────────────────────
 router.post('/:patientId/contact', requireRoles(Role.STAFF, Role.ADMIN), markContacted);
+
+// ─── Health metric sub-routes ──────────────────────────────────────────────────
+// /trend must come before /:id, same convention as health-logs
+router.get('/:patientId/health-metrics/trend', getTrend);
+router.get('/:patientId/health-metrics', listMetrics);
+router.post('/:patientId/health-metrics', createMetric);
+router.delete('/:patientId/health-metrics/:id', deleteMetric);
 
 export default router;

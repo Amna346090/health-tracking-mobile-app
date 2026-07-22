@@ -355,6 +355,20 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {/* ── Health Metrics ── */}
+        {isPatient && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Health Metrics</Text>
+            </View>
+            <TouchableOpacity onPress={() => patientId && router.push(`/health-metrics/${patientId}`)}>
+              <Card>
+                <Text style={summaryStyles.viewAll}>Log cholesterol, bloodwork, and more →</Text>
+              </Card>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Recent Health Logs ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

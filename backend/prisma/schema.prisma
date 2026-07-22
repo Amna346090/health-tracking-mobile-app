@@ -101,6 +101,7 @@ model User {
   documentsUploaded     Document[]             @relation("DocumentUploadedBy")
   testRequestsCreated   TestRequest[]          @relation("TestRequestedBy")
   notifications         Notification[]
+  healthMetricsCreated  HealthMetric[]         @relation("HealthMetricCreatedBy")
 }
 
 model RefreshToken {
@@ -142,6 +143,7 @@ model PatientProfile {
   testRequests            TestRequest[]
   testRequestReminderLogs TestRequestReminderLog[]
   notifications           Notification[]
+  healthMetrics           HealthMetric[]
 }
 
 // ─── Medication ───────────────────────────────────────────────────────────────
@@ -315,7 +317,8 @@ model Document {
   uploadedBy    User           @relation("DocumentUploadedBy", fields: [uploadedById], references: [id])
   uploadedAt    DateTime       @default(now())
 
-  testRequestFulfillments TestRequest[]
+  testRequestFulfillments  TestRequest[]
+  healthMetricFulfillments HealthMetric[]
 
   @@index([patientId])
   @@index([appointmentId])
@@ -400,4 +403,36 @@ model Notification {
 
   @@index([userId])
   @@index([patientId])
+}
+
+// ─── Health Metrics ─────────────────────────────────────────────────────────────
+
+enum HealthMetricType {
+  CHOLESTEROL_TOTAL
+  CHOLESTEROL_LDL
+  CHOLESTEROL_HDL
+  TRIGLYCERIDES
+  BLOOD_GLUCOSE
+  BLOOD_PRESSURE_SYSTOLIC
+  BLOOD_PRESSURE_DIASTOLIC
+  OTHER
+}
+
+model HealthMetric {
+  id          Int              @id @default(autoincrement())
+  patientId   Int
+  patient     PatientProfile   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type        HealthMetricType
+  label       String?
+  value       Float
+  unit        String?
+  recordedAt  DateTime         @db.Date
+  documentId  Int?
+  document    Document?        @relation(fields: [documentId], references: [id])
+  createdById Int
+  createdBy   User             @relation("HealthMetricCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime         @default(now())
+
+  @@index([patientId])
+  @@index([patientId, type])
 }

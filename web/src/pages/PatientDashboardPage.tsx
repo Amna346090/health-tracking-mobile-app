@@ -11,6 +11,9 @@ import type { PatientSummary, TimelineEvent } from '../api/timeline';
 import { getWeightTrend } from '../api/healthLog';
 import { WeightChart } from '../components/WeightChart';
 import type { WeightPoint } from '../components/WeightChart';
+import { MetricChart } from '../components/MetricChart';
+import { getMetrics, getMetricTrend, HEALTH_METRIC_TYPE_LABEL } from '../api/healthMetrics';
+import type { HealthMetric, HealthMetricType, MetricTrendPoint } from '../api/healthMetrics';
 import { getAssignments, prescriptionPdfPath } from '../api/assignments';
 import type { MedicationAssignment } from '../api/assignments';
 import { AssignMedicationModal } from '../components/AssignMedicationModal';
@@ -78,6 +81,11 @@ function formatWhen(iso: string): string {
   });
 }
 
+const HEALTH_METRIC_TYPES: HealthMetricType[] = [
+  'CHOLESTEROL_TOTAL', 'CHOLESTEROL_LDL', 'CHOLESTEROL_HDL', 'TRIGLYCERIDES',
+  'BLOOD_GLUCOSE', 'BLOOD_PRESSURE_SYSTOLIC', 'BLOOD_PRESSURE_DIASTOLIC', 'OTHER',
+];
+
 const TOUCH_BASE_THRESHOLD_PRESETS: { label: string; days: number }[] = [
   { label: '1 week', days: 7 },
   { label: '2 weeks', days: 14 },
@@ -134,6 +142,9 @@ export function PatientDashboardPage() {
   const [showSendMessage, setShowSendMessage] = useState(false);
   const [testRequestModal, setTestRequestModal] = useState<'new' | TestRequest | null>(null);
   const [markingContacted, setMarkingContacted] = useState(false);
+  const [metricType, setMetricType] = useState<HealthMetricType>('CHOLESTEROL_LDL');
+  const [metricTrend, setMetricTrend] = useState<MetricTrendPoint[]>([]);
+  const [metricEntries, setMetricEntries] = useState<HealthMetric[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -153,6 +164,12 @@ export function PatientDashboardPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [pid]);
+
+  useEffect(() => {
+    Promise.all([getMetricTrend(pid, metricType), getMetrics(pid, metricType)])
+      .then(([trendData, entries]) => { setMetricTrend(trendData); setMetricEntries(entries); })
+      .catch(() => {});
+  }, [pid, metricType]);
 
   async function handleMarkCompleted(appointment: Appointment) {
     const updated = await updateAppointment(pid, appointment.id, { status: 'COMPLETED' });
@@ -323,6 +340,45 @@ export function PatientDashboardPage() {
           <WeightChart data={trend} />
         </div>
       )}
+
+      <div className="section">
+        <h2 className="section-title">Health Metrics</h2>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {HEALTH_METRIC_TYPES.map((type) => (
+            <button
+              key={type}
+              className={`btn btn-sm ${metricType === type ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setMetricType(type)}
+            >
+              {HEALTH_METRIC_TYPE_LABEL[type]}
+            </button>
+          ))}
+        </div>
+        {metricTrend.length >= 2 && (
+          <div style={{ marginBottom: 12 }}>
+            <MetricChart data={metricTrend} label={HEALTH_METRIC_TYPE_LABEL[metricType]} unit={metricEntries[0]?.unit ?? ''} />
+          </div>
+        )}
+        {metricEntries.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13.5 }}>
+            No {HEALTH_METRIC_TYPE_LABEL[metricType].toLowerCase()} entries yet.
+          </div>
+        ) : (
+          <div className="card-list">
+            {metricEntries.map((m) => (
+              <div key={m.id} className="row">
+                <div className="row-body">
+                  <div className="row-name">{m.value} {m.unit ?? ''}</div>
+                  <div className="row-sub">
+                    {formatDate(m.recordedAt)}
+                    {m.documentId && ' · Linked to a document'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="section">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

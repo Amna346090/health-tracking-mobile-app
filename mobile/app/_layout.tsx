@@ -57,6 +57,8 @@ function NavigationGuard() {
       <Stack.Screen name="documents/[patientId]" options={{ animation: 'slide_from_right' }} />
       {/* Test/scan requests */}
       <Stack.Screen name="test-requests/[patientId]" options={{ animation: 'slide_from_right' }} />
+      {/* Health metrics (cholesterol, lipid profile, etc.) */}
+      <Stack.Screen name="health-metrics/[patientId]" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }
