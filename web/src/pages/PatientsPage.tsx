@@ -68,7 +68,7 @@ export function PatientsPage() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+      <div className="filter-bar">
         <div className="search-wrap" style={{ flex: 1, marginBottom: 0 }}>
           <Search size={16} strokeWidth={2} />
           <input
@@ -79,7 +79,7 @@ export function PatientsPage() {
           />
         </div>
         {isAdmin && (
-          <select className="select-filter" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} style={{ maxWidth: 220 }}>
+          <select className="select-filter" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)}>
             <option value="">All providers</option>
             {providers.map((p) => (
               <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}'s panel</option>

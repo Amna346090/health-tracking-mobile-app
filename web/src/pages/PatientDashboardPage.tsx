@@ -457,7 +457,7 @@ export function PatientDashboardPage() {
                 </div>
                 <span className={`badge badge-${a.status.toLowerCase()}`}>{STATUS_LABEL[a.status]}</span>
                 {(a.status === 'SCHEDULED' || a.status === 'RESCHEDULED') && (
-                  <div style={{ display: 'flex', gap: 6, marginLeft: 10 }}>
+                  <div className="row-actions">
                     <button className="btn btn-secondary btn-sm" onClick={() => setAppointmentModal(a)}>
                       Reschedule
                     </button>
@@ -523,7 +523,7 @@ export function PatientDashboardPage() {
                     {overdue ? 'Overdue' : TEST_REQUEST_STATUS_LABEL[req.status]}
                   </span>
                   {req.status === 'PENDING' && (
-                    <div style={{ display: 'flex', gap: 6, marginLeft: 10 }}>
+                    <div className="row-actions">
                       <button className="btn btn-secondary btn-sm" onClick={() => setTestRequestModal(req)}>
                         Edit
                       </button>

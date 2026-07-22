@@ -72,13 +72,15 @@ export function PatientDocumentsPage() {
                 </div>
               </div>
               {!doc.tag && <span className="badge badge-cancelled">Untagged</span>}
-              <a href={doc.url} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">
-                View
-              </a>
-              <button className="btn btn-secondary btn-sm" onClick={() => setTagging(doc)}>
-                <Tag size={13} strokeWidth={2.2} />
-                Edit tag
-              </button>
+              <div className="row-actions">
+                <a href={doc.url} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">
+                  View
+                </a>
+                <button className="btn btn-secondary btn-sm" onClick={() => setTagging(doc)}>
+                  <Tag size={13} strokeWidth={2.2} />
+                  Edit tag
+                </button>
+              </div>
             </div>
           ))}
         </div>

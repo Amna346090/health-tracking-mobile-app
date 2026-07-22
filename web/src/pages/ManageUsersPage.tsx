@@ -86,7 +86,7 @@ export function ManageUsersPage() {
                 </div>
                 <span className={badgeClass(u.role)}>{u.role}</span>
                 {!isSelf && (
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="row-actions">
                     {u.role === 'STAFF' && (() => {
                       const provider = providers.find((p) => p.userId === u.id);
                       return provider ? (
