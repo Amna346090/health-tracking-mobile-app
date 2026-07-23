@@ -10,8 +10,8 @@ import { deleteUser } from '../api/users';
 import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { AddPatientModal } from '../components/AddPatientModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { Spinner } from '../components/Spinner';
-import { ApiError } from '../api/client';
 
 function initialsOf(row: PatientRow): string {
   return (row.user.firstName[0] + row.user.lastName[0]).toUpperCase();
@@ -36,8 +36,7 @@ export function PatientsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PatientRow | null>(null);
 
   useEffect(() => {
     if (isAdmin) getAllProviders().then(setProviders).catch(() => {});
@@ -58,25 +57,6 @@ export function PatientsPage() {
       `${p.user.firstName} ${p.user.lastName} ${p.user.email}`.toLowerCase().includes(q),
     );
   }, [patients, query]);
-
-  async function handleDelete(e: MouseEvent, p: PatientRow) {
-    e.stopPropagation();
-    const confirmed = window.confirm(
-      `Delete ${p.user.firstName} ${p.user.lastName}? This permanently removes their account and all associated health data (logs, medications, photos, documents). This cannot be undone.`,
-    );
-    if (!confirmed) return;
-
-    setError(null);
-    setDeletingId(p.id);
-    try {
-      await deleteUser(p.user.id);
-      setPatients((prev) => prev.filter((row) => row.id !== p.id));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not delete this patient.');
-    } finally {
-      setDeletingId(null);
-    }
-  }
 
   return (
     <div className="page">
@@ -112,8 +92,6 @@ export function PatientsPage() {
         )}
       </div>
 
-      {error && <div className="form-error">{error}</div>}
-
       {loading ? (
         <Spinner />
       ) : filtered.length === 0 ? (
@@ -124,7 +102,6 @@ export function PatientsPage() {
             <div
               key={p.id}
               className="row row-clickable"
-              style={{ opacity: deletingId === p.id ? 0.4 : 1 }}
               onClick={() => navigate(`/patients/${p.id}`)}
             >
               <Avatar url={p.avatarUrl} initials={initialsOf(p)} />
@@ -136,8 +113,7 @@ export function PatientsPage() {
                 <div className="row-actions">
                   <button
                     className="btn btn-danger btn-sm"
-                    onClick={(e) => handleDelete(e, p)}
-                    disabled={deletingId === p.id}
+                    onClick={(e: MouseEvent) => { e.stopPropagation(); setDeleteTarget(p); }}
                   >
                     <Trash2 size={13} strokeWidth={2.2} />
                     Delete
@@ -154,6 +130,19 @@ export function PatientsPage() {
         <AddPatientModal
           onClose={() => setShowAdd(false)}
           onCreated={(patientId) => navigate(`/patients/${patientId}`)}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title="Delete Patient"
+          message={`Delete ${deleteTarget.user.firstName} ${deleteTarget.user.lastName}? This permanently removes their account and all associated health data (logs, medications, photos, documents). This cannot be undone.`}
+          confirmLabel="Delete patient"
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={async () => {
+            await deleteUser(deleteTarget.user.id);
+            setPatients((prev) => prev.filter((row) => row.id !== deleteTarget.id));
+          }}
         />
       )}
     </div>
