@@ -21,8 +21,8 @@ export async function getMedicationById(req: Request, res: Response, next: NextF
 export async function createMedication(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { name, dosage, doseAmount, doseUnit, form, quantityPerDose, foodInstruction, instructions, prescribingNotes } = req.body;
-    if (!name?.trim() || !dosage?.trim()) {
-      res.status(400).json({ status: 'error', message: 'name and dosage are required' });
+    if (!name?.trim()) {
+      res.status(400).json({ status: 'error', message: 'name is required' });
       return;
     }
     if (quantityPerDose !== undefined && (!Number.isInteger(quantityPerDose) || quantityPerDose < 1)) {
@@ -31,7 +31,7 @@ export async function createMedication(req: Request, res: Response, next: NextFu
     }
     const med = await medicationService.createMedication({
       name: name.trim(),
-      dosage: dosage.trim(),
+      dosage: dosage?.trim() || undefined,
       doseAmount,
       doseUnit,
       form,

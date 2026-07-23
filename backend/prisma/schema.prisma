@@ -156,7 +156,7 @@ model PatientProfile {
 model Medication {
   id               Int              @id @default(autoincrement())
   name             String
-  dosage           String
+  dosage           String?
   doseAmount       Float?
   doseUnit         String?
   form             MedicationForm?

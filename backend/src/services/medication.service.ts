@@ -4,7 +4,7 @@ import { MedicationForm, FoodInstruction } from '@prisma/client';
 
 export interface CreateMedicationInput {
   name: string;
-  dosage: string;
+  dosage?: string;
   doseAmount?: number;
   doseUnit?: string;
   form?: MedicationForm;

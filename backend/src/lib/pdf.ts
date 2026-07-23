@@ -5,7 +5,7 @@ export interface PrescriptionPdfData {
   patientDateOfBirth: string;
   prescriberName: string | null;
   medicationName: string;
-  dosage: string;
+  dosage: string | null;
   doseAmount: number | null;
   doseUnit: string | null;
   form: string | null;
@@ -58,7 +58,7 @@ export function renderPrescriptionPdf(data: PrescriptionPdfData): Promise<Buffer
 
   const doseLine = data.doseAmount && data.doseUnit
     ? `${data.doseAmount} ${data.doseUnit}`
-    : data.dosage;
+    : data.dosage ?? '—';
   field(doc, 'Dose:', doseLine);
   if (data.form) field(doc, 'Form:', data.form.charAt(0) + data.form.slice(1).toLowerCase());
   if (data.quantityPerDose) field(doc, 'Quantity per dose:', String(data.quantityPerDose));
