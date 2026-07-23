@@ -31,8 +31,13 @@ interface RegisterInput {
   address?: string;
 }
 
-export async function register(input: RegisterInput) {
+export async function register(input: RegisterInput, requestedByRole: Role) {
   const { email, password, role = Role.PATIENT, firstName, lastName, dateOfBirth, gender, healthIssue, phone, address } = input;
+
+  // Only admins may create STAFF/ADMIN accounts; staff may only create patients.
+  if (role !== Role.PATIENT && requestedByRole !== Role.ADMIN) {
+    throw new AppError('Only admins can create staff or admin accounts', 403);
+  }
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) throw new AppError('Email already registered', 409);

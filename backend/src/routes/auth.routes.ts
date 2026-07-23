@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Role } from '@prisma/client';
 import {
   register,
   login,
@@ -9,11 +10,12 @@ import {
   registerPushToken,
   updateNotificationSettings,
 } from '../controllers/auth.controller';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, requireRoles } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.post('/register', register);
+// Account creation is staff-only: there is no public sign-up flow in this app.
+router.post('/register', authenticate, requireRoles(Role.STAFF, Role.ADMIN), register);
 router.post('/login', login);
 router.post('/refresh', refresh);
 router.post('/logout', authenticate, logout);

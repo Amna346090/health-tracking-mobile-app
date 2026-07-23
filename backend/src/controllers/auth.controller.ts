@@ -12,7 +12,10 @@ export async function register(req: Request, res: Response, next: NextFunction):
       });
       return;
     }
-    const user = await authService.register({ email, password, role, firstName, lastName, dateOfBirth, gender, healthIssue, phone, address });
+    const user = await authService.register(
+      { email, password, role, firstName, lastName, dateOfBirth, gender, healthIssue, phone, address },
+      req.user!.role,
+    );
     res.status(201).json({ status: 'ok', data: user });
   } catch (err) {
     next(err);
