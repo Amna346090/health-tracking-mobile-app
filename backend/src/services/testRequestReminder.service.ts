@@ -16,7 +16,7 @@ function addDays(date: Date, days: number): Date {
 }
 
 async function sendReminder(
-  testRequest: { id: number; name: string; dueDate: Date; patient: { id: number; user: { email: string; pushToken: string | null } } },
+  testRequest: { id: number; name: string; dueDate: Date; patient: { id: number; user: { email: string | null; pushToken: string | null } } },
   offsetLabel: string,
   bodyText: string,
 ): Promise<void> {
@@ -29,7 +29,7 @@ async function sendReminder(
   // patient's general notifPush/notifEmail preference, since this is a care-coordination requirement.
   const channels: ReminderChannel[] = [];
   if (user.pushToken) channels.push(ReminderChannel.PUSH);
-  channels.push(ReminderChannel.EMAIL);
+  if (user.email) channels.push(ReminderChannel.EMAIL);
 
   for (const channel of channels) {
     let logId: number;
@@ -60,7 +60,7 @@ async function sendReminder(
           patientId: patient.id,
         });
       } else {
-        await sendEmail(user.email, title, htmlBody);
+        await sendEmail(user.email!, title, htmlBody);
       }
     } catch (e: unknown) {
       status = ReminderStatus.FAILED;

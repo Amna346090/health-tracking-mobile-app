@@ -73,9 +73,11 @@ export async function runTouchBaseReminderJob(): Promise<void> {
         });
       }
 
-      sendEmail(staff.email, title, `<p>${body}</p>`).catch((e) => {
-        console.error(`[touch-base reminder] email failed for user ${staff.id}:`, e instanceof Error ? e.message : e);
-      });
+      if (staff.email) {
+        sendEmail(staff.email, title, `<p>${body}</p>`).catch((e) => {
+          console.error(`[touch-base reminder] email failed for user ${staff.id}:`, e instanceof Error ? e.message : e);
+        });
+      }
     }
   }
 }

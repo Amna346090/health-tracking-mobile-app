@@ -59,7 +59,7 @@ export async function runAppointmentReminderJob(): Promise<void> {
       // preference, since reliable appointment reminders are a care-coordination requirement.
       const channels: ReminderChannel[] = [];
       if (user.pushToken) channels.push(ReminderChannel.PUSH);
-      channels.push(ReminderChannel.EMAIL);
+      if (user.email) channels.push(ReminderChannel.EMAIL);
 
       for (const channel of channels) {
         let logId: number;
@@ -90,7 +90,7 @@ export async function runAppointmentReminderJob(): Promise<void> {
               patientId: patient.id,
             });
           } else {
-            await sendEmail(user.email, title, htmlBody);
+            await sendEmail(user.email!, title, htmlBody);
           }
         } catch (e: unknown) {
           status = ReminderStatus.FAILED;

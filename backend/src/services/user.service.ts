@@ -5,6 +5,7 @@ import { AppError } from '../middleware/errorHandler';
 const USER_SELECT = {
   id: true,
   email: true,
+  username: true,
   role: true,
   firstName: true,
   lastName: true,

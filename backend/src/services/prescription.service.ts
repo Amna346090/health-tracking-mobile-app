@@ -15,7 +15,7 @@ export async function getPrescriptionPdf(assignmentId: number): Promise<Buffer> 
 
   return renderPrescriptionPdf({
     patientName: `${assignment.patient.user.firstName} ${assignment.patient.user.lastName}`,
-    patientDateOfBirth: assignment.patient.dateOfBirth.toISOString(),
+    patientDateOfBirth: assignment.patient.dateOfBirth ? assignment.patient.dateOfBirth.toISOString() : null,
     prescriberName: assignment.prescribedBy ? `${assignment.prescribedBy.firstName} ${assignment.prescribedBy.lastName}` : null,
     medicationName: assignment.medication.name,
     dosage: assignment.medication.dosage,

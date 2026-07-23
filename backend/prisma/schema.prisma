@@ -79,7 +79,8 @@ enum TestRequestStatus {
 
 model User {
   id           Int      @id @default(autoincrement())
-  email        String   @unique
+  email        String?  @unique
+  username     String?  @unique
   passwordHash String
   role         Role     @default(PATIENT)
   firstName    String
@@ -122,7 +123,7 @@ model PatientProfile {
   id                     Int       @id @default(autoincrement())
   userId                 Int       @unique
   user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dateOfBirth            DateTime  @db.Date
+  dateOfBirth            DateTime? @db.Date
   gender                 Gender?
   healthIssue            String?
   avatarUrl              String?

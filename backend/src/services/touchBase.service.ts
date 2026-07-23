@@ -18,7 +18,7 @@ export interface TouchBaseQueueItem {
   thresholdDays: number;
   dueAt: Date;
   overdue: boolean;
-  user: { firstName: string; lastName: string; email: string };
+  user: { firstName: string; lastName: string; email: string | null };
 }
 
 export interface TouchBaseQueueFilters {

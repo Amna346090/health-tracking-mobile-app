@@ -5,6 +5,7 @@ import { Gender } from '@prisma/client';
 const USER_SELECT = {
   id: true,
   email: true,
+  username: true,
   role: true,
   firstName: true,
   lastName: true,

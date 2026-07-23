@@ -5,15 +5,27 @@ import { AppError } from '../middleware/errorHandler';
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { email, password, role, firstName, lastName, dateOfBirth, gender, healthIssue, phone, address } = req.body;
-    if (!email || !password || !firstName || !lastName) {
+    const effectiveRole = role || 'PATIENT';
+
+    if (!firstName?.trim()) {
+      res.status(400).json({ status: 'error', message: 'firstName is required' });
+      return;
+    }
+    if (effectiveRole === 'PATIENT') {
+      if (!phone?.trim()) {
+        res.status(400).json({ status: 'error', message: 'phone is required for patient accounts' });
+        return;
+      }
+    } else if (!email?.trim() || !password || !lastName?.trim()) {
       res.status(400).json({
         status: 'error',
-        message: 'email, password, firstName, and lastName are required',
+        message: 'email, password, and lastName are required for staff/admin accounts',
       });
       return;
     }
+
     const user = await authService.register(
-      { email, password, role, firstName, lastName, dateOfBirth, gender, healthIssue, phone, address },
+      { email: email?.trim() || undefined, password, role, firstName, lastName, dateOfBirth, gender, healthIssue, phone, address },
       req.user!.role,
     );
     res.status(201).json({ status: 'ok', data: user });
@@ -24,12 +36,12 @@ export async function register(req: Request, res: Response, next: NextFunction):
 
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      res.status(400).json({ status: 'error', message: 'email and password are required' });
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      res.status(400).json({ status: 'error', message: 'identifier and password are required' });
       return;
     }
-    const result = await authService.login(email, password);
+    const result = await authService.login(identifier, password);
     res.json({ status: 'ok', data: result });
   } catch (err) {
     next(err);

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { Role, Gender } from '@prisma/client';
 import prisma from '../lib/prisma';
@@ -7,6 +8,7 @@ import { AppError } from '../middleware/errorHandler';
 const SAFE_USER_SELECT = {
   id: true,
   email: true,
+  username: true,
   role: true,
   firstName: true,
   lastName: true,
@@ -18,17 +20,45 @@ const SAFE_USER_SELECT = {
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Excludes visually ambiguous characters (0/O, 1/I/l) since this gets read aloud/copied by staff.
+const PASSWORD_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+
+function generatePassword(length = 10): string {
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += PASSWORD_CHARS[crypto.randomInt(PASSWORD_CHARS.length)];
+  }
+  return out;
+}
+
+async function generateUsername(firstName: string, lastName?: string): Promise<string> {
+  const base = `${firstName}${lastName ?? ''}`.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
+  let candidate = base;
+  let attempt = 0;
+  while (await prisma.user.findUnique({ where: { username: candidate } })) {
+    attempt++;
+    const digits = attempt < 5 ? 3 : 5;
+    candidate = `${base}${crypto.randomInt(10 ** (digits - 1), 10 ** digits)}`;
+  }
+  return candidate;
+}
+
 interface RegisterInput {
-  email: string;
-  password: string;
+  email?: string;
+  password?: string;
   role?: Role;
   firstName: string;
-  lastName: string;
+  lastName?: string;
   dateOfBirth?: string;
   gender?: Gender;
   healthIssue?: string;
   phone?: string;
   address?: string;
+}
+
+export interface GeneratedCredentials {
+  identifier: string;
+  password?: string;
 }
 
 export async function register(input: RegisterInput, requestedByRole: Role) {
@@ -39,27 +69,40 @@ export async function register(input: RegisterInput, requestedByRole: Role) {
     throw new AppError('Only admins can create staff or admin accounts', 403);
   }
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) throw new AppError('Email already registered', 409);
-
   if (role === Role.PATIENT) {
-    if (!dateOfBirth) throw new AppError('dateOfBirth is required for patient accounts', 400);
-    if (isNaN(new Date(dateOfBirth).getTime())) throw new AppError('Invalid dateOfBirth format', 400);
+    if (!phone?.trim()) throw new AppError('phone is required for patient accounts', 400);
+  } else if (!email?.trim() || !password) {
+    throw new AppError('email and password are required for staff/admin accounts', 400);
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  if (email) {
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) throw new AppError('Email already registered', 409);
+  }
+
+  if (dateOfBirth && isNaN(new Date(dateOfBirth).getTime())) {
+    throw new AppError('Invalid dateOfBirth format', 400);
+  }
+
+  // No email means there's no way to log in unless we hand the account a username.
+  const generatedUsername = email ? undefined : await generateUsername(firstName, lastName);
+
+  const passwordWasGenerated = !password;
+  const finalPassword = password ?? generatePassword();
+  const passwordHash = await bcrypt.hash(finalPassword, 12);
 
   const user = await prisma.user.create({
     data: {
-      email,
+      email: email ?? null,
+      username: generatedUsername ?? null,
       passwordHash,
       role,
       firstName,
-      lastName,
+      lastName: lastName?.trim() || '',
       ...(role === Role.PATIENT && {
         patientProfile: {
           create: {
-            dateOfBirth: new Date(dateOfBirth!),
+            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
             gender: gender ?? null,
             healthIssue: healthIssue ?? null,
             phone: phone ?? null,
@@ -77,12 +120,20 @@ export async function register(input: RegisterInput, requestedByRole: Role) {
     },
   });
 
-  return user;
+  const generatedCredentials: GeneratedCredentials | undefined =
+    generatedUsername || passwordWasGenerated
+      ? {
+          identifier: generatedUsername ?? email!,
+          ...(passwordWasGenerated && { password: finalPassword }),
+        }
+      : undefined;
+
+  return { ...user, generatedCredentials };
 }
 
-export async function login(email: string, password: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
+export async function login(identifier: string, password: string) {
+  const user = await prisma.user.findFirst({
+    where: { OR: [{ email: identifier }, { username: identifier }] },
     select: {
       ...SAFE_USER_SELECT,
       passwordHash: true,
@@ -91,7 +142,7 @@ export async function login(email: string, password: string) {
   });
 
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    throw new AppError('Invalid email or password', 401);
+    throw new AppError('Invalid credentials', 401);
   }
 
   const { passwordHash: _omit, ...safeUser } = user;

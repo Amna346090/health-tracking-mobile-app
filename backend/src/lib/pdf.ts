@@ -2,7 +2,7 @@ import PDFDocument from 'pdfkit';
 
 export interface PrescriptionPdfData {
   patientName: string;
-  patientDateOfBirth: string;
+  patientDateOfBirth: string | null;
   prescriberName: string | null;
   medicationName: string;
   dosage: string | null;
@@ -49,7 +49,7 @@ export function renderPrescriptionPdf(data: PrescriptionPdfData): Promise<Buffer
   doc.moveDown(1);
 
   field(doc, 'Patient:', data.patientName);
-  field(doc, 'Date of birth:', formatDate(data.patientDateOfBirth));
+  field(doc, 'Date of birth:', data.patientDateOfBirth ? formatDate(data.patientDateOfBirth) : '—');
   field(doc, 'Prescribed by:', data.prescriberName ?? '—');
   doc.moveDown(0.5);
 

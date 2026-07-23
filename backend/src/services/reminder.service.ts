@@ -46,12 +46,14 @@ export async function runReminderJob(): Promise<void> {
     const { patient, medication } = assignment;
     const { user } = patient;
     const title = 'Medication Reminder';
-    const body = `Time to take ${medication.name} (${medication.dosage})`;
+    const body = medication.dosage
+      ? `Time to take ${medication.name} (${medication.dosage})`
+      : `Time to take ${medication.name}`;
     const htmlBody = `<p>${body}</p>`;
 
     const channels: ReminderChannel[] = [];
-    if (user.notifPush && user.pushToken) channels.push(ReminderChannel.PUSH);
-    if (user.notifEmail)                  channels.push(ReminderChannel.EMAIL);
+    if (user.notifPush && user.pushToken)      channels.push(ReminderChannel.PUSH);
+    if (user.notifEmail && user.email)         channels.push(ReminderChannel.EMAIL);
     if (channels.length === 0) continue;
 
     for (const channel of channels) {
@@ -87,7 +89,7 @@ export async function runReminderJob(): Promise<void> {
             { assignmentId: assignment.id },
           );
         } else {
-          await sendEmail(user.email, title, htmlBody);
+          await sendEmail(user.email!, title, htmlBody);
         }
       } catch (e: unknown) {
         status = ReminderStatus.FAILED;
