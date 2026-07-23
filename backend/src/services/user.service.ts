@@ -28,7 +28,10 @@ export async function deleteUser(targetId: number, requestedById: number) {
     throw new AppError('User not found', 404);
   }
 
-  // PATIENT accounts cascade cleanly via PatientProfile (logs, meds, photos, tokens).
+  // PATIENT accounts cascade cleanly via PatientProfile (logs, meds, photos, tokens) —
+  // except MedicationLog, which has no patientId of its own (only assignmentId/userId,
+  // both ON DELETE RESTRICT) so it's never swept up by the PatientProfile cascade and
+  // must be deleted explicitly before the account can go.
   // STAFF/ADMIN accounts have no such cascade — block deletion if they authored
   // records elsewhere, since those rows require a non-null author (ON DELETE RESTRICT)
   // and silently deleting a patient's health history as a side effect would be wrong.
@@ -45,9 +48,22 @@ export async function deleteUser(targetId: number, requestedById: number) {
         409,
       );
     }
+    await prisma.user.delete({ where: { id: targetId } });
+    return;
   }
 
-  await prisma.user.delete({ where: { id: targetId } });
+  const patientProfile = await prisma.patientProfile.findUnique({ where: { userId: targetId } });
+  await prisma.$transaction([
+    ...(patientProfile
+      ? [
+          prisma.medicationLog.deleteMany({
+            where: { assignment: { patientId: patientProfile.id } },
+          }),
+        ]
+      : []),
+    prisma.medicationLog.deleteMany({ where: { userId: targetId } }),
+    prisma.user.delete({ where: { id: targetId } }),
+  ]);
 }
 
 export async function resetPassword(targetId: number, newPassword: string) {
