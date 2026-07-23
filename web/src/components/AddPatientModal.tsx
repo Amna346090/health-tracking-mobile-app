@@ -3,6 +3,10 @@ import type { FormEvent } from 'react';
 import { Modal } from './Modal';
 import { createPatient } from '../api/patients';
 import type { Gender } from '../api/patients';
+import { createMedication } from '../api/medications';
+import { createAssignment } from '../api/assignments';
+import { MedicationCombobox } from './MedicationCombobox';
+import type { MedicationSelection } from './MedicationCombobox';
 import { ApiError } from '../api/client';
 
 interface Props {
@@ -19,6 +23,7 @@ export function AddPatientModal({ onClose, onCreated }: Props) {
   const [gender, setGender] = useState<Gender | ''>('');
   const [healthIssue, setHealthIssue] = useState('');
   const [phone, setPhone] = useState('');
+  const [medication, setMedication] = useState<MedicationSelection | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -43,6 +48,19 @@ export function AddPatientModal({ onClose, onCreated }: Props) {
         healthIssue: healthIssue.trim() || undefined,
         phone: phone.trim() || undefined,
       });
+
+      if (medication && result.patientProfile) {
+        const medicationId =
+          medication.type === 'existing'
+            ? medication.medication.id
+            : (await createMedication({ name: medication.name })).id;
+
+        await createAssignment(result.patientProfile.id, {
+          medicationId,
+          startDate: new Date().toISOString().slice(0, 10),
+        });
+      }
+
       if (result.patientProfile) onCreated(result.patientProfile.id);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create patient.');
@@ -106,7 +124,7 @@ export function AddPatientModal({ onClose, onCreated }: Props) {
           </div>
         </div>
 
-        <div className="field" style={{ marginBottom: 0 }}>
+        <div className="field">
           <label htmlFor="ap-healthIssue">Health issue / condition</label>
           <input
             id="ap-healthIssue"
@@ -114,6 +132,11 @@ export function AddPatientModal({ onClose, onCreated }: Props) {
             onChange={(e) => setHealthIssue(e.target.value)}
             placeholder="e.g. Type 2 Diabetes"
           />
+        </div>
+
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label htmlFor="ap-medication">Current medication (optional)</label>
+          <MedicationCombobox id="ap-medication" value={medication} onChange={setMedication} />
         </div>
 
         <div className="modal-actions">

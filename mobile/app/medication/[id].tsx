@@ -62,7 +62,7 @@ export default function MedicationDetailScreen() {
 
         <View style={styles.header}>
           <Text style={styles.name}>{medication.name}</Text>
-          <Text style={styles.dosage}>{medication.dosage}</Text>
+          {medication.dosage && <Text style={styles.dosage}>{medication.dosage}</Text>}
           <View style={styles.countBadge}>
             <Text style={styles.countText}>
               {medication._count.assignments} active patient{medication._count.assignments !== 1 ? 's' : ''}

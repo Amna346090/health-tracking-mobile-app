@@ -158,9 +158,11 @@ export default function AssignmentDetailScreen() {
         {/* Medication header */}
         <View style={styles.medHeader}>
           <Text style={styles.medName}>{assignment.medication.name}</Text>
-          <Text style={styles.medDosage}>{assignment.medication.dosage}</Text>
+          {assignment.medication.dosage && <Text style={styles.medDosage}>{assignment.medication.dosage}</Text>}
           <Text style={styles.schedule}>
-            {assignment.frequency} · {assignment.timesOfDay.join(', ')}
+            {assignment.frequency
+              ? [assignment.frequency, assignment.timesOfDay.join(', ')].filter(Boolean).join(' · ')
+              : 'Schedule not set yet'}
           </Text>
         </View>
 

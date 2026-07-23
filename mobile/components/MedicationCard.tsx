@@ -57,7 +57,7 @@ export function TodayMedicationCard({ item, onMarkTaken, disabled }: ScheduleCar
       <View style={styles.row}>
         <View style={styles.info}>
           <Text style={styles.name}>{item.medication.name}</Text>
-          <Text style={styles.dosage}>{item.medication.dosage}</Text>
+          {item.medication.dosage && <Text style={styles.dosage}>{item.medication.dosage}</Text>}
           {item.timesOfDay.length > 0 && (
             <Text style={styles.times}>{item.timesOfDay.join(' · ')}</Text>
           )}
@@ -96,8 +96,12 @@ export function AssignmentCard({ item, onPress }: AssignmentCardProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item)} activeOpacity={0.7}>
       <Text style={styles.name}>{item.medication.name}</Text>
-      <Text style={styles.dosage}>{item.medication.dosage}</Text>
-      <Text style={styles.times}>{item.frequency} · {item.timesOfDay.join(', ')}</Text>
+      {item.medication.dosage && <Text style={styles.dosage}>{item.medication.dosage}</Text>}
+      <Text style={styles.times}>
+        {item.frequency
+          ? [item.frequency, item.timesOfDay.join(', ')].filter(Boolean).join(' · ')
+          : 'Schedule not set yet'}
+      </Text>
       {doseDetail && <Text style={styles.times}>{doseDetail}</Text>}
       {item.medication.instructions && (
         <Text style={styles.instructions} numberOfLines={2}>
@@ -114,7 +118,7 @@ interface CatalogCardProps {
   item: {
     id: number;
     name: string;
-    dosage: string;
+    dosage: string | null;
     form: string | null;
     quantityPerDose: number | null;
     foodInstruction: string | null;
@@ -131,7 +135,7 @@ export function CatalogMedicationCard({ item, onPress }: CatalogCardProps) {
       <View style={styles.row}>
         <View style={styles.info}>
           <Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.dosage}>{item.dosage}</Text>
+          {item.dosage && <Text style={styles.dosage}>{item.dosage}</Text>}
           {doseDetail && <Text style={styles.times}>{doseDetail}</Text>}
           {item.instructions && (
             <Text style={styles.instructions} numberOfLines={2}>{item.instructions}</Text>

@@ -45,7 +45,7 @@ export default function AddMedicationScreen() {
   const [prescribingNotes, setPrescribingNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const canSubmit = name.trim().length > 0 && dosage.trim().length > 0;
+  const canSubmit = name.trim().length > 0;
 
   const handleSave = async () => {
     if (!canSubmit) return;
@@ -54,7 +54,7 @@ export default function AddMedicationScreen() {
       const quantity = quantityPerDose.trim() ? parseInt(quantityPerDose.trim(), 10) : undefined;
       await createMedication({
         name: name.trim(),
-        dosage: dosage.trim(),
+        dosage: dosage.trim() || undefined,
         form: form ?? undefined,
         quantityPerDose: quantity && !isNaN(quantity) ? quantity : undefined,
         foodInstruction: foodInstruction ?? undefined,
@@ -93,7 +93,7 @@ export default function AddMedicationScreen() {
               autoCapitalize="words"
             />
             <Field
-              label="Dosage *"
+              label="Dosage"
               value={dosage}
               onChangeText={setDosage}
               placeholder="e.g. 500mg twice daily"

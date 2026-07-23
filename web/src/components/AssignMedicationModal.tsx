@@ -79,7 +79,7 @@ export function AssignMedicationModal({ patientId, onClose, onAssigned }: Props)
           <select id="asn-medication" value={medicationId} onChange={(e) => setMedicationId(e.target.value)} required>
             <option value="">Select a medication…</option>
             {medications.map((m) => (
-              <option key={m.id} value={m.id}>{m.name} · {m.dosage}</option>
+              <option key={m.id} value={m.id}>{m.dosage ? `${m.name} · ${m.dosage}` : m.name}</option>
             ))}
           </select>
         </div>

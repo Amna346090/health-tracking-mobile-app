@@ -416,8 +416,12 @@ export function PatientDashboardPage() {
                   <Pill size={16} strokeWidth={2.2} />
                 </div>
                 <div className="row-body">
-                  <div className="row-name">{a.medication.name} · {a.medication.dosage}</div>
-                  <div className="row-sub">{a.frequency} · {a.timesOfDay.join(', ')}</div>
+                  <div className="row-name">{a.medication.dosage ? `${a.medication.name} · ${a.medication.dosage}` : a.medication.name}</div>
+                  <div className="row-sub">
+                    {a.frequency
+                      ? [a.frequency, a.timesOfDay.join(', ')].filter(Boolean).join(' · ')
+                      : 'Schedule not set yet'}
+                  </div>
                 </div>
                 <button
                   className="btn btn-secondary btn-sm"

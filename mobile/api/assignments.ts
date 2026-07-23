@@ -16,7 +16,7 @@ export interface MedicationAssignment {
   id: number;
   patientId: number;
   medicationId: number;
-  frequency: string;
+  frequency: string | null;
   timesPerDay: number | null;
   timesOfDay: string[];
   startDate: string;
@@ -28,7 +28,7 @@ export interface MedicationAssignment {
   medication: {
     id: number;
     name: string;
-    dosage: string;
+    dosage: string | null;
     doseAmount: number | null;
     doseUnit: string | null;
     form: string | null;

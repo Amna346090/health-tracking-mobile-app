@@ -6,7 +6,7 @@ export type FoodInstruction = 'WITH_FOOD' | 'WITHOUT_FOOD' | 'EITHER';
 export interface Medication {
   id: number;
   name: string;
-  dosage: string;
+  dosage: string | null;
   form: MedicationForm | null;
   quantityPerDose: number | null;
   foodInstruction: FoodInstruction | null;
@@ -26,7 +26,7 @@ export function getMedicationById(id: number): Promise<Medication> {
 
 export interface MedicationInput {
   name: string;
-  dosage: string;
+  dosage?: string;
   form?: MedicationForm;
   quantityPerDose?: number;
   foodInstruction?: FoodInstruction;

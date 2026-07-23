@@ -8,7 +8,7 @@ export type MedLogEvent = {
   timestamp: string;
   status: 'TAKEN' | 'MISSED' | 'SKIPPED';
   notes: string | null;
-  medication: { name: string; dosage: string };
+  medication: { name: string; dosage: string | null };
   loggedBy: { id: number; firstName: string; lastName: string; role: string };
 };
 

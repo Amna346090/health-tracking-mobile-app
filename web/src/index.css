@@ -670,6 +670,42 @@ button {
   resize: vertical;
 }
 
+.combobox {
+  position: relative;
+}
+
+.combobox-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+}
+
+.combobox-option {
+  padding: 9px 10px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.combobox-option:hover {
+  background: var(--color-bg-app);
+}
+
+.combobox-option-create {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -987,6 +1023,8 @@ button {
 .modal-card {
   width: 100%;
   max-width: 380px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);

@@ -56,7 +56,7 @@ export function MedicationsPage() {
                 <Pill size={17} strokeWidth={2.2} />
               </div>
               <div className="row-body">
-                <div className="row-name">{m.name} · {m.dosage}</div>
+                <div className="row-name">{m.dosage ? `${m.name} · ${m.dosage}` : m.name}</div>
                 <div className="row-sub">
                   {[
                     m.form && FORM_LABEL[m.form],
@@ -92,7 +92,7 @@ export function MedicationsPage() {
       {deleteTarget && (
         <ConfirmModal
           title="Delete Medication"
-          message={`Delete ${deleteTarget.name} · ${deleteTarget.dosage}? This cannot be undone.`}
+          message={`Delete ${deleteTarget.dosage ? `${deleteTarget.name} · ${deleteTarget.dosage}` : deleteTarget.name}? This cannot be undone.`}
           confirmLabel="Delete medication"
           onClose={() => setDeleteTarget(null)}
           onConfirm={async () => {

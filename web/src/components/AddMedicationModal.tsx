@@ -31,7 +31,7 @@ export function AddMedicationModal({ onClose, onCreated }: Props) {
       const amount = doseAmount.trim() ? parseFloat(doseAmount.trim()) : undefined;
       const med = await createMedication({
         name: name.trim(),
-        dosage: dosage.trim(),
+        dosage: dosage.trim() || undefined,
         doseAmount: amount && !isNaN(amount) ? amount : undefined,
         doseUnit: doseUnit.trim() || undefined,
         form: form || undefined,
@@ -58,8 +58,8 @@ export function AddMedicationModal({ onClose, onCreated }: Props) {
         </div>
 
         <div className="field">
-          <label htmlFor="am-dosage">Dosage</label>
-          <input id="am-dosage" value={dosage} onChange={(e) => setDosage(e.target.value)} placeholder="e.g. 500mg" required />
+          <label htmlFor="am-dosage">Dosage (optional)</label>
+          <input id="am-dosage" value={dosage} onChange={(e) => setDosage(e.target.value)} placeholder="e.g. 500mg" />
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

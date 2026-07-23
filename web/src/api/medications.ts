@@ -6,7 +6,7 @@ export type FoodInstruction = 'WITH_FOOD' | 'WITHOUT_FOOD' | 'EITHER';
 export interface Medication {
   id: number;
   name: string;
-  dosage: string;
+  dosage: string | null;
   doseAmount: number | null;
   doseUnit: string | null;
   form: MedicationForm | null;
@@ -21,7 +21,7 @@ export const getAllMedications = () => api.get<Medication[]>('/medications');
 
 export interface CreateMedicationInput {
   name: string;
-  dosage: string;
+  dosage?: string;
   doseAmount?: number;
   doseUnit?: string;
   form?: MedicationForm;

@@ -56,7 +56,8 @@ function EventCard({ event, onPhotoPress }: { event: TimelineEvent; onPhotoPress
         <View style={styles.cardBody}>
           <Text style={styles.cardTitle}>{event.medication.name}</Text>
           <Text style={[styles.cardSub, { color }]}>
-            {event.status.charAt(0) + event.status.slice(1).toLowerCase()} · {event.medication.dosage}
+            {event.status.charAt(0) + event.status.slice(1).toLowerCase()}
+            {event.medication.dosage ? ` · ${event.medication.dosage}` : ''}
           </Text>
           {event.notes ? <Text style={styles.cardNote}>{event.notes}</Text> : null}
         </View>
