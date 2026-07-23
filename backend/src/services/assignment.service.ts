@@ -83,7 +83,7 @@ export async function getAssignmentById(id: number) {
 export interface CreateAssignmentInput {
   patientId: number;
   medicationId: number;
-  frequency: string;
+  frequency?: string;
   timesPerDay?: number;
   timesOfDay: string[];
   startDate: string;
@@ -104,7 +104,7 @@ export async function createAssignment(data: CreateAssignmentInput) {
     data: {
       patientId: data.patientId,
       medicationId: data.medicationId,
-      frequency: data.frequency,
+      frequency: data.frequency ?? null,
       timesPerDay: data.timesPerDay ?? null,
       timesOfDay: data.timesOfDay,
       startDate: new Date(data.startDate),

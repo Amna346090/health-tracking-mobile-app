@@ -176,7 +176,7 @@ model MedicationAssignment {
   patient        PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
   medicationId   Int
   medication     Medication     @relation(fields: [medicationId], references: [id])
-  frequency      String
+  frequency      String?
   timesPerDay    Int?
   timesOfDay     String[]
   startDate      DateTime       @db.Date

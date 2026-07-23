@@ -10,7 +10,7 @@ export interface PrescriptionPdfData {
   doseUnit: string | null;
   form: string | null;
   quantityPerDose: number | null;
-  frequency: string;
+  frequency: string | null;
   timesPerDay: number | null;
   timesOfDay: string[];
   foodInstruction: string | null;
@@ -63,9 +63,9 @@ export function renderPrescriptionPdf(data: PrescriptionPdfData): Promise<Buffer
   if (data.form) field(doc, 'Form:', data.form.charAt(0) + data.form.slice(1).toLowerCase());
   if (data.quantityPerDose) field(doc, 'Quantity per dose:', String(data.quantityPerDose));
 
-  const frequencyLine = data.timesPerDay
+  const frequencyLine = data.timesPerDay && data.frequency
     ? `${data.frequency} (${data.timesPerDay}x per day)`
-    : data.frequency;
+    : data.frequency ?? 'Not yet scheduled';
   field(doc, 'Frequency:', frequencyLine);
 
   if (data.timesOfDay.length > 0) field(doc, 'Times of day:', data.timesOfDay.join(', '));

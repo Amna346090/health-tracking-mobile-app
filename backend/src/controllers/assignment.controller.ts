@@ -39,10 +39,10 @@ export async function createAssignment(req: Request, res: Response, next: NextFu
     await assertPatientAccess(req, patientId);
     const { medicationId, frequency, timesPerDay, timesOfDay, startDate, endDate, refillsAllowed } = req.body;
 
-    if (!medicationId || !frequency || !timesOfDay?.length || !startDate) {
+    if (!medicationId || !startDate) {
       res.status(400).json({
         status: 'error',
-        message: 'medicationId, frequency, timesOfDay, and startDate are required',
+        message: 'medicationId and startDate are required',
       });
       return;
     }
@@ -50,9 +50,9 @@ export async function createAssignment(req: Request, res: Response, next: NextFu
     const assignment = await assignmentService.createAssignment({
       patientId,
       medicationId: Number(medicationId),
-      frequency,
+      frequency: frequency || undefined,
       timesPerDay: timesPerDay !== undefined ? Number(timesPerDay) : undefined,
-      timesOfDay,
+      timesOfDay: timesOfDay ?? [],
       startDate,
       endDate: endDate ?? null,
       refillsAllowed: refillsAllowed !== undefined ? Number(refillsAllowed) : undefined,
