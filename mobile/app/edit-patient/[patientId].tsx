@@ -53,7 +53,7 @@ export default function EditPatientScreen() {
         setValues({
           firstName: p.user.firstName,
           lastName: p.user.lastName,
-          dateOfBirth: p.dateOfBirth.slice(0, 10),
+          dateOfBirth: p.dateOfBirth?.slice(0, 10) ?? '',
           gender: p.gender,
           healthIssue: p.healthIssue ?? '',
           phone: p.phone ?? '',
@@ -75,7 +75,7 @@ export default function EditPatientScreen() {
       await updatePatient(pid, {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
-        dateOfBirth: values.dateOfBirth.trim(),
+        ...(values.dateOfBirth.trim() && { dateOfBirth: values.dateOfBirth.trim() }),
         gender: values.gender,
         healthIssue: values.healthIssue.trim() || null,
         phone: values.phone.trim() || null,

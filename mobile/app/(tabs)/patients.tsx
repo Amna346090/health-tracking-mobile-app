@@ -17,25 +17,25 @@ import { Avatar } from '../../components/Avatar';
 interface PatientRow {
   id: number;
   userId: number;
-  dateOfBirth: string;
+  dateOfBirth: string | null;
   avatarUrl: string | null;
-  user: { firstName: string; lastName: string; email: string };
+  user: { firstName: string; lastName: string; email: string | null; username: string | null };
 }
 
 function PatientCard({ patient, onPress }: { patient: PatientRow; onPress: () => void }) {
   const name = `${patient.user.firstName} ${patient.user.lastName}`;
-  const initials = (patient.user.firstName[0] + patient.user.lastName[0]).toUpperCase();
-  const dob = new Date(patient.dateOfBirth).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
+  const initials = (patient.user.firstName[0] + (patient.user.lastName[0] ?? patient.user.firstName[1] ?? '')).toUpperCase();
+  const dob = patient.dateOfBirth
+    ? new Date(patient.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <Avatar uri={patient.avatarUrl} initials={initials} size={44} />
       <View style={styles.cardBody}>
         <Text style={styles.cardName}>{name}</Text>
-        <Text style={styles.cardSub}>{patient.user.email}</Text>
-        <Text style={styles.cardDob}>DOB: {dob}</Text>
+        <Text style={styles.cardSub}>{patient.user.email ?? patient.user.username}</Text>
+        {dob && <Text style={styles.cardDob}>DOB: {dob}</Text>}
       </View>
       <Text style={styles.chevron}>›</Text>
     </TouchableOpacity>
@@ -68,7 +68,7 @@ export default function PatientsScreen() {
     if (!query.trim()) return patients;
     const q = query.toLowerCase();
     return patients.filter((p) =>
-      `${p.user.firstName} ${p.user.lastName} ${p.user.email}`.toLowerCase().includes(q),
+      `${p.user.firstName} ${p.user.lastName} ${p.user.email ?? ''} ${p.user.username ?? ''}`.toLowerCase().includes(q),
     );
   }, [patients, query]);
 

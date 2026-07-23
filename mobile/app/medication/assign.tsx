@@ -21,7 +21,7 @@ import { api } from '../../api/client';
 interface PatientOption {
   id: number;
   userId: number;
-  user: { id: number; firstName: string; lastName: string; email: string };
+  user: { id: number; firstName: string; lastName: string; email: string | null; username: string | null };
 }
 
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'As needed', 'Weekly'];
@@ -126,7 +126,7 @@ export default function AssignMedicationScreen() {
                     <Text style={styles.patientName}>
                       {p.user.firstName} {p.user.lastName}
                     </Text>
-                    <Text style={styles.patientEmail}>{p.user.email}</Text>
+                    <Text style={styles.patientEmail}>{p.user.email ?? p.user.username}</Text>
                   </View>
                 </TouchableOpacity>
               ))

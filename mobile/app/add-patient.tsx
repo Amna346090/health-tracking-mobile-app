@@ -54,12 +54,9 @@ export default function AddPatientScreen() {
   function validate(): boolean {
     const next: typeof errors = {};
     if (!values.firstName.trim()) next.firstName = 'First name is required';
-    if (!values.lastName.trim()) next.lastName = 'Last name is required';
-    if (!values.email.trim()) next.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) next.email = 'Enter a valid email';
-    if (!values.password) next.password = 'Password is required';
-    else if (values.password.length < 8) next.password = 'Password must be at least 8 characters';
-    if (!values.dateOfBirth.trim()) next.dateOfBirth = 'Date of birth is required';
+    if (!values.phone.trim()) next.phone = 'Phone number is required';
+    if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) next.email = 'Enter a valid email';
+    if (values.password && values.password.length < 8) next.password = 'Password must be at least 8 characters';
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -71,19 +68,33 @@ export default function AddPatientScreen() {
     try {
       const created = await registerApi({
         firstName: values.firstName.trim(),
-        lastName: values.lastName.trim(),
-        email: values.email.trim().toLowerCase(),
-        password: values.password,
-        dateOfBirth: values.dateOfBirth.trim(),
+        phone: values.phone.trim(),
+        lastName: values.lastName.trim() || undefined,
+        email: values.email.trim() ? values.email.trim().toLowerCase() : undefined,
+        password: values.password || undefined,
+        dateOfBirth: values.dateOfBirth.trim() || undefined,
         gender: values.gender ?? undefined,
         healthIssue: values.healthIssue.trim() || undefined,
-        phone: values.phone.trim() || undefined,
         role: 'PATIENT',
       });
-      if (created.patientProfile) {
-        router.replace(`/patient-dashboard/${created.patientProfile.id}`);
+
+      function goToPatient() {
+        if (created.patientProfile) {
+          router.replace(`/patient-dashboard/${created.patientProfile.id}`);
+        } else {
+          router.back();
+        }
+      }
+
+      if (created.generatedCredentials) {
+        const { identifier, password } = created.generatedCredentials;
+        Alert.alert(
+          'Patient Created',
+          `Save these login details now — they won't be shown again.\n\nUsername: ${identifier}${password ? `\nPassword: ${password}` : ''}`,
+          [{ text: 'OK', onPress: goToPatient }],
+        );
       } else {
-        router.back();
+        goToPatient();
       }
     } catch (err) {
       setErrors({ form: (err as Error).message ?? 'Could not create patient.' });
@@ -121,7 +132,7 @@ export default function AddPatientScreen() {
                 containerStyle={styles.halfInput}
               />
               <Input
-                label="Last name"
+                label="Last name (optional)"
                 value={values.lastName}
                 onChangeText={set('lastName')}
                 error={errors.lastName}
@@ -131,26 +142,35 @@ export default function AddPatientScreen() {
             </View>
 
             <Input
-              label="Email"
+              label="Phone"
+              value={values.phone}
+              onChangeText={set('phone')}
+              error={errors.phone}
+              keyboardType="phone-pad"
+            />
+
+            <Input
+              label="Email (optional)"
               value={values.email}
               onChangeText={set('email')}
               error={errors.email}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              placeholder="Leave blank to auto-generate a username"
             />
 
             <Input
-              label="Initial password"
+              label="Initial password (optional)"
               value={values.password}
               onChangeText={set('password')}
               error={errors.password}
               secureTextEntry
-              placeholder="Min. 8 characters"
+              placeholder="Leave blank to auto-generate one"
             />
 
             <DateField
-              label="Date of birth"
+              label="Date of birth (optional)"
               value={values.dateOfBirth}
               onChange={(date) => setValues((v) => ({ ...v, dateOfBirth: date }))}
               error={errors.dateOfBirth}
@@ -169,13 +189,6 @@ export default function AddPatientScreen() {
               value={values.healthIssue}
               onChangeText={set('healthIssue')}
               placeholder="e.g. Type 2 Diabetes"
-            />
-
-            <Input
-              label="Phone (optional)"
-              value={values.phone}
-              onChangeText={set('phone')}
-              keyboardType="phone-pad"
               onSubmitEditing={handleSave}
             />
 

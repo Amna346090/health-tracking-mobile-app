@@ -4,14 +4,14 @@ import type { Gender } from './auth';
 export interface PatientRow {
   id: number;
   userId: number;
-  dateOfBirth: string;
+  dateOfBirth: string | null;
   gender: Gender | null;
   healthIssue: string | null;
   avatarUrl: string | null;
   phone: string | null;
   address: string | null;
   createdAt: string;
-  user: { id: number; firstName: string; lastName: string; email: string };
+  user: { id: number; firstName: string; lastName: string; email: string | null; username: string | null };
 }
 
 export function getPatientById(id: number): Promise<PatientRow> {

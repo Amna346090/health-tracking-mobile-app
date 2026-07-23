@@ -82,13 +82,13 @@ export default function RegisterScreen() {
     try {
       await register({
         firstName: values.firstName.trim(),
+        phone: values.phone.trim(),
         lastName: values.lastName.trim(),
         email: values.email.trim().toLowerCase(),
         password: values.password,
         dateOfBirth: values.dateOfBirth.trim(),
         gender: values.gender ?? undefined,
         healthIssue: values.healthIssue.trim() || undefined,
-        phone: values.phone.trim() || undefined,
         role: 'PATIENT',
       });
       // NavigationGuard redirects to (tabs) automatically

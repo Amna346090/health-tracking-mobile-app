@@ -33,7 +33,7 @@ function UserRow({
   onResetPassword: (user: ManagedUser) => void;
 }) {
   const badge = roleBadgeColor(user.role);
-  const initials = (user.firstName[0] + user.lastName[0]).toUpperCase();
+  const initials = (user.firstName[0] + (user.lastName[0] ?? user.firstName[1] ?? '')).toUpperCase();
 
   return (
     <View style={styles.card}>
@@ -45,7 +45,7 @@ function UserRow({
           <Text style={styles.rowName}>
             {user.firstName} {user.lastName} {isSelf && <Text style={styles.youTag}>(you)</Text>}
           </Text>
-          <Text style={styles.rowEmail}>{user.email}</Text>
+          <Text style={styles.rowEmail}>{user.email ?? user.username}</Text>
         </View>
         <View style={[styles.roleBadge, { backgroundColor: badge.bg }]}>
           <Text style={[styles.roleText, { color: badge.text }]}>{user.role}</Text>

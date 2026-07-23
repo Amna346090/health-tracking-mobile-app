@@ -6,7 +6,7 @@ export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
 export interface PatientProfile {
   id: number;
   userId: number;
-  dateOfBirth: string;
+  dateOfBirth: string | null;
   gender: Gender | null;
   healthIssue: string | null;
   avatarUrl: string | null;
@@ -18,7 +18,8 @@ export interface PatientProfile {
 
 export interface AuthUser {
   id: number;
-  email: string;
+  email: string | null;
+  username: string | null;
   role: 'PATIENT' | 'STAFF' | 'ADMIN';
   firstName: string;
   lastName: string;
@@ -52,22 +53,29 @@ export interface LoginResult {
 }
 
 export interface RegisterInput {
-  email: string;
-  password: string;
   firstName: string;
-  lastName: string;
+  phone: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
   dateOfBirth?: string;
   gender?: Gender;
   healthIssue?: string;
-  phone?: string;
   role?: 'PATIENT' | 'STAFF' | 'ADMIN';
 }
 
-export const loginApi = (email: string, password: string) =>
-  post<LoginResult>('/auth/login', { email, password });
+export interface GeneratedCredentials {
+  identifier: string;
+  password?: string;
+}
+
+export type RegisterResult = AuthUser & { generatedCredentials?: GeneratedCredentials };
+
+export const loginApi = (identifier: string, password: string) =>
+  post<LoginResult>('/auth/login', { identifier, password });
 
 export const registerApi = (data: RegisterInput) =>
-  post<AuthUser>('/auth/register', data);
+  post<RegisterResult>('/auth/register', data);
 
 export const refreshApi = (refreshToken: string) =>
   post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken });

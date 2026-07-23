@@ -31,7 +31,7 @@ const KEY = {
 export interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
   register: (data: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -128,15 +128,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── public auth actions ───────────────────────────────────────────────────
 
-  const login = useCallback(async (email: string, password: string) => {
-    const result = await loginApi(email, password);
+  const login = useCallback(async (identifier: string, password: string) => {
+    const result = await loginApi(identifier, password);
     await persist(result);
   }, [persist]);
 
   const register = useCallback(async (data: RegisterInput) => {
     await registerApi(data);
-    const result = await loginApi(data.email, data.password);
-    await persist(result);
+    if (data.email && data.password) {
+      const result = await loginApi(data.email, data.password);
+      await persist(result);
+    }
   }, [persist]);
 
   return (

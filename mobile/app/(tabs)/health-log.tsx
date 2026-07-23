@@ -341,7 +341,7 @@ function PatientHealthLog({ patientId }: { patientId: number }) {
 interface PatientRow {
   id: number;
   userId: number;
-  user: { id: number; firstName: string; lastName: string; email: string };
+  user: { id: number; firstName: string; lastName: string; email: string | null; username: string | null };
 }
 
 function StaffHealthLog() {
@@ -384,7 +384,7 @@ function StaffHealthLog() {
             <Text style={listStyles.patientName}>
               {item.user.firstName} {item.user.lastName}
             </Text>
-            <Text style={listStyles.patientEmail}>{item.user.email}</Text>
+            <Text style={listStyles.patientEmail}>{item.user.email ?? item.user.username}</Text>
           </View>
           <Text style={listStyles.chevron}>›</Text>
         </TouchableOpacity>

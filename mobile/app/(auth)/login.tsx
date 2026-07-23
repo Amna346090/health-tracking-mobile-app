@@ -18,15 +18,14 @@ import { colors, spacing, typography } from '../../theme';
 export default function LoginScreen() {
   const { login } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
+  const [errors, setErrors] = useState<{ identifier?: string; password?: string; form?: string }>({});
   const [loading, setLoading] = useState(false);
 
   function validate(): boolean {
     const next: typeof errors = {};
-    if (!email.trim()) next.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = 'Enter a valid email';
+    if (!identifier.trim()) next.identifier = 'Email or username is required';
     if (!password) next.password = 'Password is required';
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -37,7 +36,7 @@ export default function LoginScreen() {
     setLoading(true);
     setErrors({});
     try {
-      await login(email.trim().toLowerCase(), password);
+      await login(identifier.trim().toLowerCase(), password);
       // NavigationGuard redirects to (tabs) automatically
     } catch (err) {
       setErrors({ form: (err as Error).message ?? 'Login failed. Please try again.' });
@@ -73,15 +72,14 @@ export default function LoginScreen() {
             )}
 
             <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              error={errors.email}
-              keyboardType="email-address"
+              label="Email or Username"
+              value={identifier}
+              onChangeText={setIdentifier}
+              error={errors.identifier}
               autoCapitalize="none"
               autoCorrect={false}
-              autoComplete="email"
-              placeholder="you@example.com"
+              autoComplete="username"
+              placeholder="you@example.com or username"
               returnKeyType="next"
             />
 

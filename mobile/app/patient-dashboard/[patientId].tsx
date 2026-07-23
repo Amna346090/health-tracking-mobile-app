@@ -21,8 +21,8 @@ import { getAllProviders, type Provider } from '../../api/providers';
 
 interface PatientMeta {
   id: number;
-  user: { firstName: string; lastName: string; email: string };
-  dateOfBirth: string;
+  user: { firstName: string; lastName: string; email: string | null; username: string | null };
+  dateOfBirth: string | null;
   gender: string | null;
   healthIssue: string | null;
   avatarUrl: string | null;
@@ -35,7 +35,8 @@ function formatLastContact(iso: string | null): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function ageFromDob(iso: string): number {
+function ageFromDob(iso: string | null): number | null {
+  if (!iso) return null;
   const dob = new Date(iso);
   const now = new Date();
   let age = now.getFullYear() - dob.getFullYear();
@@ -234,7 +235,7 @@ export default function PatientDashboardScreen() {
           <Avatar uri={patient?.avatarUrl} initials={patientName[0].toUpperCase()} size={52} fontSize={20} />
           <View>
             <Text style={crmStyles.patientName}>{patientName}</Text>
-            <Text style={crmStyles.patientEmail}>{patient?.user.email}</Text>
+            <Text style={crmStyles.patientEmail}>{patient?.user.email ?? patient?.user.username}</Text>
           </View>
         </View>
 
@@ -248,7 +249,7 @@ export default function PatientDashboardScreen() {
               </TouchableOpacity>
             </View>
             <View style={crmStyles.infoCard}>
-              <InfoItem label="Age" value={`${ageFromDob(patient.dateOfBirth)}`} />
+              <InfoItem label="Age" value={ageFromDob(patient.dateOfBirth) !== null ? `${ageFromDob(patient.dateOfBirth)}` : '—'} />
               <InfoItem label="Gender" value={formatGender(patient.gender) ?? '—'} />
               <InfoItem label="Health issue" value={patient.healthIssue ?? '—'} />
             </View>

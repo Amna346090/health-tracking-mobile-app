@@ -57,7 +57,8 @@ function formatDate(iso: string): string {
   });
 }
 
-function ageFromDob(iso: string): number {
+function ageFromDob(iso: string | null): number | null {
+  if (!iso) return null;
   const dob = new Date(iso);
   const now = new Date();
   let age = now.getFullYear() - dob.getFullYear();
@@ -137,7 +138,7 @@ function ProgressPhotosSection({ patientId }: { patientId: number }) {
 
 // ─── Notification settings ────────────────────────────────────────────────────
 
-function NotificationSettings({ initial, userEmail }: { initial: { push: boolean; email: boolean }; userEmail: string }) {
+function NotificationSettings({ initial, userEmail }: { initial: { push: boolean; email: boolean }; userEmail: string | null }) {
   const [push,  setPush]  = useState(initial.push);
   const [email, setEmail] = useState(initial.email);
 
@@ -176,7 +177,9 @@ function NotificationSettings({ initial, userEmail }: { initial: { push: boolean
           <View style={[notifStyles.row, notifStyles.rowBorder]}>
             <View style={notifStyles.labelCol}>
               <Text style={notifStyles.label}>Email notifications</Text>
-              <Text style={notifStyles.sub}>Reminders sent to {userEmail}</Text>
+              <Text style={notifStyles.sub}>
+                {userEmail ? `Reminders sent to ${userEmail}` : 'Add an email to receive reminders'}
+              </Text>
             </View>
             <Switch
               value={email}
@@ -247,7 +250,7 @@ export default function ProfileScreen() {
             fontSize={28}
           />
           <Text style={styles.fullName}>{user.firstName} {user.lastName}</Text>
-          <Text style={styles.email}>{user.email}</Text>
+          <Text style={styles.email}>{user.email ?? user.username}</Text>
           <View style={[styles.roleBadge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.roleText, { color: badge.text }]}>{user.role}</Text>
           </View>
@@ -260,7 +263,8 @@ export default function ProfileScreen() {
             <View style={styles.cardInner}>
               <ProfileRow label="First name"   value={user.firstName} />
               <ProfileRow label="Last name"    value={user.lastName} />
-              <ProfileRow label="Email"        value={user.email} />
+              <ProfileRow label="Email"        value={user.email ?? '—'} />
+              <ProfileRow label="Username"     value={user.username ?? '—'} />
               <ProfileRow label="Member since" value={formatDate(user.createdAt)} />
             </View>
           </Card>
@@ -277,8 +281,8 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>PATIENT PROFILE</Text>
             <Card variant="outlined" padding={0}>
               <View style={styles.cardInner}>
-                <ProfileRow label="Date of birth" value={formatDate(user.patientProfile.dateOfBirth)} />
-                <ProfileRow label="Age"           value={`${ageFromDob(user.patientProfile.dateOfBirth)}`} />
+                <ProfileRow label="Date of birth" value={user.patientProfile.dateOfBirth ? formatDate(user.patientProfile.dateOfBirth) : '—'} />
+                <ProfileRow label="Age"           value={ageFromDob(user.patientProfile.dateOfBirth) !== null ? `${ageFromDob(user.patientProfile.dateOfBirth)}` : '—'} />
                 <ProfileRow label="Gender"        value={formatGender(user.patientProfile.gender)} />
                 <ProfileRow label="Health issue"  value={user.patientProfile.healthIssue ?? '—'} />
                 <ProfileRow label="Phone"          value={user.patientProfile.phone   ?? '—'} />
