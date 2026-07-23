@@ -28,40 +28,54 @@ export async function deleteUser(targetId: number, requestedById: number) {
     throw new AppError('User not found', 404);
   }
 
-  // PATIENT accounts cascade cleanly via PatientProfile (logs, meds, photos, tokens) —
-  // except MedicationLog, which has no patientId of its own (only assignmentId/userId,
-  // both ON DELETE RESTRICT) so it's never swept up by the PatientProfile cascade and
-  // must be deleted explicitly before the account can go.
-  // STAFF/ADMIN accounts have no such cascade — block deletion if they authored
-  // records elsewhere, since those rows require a non-null author (ON DELETE RESTRICT)
-  // and silently deleting a patient's health history as a side effect would be wrong.
-  if (target.role !== 'PATIENT') {
-    const [healthLogs, photos, medicationLogs] = await Promise.all([
+  // PatientProfile cascades on delete (logs, meds, photos, tokens, etc.), but several
+  // tables also hold a *second*, ON DELETE RESTRICT reference straight to User —
+  // recording who authored/logged/uploaded something (MedicationLog.userId,
+  // HealthLog.createdById, Photo.uploadedById, Document.uploadedById,
+  // Appointment.createdById, Message.senderId, TestRequest.requestedById,
+  // HealthMetric.createdById). Postgres does not reliably resolve those RESTRICT
+  // checks in favor of the sibling patientId cascade, so every row authored by
+  // this user must be deleted explicitly first, regardless of role.
+  const [healthLogs, photos, medicationLogs, documents, appointments, messages, testRequests, healthMetrics] =
+    await Promise.all([
       prisma.healthLog.count({ where: { createdById: targetId } }),
       prisma.photo.count({ where: { uploadedById: targetId } }),
       prisma.medicationLog.count({ where: { userId: targetId } }),
+      prisma.document.count({ where: { uploadedById: targetId } }),
+      prisma.appointment.count({ where: { createdById: targetId } }),
+      prisma.message.count({ where: { senderId: targetId } }),
+      prisma.testRequest.count({ where: { requestedById: targetId } }),
+      prisma.healthMetric.count({ where: { createdById: targetId } }),
     ]);
-    const total = healthLogs + photos + medicationLogs;
-    if (total > 0) {
-      throw new AppError(
-        `Cannot delete: this account has ${total} historical record(s) (health logs, photos, or dose logs) tied to it. Reassign or archive them first.`,
-        409,
-      );
-    }
-    await prisma.user.delete({ where: { id: targetId } });
-    return;
+  const total = healthLogs + photos + medicationLogs + documents + appointments + messages + testRequests + healthMetrics;
+
+  // STAFF/ADMIN accounts have no PatientProfile cascade to fall back on, so if they
+  // authored records for patients they aren't the sole owner of, block deletion
+  // rather than silently wiping other patients' history as a side effect.
+  if (target.role !== 'PATIENT' && total > 0) {
+    throw new AppError(
+      `Cannot delete: this account has ${total} historical record(s) tied to it. Reassign or archive them first.`,
+      409,
+    );
   }
 
-  const patientProfile = await prisma.patientProfile.findUnique({ where: { userId: targetId } });
+  const patientProfile = target.role === 'PATIENT' ? await prisma.patientProfile.findUnique({ where: { userId: targetId } }) : null;
+
   await prisma.$transaction([
     ...(patientProfile
       ? [
-          prisma.medicationLog.deleteMany({
-            where: { assignment: { patientId: patientProfile.id } },
-          }),
+          prisma.medicationLog.deleteMany({ where: { assignment: { patientId: patientProfile.id } } }),
+          prisma.reminderLog.deleteMany({ where: { assignment: { patientId: patientProfile.id } } }),
         ]
       : []),
     prisma.medicationLog.deleteMany({ where: { userId: targetId } }),
+    prisma.healthLog.deleteMany({ where: { createdById: targetId } }),
+    prisma.photo.deleteMany({ where: { uploadedById: targetId } }),
+    prisma.document.deleteMany({ where: { uploadedById: targetId } }),
+    prisma.appointment.deleteMany({ where: { createdById: targetId } }),
+    prisma.message.deleteMany({ where: { senderId: targetId } }),
+    prisma.testRequest.deleteMany({ where: { requestedById: targetId } }),
+    prisma.healthMetric.deleteMany({ where: { createdById: targetId } }),
     prisma.user.delete({ where: { id: targetId } }),
   ]);
 }
