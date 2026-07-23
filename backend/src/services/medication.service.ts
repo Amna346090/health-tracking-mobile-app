@@ -47,3 +47,18 @@ export async function updateMedication(id: number, data: Partial<CreateMedicatio
   if (!exists) throw new AppError('Medication not found', 404);
   return prisma.medication.update({ where: { id }, data });
 }
+
+export async function deleteMedication(id: number) {
+  const exists = await prisma.medication.findUnique({ where: { id } });
+  if (!exists) throw new AppError('Medication not found', 404);
+
+  const assignmentCount = await prisma.medicationAssignment.count({ where: { medicationId: id } });
+  if (assignmentCount > 0) {
+    throw new AppError(
+      `Cannot delete: ${assignmentCount} patient assignment(s) reference this medication. Remove those assignments first.`,
+      409,
+    );
+  }
+
+  await prisma.medication.delete({ where: { id } });
+}

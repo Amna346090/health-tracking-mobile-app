@@ -33,3 +33,5 @@ export interface CreateMedicationInput {
 
 export const createMedication = (data: CreateMedicationInput) =>
   api.post<Medication>('/medications', data);
+
+export const deleteMedication = (id: number) => api.delete<{ id: number }>(`/medications/${id}`);

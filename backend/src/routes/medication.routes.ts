@@ -6,6 +6,7 @@ import {
   getMedicationById,
   createMedication,
   updateMedication,
+  deleteMedication,
 } from '../controllers/medication.controller';
 
 const router = Router();
@@ -17,5 +18,6 @@ router.get('/', getAllMedications);
 router.post('/', createMedication);
 router.get('/:id', getMedicationById);
 router.patch('/:id', updateMedication);
+router.delete('/:id', requireRoles(Role.ADMIN), deleteMedication);
 
 export default router;

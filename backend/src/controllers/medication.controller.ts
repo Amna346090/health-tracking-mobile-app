@@ -44,6 +44,15 @@ export async function createMedication(req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 }
 
+export async function deleteMedication(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { res.status(400).json({ status: 'error', message: 'Invalid medication ID' }); return; }
+    await medicationService.deleteMedication(id);
+    res.json({ status: 'ok', data: { id } });
+  } catch (err) { next(err); }
+}
+
 export async function updateMedication(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = parseInt(req.params.id, 10);
