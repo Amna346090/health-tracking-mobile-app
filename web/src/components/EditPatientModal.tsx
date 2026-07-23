@@ -16,7 +16,7 @@ interface Props {
 export function EditPatientModal({ patient, onClose, onSaved }: Props) {
   const [firstName, setFirstName] = useState(patient.user.firstName);
   const [lastName, setLastName] = useState(patient.user.lastName);
-  const [dateOfBirth, setDateOfBirth] = useState(patient.dateOfBirth.slice(0, 10));
+  const [dateOfBirth, setDateOfBirth] = useState(patient.dateOfBirth?.slice(0, 10) ?? '');
   const [gender, setGender] = useState<Gender | ''>(patient.gender ?? '');
   const [healthIssue, setHealthIssue] = useState(patient.healthIssue ?? '');
   const [phone, setPhone] = useState(patient.phone ?? '');
@@ -38,7 +38,7 @@ export function EditPatientModal({ patient, onClose, onSaved }: Props) {
       const updated = await updatePatient(patient.id, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        dateOfBirth,
+        ...(dateOfBirth && { dateOfBirth }),
         gender: gender || null,
         healthIssue: healthIssue.trim() || null,
         phone: phone.trim() || null,
@@ -64,14 +64,14 @@ export function EditPatientModal({ patient, onClose, onSaved }: Props) {
             <input id="ep-firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
           </div>
           <div className="field" style={{ flex: 1 }}>
-            <label htmlFor="ep-lastName">Last name</label>
-            <input id="ep-lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+            <label htmlFor="ep-lastName">Last name (optional)</label>
+            <input id="ep-lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </div>
         </div>
 
         <div className="field">
-          <label htmlFor="ep-dob">Date of birth</label>
-          <input id="ep-dob" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} required />
+          <label htmlFor="ep-dob">Date of birth (optional)</label>
+          <input id="ep-dob" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

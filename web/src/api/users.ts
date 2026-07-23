@@ -2,7 +2,8 @@ import { api } from './client';
 
 export interface ManagedUser {
   id: number;
-  email: string;
+  email: string | null;
+  username: string | null;
   role: 'PATIENT' | 'STAFF' | 'ADMIN';
   firstName: string;
   lastName: string;

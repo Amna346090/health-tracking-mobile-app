@@ -3,7 +3,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 export interface PatientProfile {
   id: number;
   userId: number;
-  dateOfBirth: string;
+  dateOfBirth: string | null;
   phone: string | null;
   address: string | null;
   createdAt: string;
@@ -12,7 +12,8 @@ export interface PatientProfile {
 
 export interface AuthUser {
   id: number;
-  email: string;
+  email: string | null;
+  username: string | null;
   role: 'PATIENT' | 'STAFF' | 'ADMIN';
   firstName: string;
   lastName: string;
@@ -45,8 +46,8 @@ export interface LoginResult {
   user: AuthUser;
 }
 
-export const loginApi = (email: string, password: string) =>
-  post<LoginResult>('/auth/login', { email, password });
+export const loginApi = (identifier: string, password: string) =>
+  post<LoginResult>('/auth/login', { identifier, password });
 
 export const refreshApi = (refreshToken: string) =>
   post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken });

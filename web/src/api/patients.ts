@@ -2,7 +2,8 @@ import { api } from './client';
 
 export interface PatientUser {
   id: number;
-  email: string;
+  email: string | null;
+  username: string | null;
   role: string;
   firstName: string;
   lastName: string;
@@ -13,7 +14,7 @@ export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
 export interface PatientRow {
   id: number;
   userId: number;
-  dateOfBirth: string;
+  dateOfBirth: string | null;
   gender: Gender | null;
   healthIssue: string | null;
   avatarUrl: string | null;
@@ -32,23 +33,30 @@ export const getAllPatients = (providerId?: number) =>
 export const getPatientById = (id: number) => api.get<PatientRow>(`/patients/${id}`);
 
 export interface CreatePatientInput {
-  email: string;
-  password: string;
   firstName: string;
-  lastName: string;
-  dateOfBirth: string;
+  phone: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  dateOfBirth?: string;
   gender?: Gender;
   healthIssue?: string;
-  phone?: string;
   address?: string;
 }
 
-interface CreatePatientResult {
+export interface GeneratedCredentials {
+  identifier: string;
+  password?: string;
+}
+
+export interface CreatePatientResult {
   id: number;
-  email: string;
+  email: string | null;
+  username: string | null;
   firstName: string;
   lastName: string;
   patientProfile: { id: number } | null;
+  generatedCredentials?: GeneratedCredentials;
 }
 
 export const createPatient = (data: CreatePatientInput) =>

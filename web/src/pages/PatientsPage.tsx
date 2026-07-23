@@ -14,10 +14,12 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { Spinner } from '../components/Spinner';
 
 function initialsOf(row: PatientRow): string {
-  return (row.user.firstName[0] + row.user.lastName[0]).toUpperCase();
+  const { firstName, lastName } = row.user;
+  return (firstName[0] + (lastName[0] ?? firstName[1] ?? '')).toUpperCase();
 }
 
-function ageFromDob(iso: string): number {
+function ageFromDob(iso: string | null): number | null {
+  if (!iso) return null;
   const dob = new Date(iso);
   const now = new Date();
   let age = now.getFullYear() - dob.getFullYear();
@@ -54,7 +56,7 @@ export function PatientsPage() {
     const q = query.trim().toLowerCase();
     if (!q) return patients;
     return patients.filter((p) =>
-      `${p.user.firstName} ${p.user.lastName} ${p.user.email}`.toLowerCase().includes(q),
+      `${p.user.firstName} ${p.user.lastName} ${p.user.email ?? ''} ${p.user.username ?? ''}`.toLowerCase().includes(q),
     );
   }, [patients, query]);
 
@@ -107,7 +109,11 @@ export function PatientsPage() {
               <Avatar url={p.avatarUrl} initials={initialsOf(p)} />
               <div className="row-body">
                 <div className="row-name">{p.user.firstName} {p.user.lastName}</div>
-                <div className="row-sub">{p.user.email} · Age {ageFromDob(p.dateOfBirth)}</div>
+                <div className="row-sub">
+                  {[p.user.email ?? p.user.username, ageFromDob(p.dateOfBirth) !== null ? `Age ${ageFromDob(p.dateOfBirth)}` : null]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
               </div>
               {isAdmin && (
                 <div className="row-actions">

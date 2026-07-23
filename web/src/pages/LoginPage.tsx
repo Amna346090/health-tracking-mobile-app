@@ -8,7 +8,7 @@ export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await login(email.trim().toLowerCase(), password);
+      await login(identifier.trim().toLowerCase(), password);
       navigate('/patients', { replace: true });
     } catch (err) {
       setError((err as Error).message ?? 'Login failed. Please try again.');
@@ -59,12 +59,12 @@ export function LoginPage() {
 
           <form onSubmit={handleSubmit}>
             <div className="field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="identifier">Email or Username</label>
               <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="identifier"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 autoComplete="username"
                 required
               />

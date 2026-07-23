@@ -77,12 +77,12 @@ export function ManageUsersPage() {
             const isSelf = u.id === currentUser?.id;
             return (
               <div key={u.id} className="row" style={{ opacity: deletingId === u.id ? 0.4 : 1 }}>
-                <div className="avatar">{(u.firstName[0] + u.lastName[0]).toUpperCase()}</div>
+                <div className="avatar">{(u.firstName[0] + (u.lastName[0] ?? u.firstName[1] ?? '')).toUpperCase()}</div>
                 <div className="row-body">
                   <div className="row-name">
                     {u.firstName} {u.lastName}{isSelf && <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}> (you)</span>}
                   </div>
-                  <div className="row-sub">{u.email}</div>
+                  <div className="row-sub">{u.email ?? u.username}</div>
                 </div>
                 <span className={badgeClass(u.role)}>{u.role}</span>
                 {!isSelf && (

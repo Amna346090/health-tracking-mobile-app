@@ -41,7 +41,8 @@ const FEELING_EMOJI: Record<string, string> = {
   TERRIBLE: '😢',
 };
 
-function ageFromDob(iso: string): number {
+function ageFromDob(iso: string | null): number | null {
+  if (!iso) return null;
   const dob = new Date(iso);
   const now = new Date();
   let age = now.getFullYear() - dob.getFullYear();
@@ -220,7 +221,7 @@ export function PatientDashboardPage() {
         <Avatar url={patient.avatarUrl} initials={name[0].toUpperCase()} size={56} fontSize={19} />
         <div className="row-body">
           <div className="row-name" style={{ fontSize: 19 }}>{name}</div>
-          <div className="row-sub">{patient.user.email}</div>
+          <div className="row-sub">{patient.user.email ?? patient.user.username}</div>
         </div>
       </div>
 
@@ -236,7 +237,7 @@ export function PatientDashboardPage() {
           <div className="info-grid">
             <div>
               <div className="info-item-label">Age</div>
-              <div className="info-item-value">{ageFromDob(patient.dateOfBirth)}</div>
+              <div className="info-item-value">{ageFromDob(patient.dateOfBirth) ?? '—'}</div>
             </div>
             <div>
               <div className="info-item-label">Gender</div>
