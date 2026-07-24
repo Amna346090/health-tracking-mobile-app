@@ -399,15 +399,15 @@ export function PatientDashboardPage() {
 
       <div className="section">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 className="section-title" style={{ margin: 0 }}>Medications</h2>
+          <h2 className="section-title" style={{ margin: 0 }}>Peptides</h2>
           <button className="btn btn-secondary btn-sm" onClick={() => setShowAssign(true)}>
             <Pill size={13} strokeWidth={2.2} />
-            Assign Medication
+            Assign Peptide
           </button>
         </div>
         {assignments.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13.5 }}>
-            No active medications.
+            No active peptides.
           </div>
         ) : (
           <div className="card-list">

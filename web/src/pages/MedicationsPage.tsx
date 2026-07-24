@@ -35,19 +35,19 @@ export function MedicationsPage() {
       <div className="page-header">
         <div>
           <p className="page-eyebrow">Catalog</p>
-          <h1 className="page-title">Medications</h1>
-          <p className="page-subtitle">{medications.length} medication{medications.length !== 1 ? 's' : ''} in the catalog</p>
+          <h1 className="page-title">Peptides</h1>
+          <p className="page-subtitle">{medications.length} peptide{medications.length !== 1 ? 's' : ''} in the catalog</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
           <Plus size={16} strokeWidth={2.2} />
-          Add Medication
+          Add Peptide
         </button>
       </div>
 
       {loading ? (
         <Spinner />
       ) : medications.length === 0 ? (
-        <div className="empty-state">No medications yet. Add one to get started.</div>
+        <div className="empty-state">No peptides yet. Add one to get started.</div>
       ) : (
         <div className="card-list">
           {medications.map((m) => (
@@ -91,9 +91,9 @@ export function MedicationsPage() {
 
       {deleteTarget && (
         <ConfirmModal
-          title="Delete Medication"
+          title="Delete Peptide"
           message={`Delete ${deleteTarget.dosage ? `${deleteTarget.name} · ${deleteTarget.dosage}` : deleteTarget.name}? This cannot be undone.`}
-          confirmLabel="Delete medication"
+          confirmLabel="Delete peptide"
           onClose={() => setDeleteTarget(null)}
           onConfirm={async () => {
             await deleteMedication(deleteTarget.id);

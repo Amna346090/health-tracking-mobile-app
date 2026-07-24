@@ -82,7 +82,7 @@ export function MedicationCombobox({ id, value, onChange }: Props) {
         onBlur={() => {
           blurTimeout.current = setTimeout(() => setOpen(false), 120);
         }}
-        placeholder="Search or add a medication…"
+        placeholder="Search or add a peptide…"
       />
       {open && rect && (matches.length > 0 || q) &&
         createPortal(

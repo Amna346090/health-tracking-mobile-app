@@ -54,7 +54,7 @@ export function Layout() {
           </NavLink>
           <NavLink to="/medications" className={linkClass} onClick={closeMobileNav}>
             <Pill size={17} strokeWidth={2} />
-            Medications
+            Peptides
           </NavLink>
           <NavLink to="/appointments" className={linkClass} onClick={closeMobileNav}>
             <Calendar size={17} strokeWidth={2} />

@@ -44,7 +44,7 @@ export function AssignMedicationModal({ patientId, onClose, onAssigned }: Props)
     setError(null);
 
     if (!medicationId) {
-      setError('Choose a medication');
+      setError('Choose a peptide');
       return;
     }
 
@@ -63,21 +63,21 @@ export function AssignMedicationModal({ patientId, onClose, onAssigned }: Props)
       });
       onAssigned(assignment);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not assign medication.');
+      setError(err instanceof ApiError ? err.message : 'Could not assign peptide.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Modal title="Assign Medication" subtitle="Add a medication to this patient's schedule" onClose={onClose}>
+    <Modal title="Assign Peptide" subtitle="Add a peptide to this patient's schedule" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         {error && <div className="form-error">{error}</div>}
 
         <div className="field">
-          <label htmlFor="asn-medication">Medication</label>
+          <label htmlFor="asn-medication">Peptide</label>
           <select id="asn-medication" value={medicationId} onChange={(e) => setMedicationId(e.target.value)} required>
-            <option value="">Select a medication…</option>
+            <option value="">Select a peptide…</option>
             {medications.map((m) => (
               <option key={m.id} value={m.id}>{m.dosage ? `${m.name} · ${m.dosage}` : m.name}</option>
             ))}
@@ -147,7 +147,7 @@ export function AssignMedicationModal({ patientId, onClose, onAssigned }: Props)
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Assigning…' : 'Assign medication'}
+            {loading ? 'Assigning…' : 'Assign peptide'}
           </button>
         </div>
       </form>

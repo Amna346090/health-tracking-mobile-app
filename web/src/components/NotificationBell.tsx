@@ -59,15 +59,9 @@ export function NotificationBell() {
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      <button
-        className="sidebar-signout"
-        onClick={handleOpen}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bell size={14} strokeWidth={2.2} />
-          Notifications
-        </span>
+      <button className="sidebar-signout" onClick={handleOpen} style={{ width: '100%' }}>
+        <Bell size={14} strokeWidth={2.2} />
+        Notifications
         {unreadCount > 0 && <span className="badge badge-overdue">{unreadCount}</span>}
       </button>
 

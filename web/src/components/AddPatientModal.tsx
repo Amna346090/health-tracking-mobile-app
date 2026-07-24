@@ -163,7 +163,7 @@ export function AddPatientModal({ onClose, onCreated }: Props) {
         </div>
 
         <div className="field" style={{ marginBottom: 0 }}>
-          <label htmlFor="ap-medication">Current medication (optional)</label>
+          <label htmlFor="ap-medication">Current peptide (optional)</label>
           <MedicationCombobox id="ap-medication" value={medication} onChange={setMedication} />
         </div>
 

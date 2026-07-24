@@ -41,14 +41,14 @@ export function AddMedicationModal({ onClose, onCreated }: Props) {
       });
       onCreated(med);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not create medication.');
+      setError(err instanceof ApiError ? err.message : 'Could not create peptide.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Modal title="Add Medication" subtitle="Create a new catalog entry" onClose={onClose}>
+    <Modal title="Add Peptide" subtitle="Create a new catalog entry" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         {error && <div className="form-error">{error}</div>}
 
@@ -131,7 +131,7 @@ export function AddMedicationModal({ onClose, onCreated }: Props) {
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Creating…' : 'Create medication'}
+            {loading ? 'Creating…' : 'Create peptide'}
           </button>
         </div>
       </form>
