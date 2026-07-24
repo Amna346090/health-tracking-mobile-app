@@ -63,7 +63,7 @@ export default function AddMedicationScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('Failed to create medication', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert('Failed to create peptide', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setSaving(false);
     }
@@ -80,7 +80,7 @@ export default function AddMedicationScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Text style={styles.backText}>← Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Add Medication</Text>
+            <Text style={styles.navTitle}>Add Peptide</Text>
             <View style={styles.navSpacer} />
           </View>
 
@@ -137,7 +137,7 @@ export default function AddMedicationScreen() {
             {saving ? (
               <ActivityIndicator color={colors.text.inverse} />
             ) : (
-              <Text style={styles.saveBtnText}>Save Medication</Text>
+              <Text style={styles.saveBtnText}>Save Peptide</Text>
             )}
           </TouchableOpacity>
         </ScrollView>

@@ -34,7 +34,7 @@ function PatientMedications({ patientId }: { patientId: number }) {
       const data = await getAssignments(patientId);
       setItems(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load medications');
+      setError(e instanceof Error ? e.message : 'Failed to load peptides');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -79,7 +79,7 @@ function PatientMedications({ patientId }: { patientId: number }) {
       ListEmptyComponent={
         <EmptyState
           icon="💊"
-          title="No medications assigned"
+          title="No peptides assigned"
           subtitle="Your prescriptions and dosing schedule will appear here once set up by your care team."
         />
       }
@@ -124,7 +124,7 @@ function StaffMedications() {
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search medications..."
+          placeholder="Search peptides..."
           placeholderTextColor={colors.text.muted}
           value={search}
           onChangeText={setSearch}
@@ -172,11 +172,11 @@ function StaffMedications() {
           ListEmptyComponent={
             <EmptyState
               icon="💊"
-              title={search ? 'No results' : 'No medications'}
+              title={search ? 'No results' : 'No peptides'}
               subtitle={
                 search
-                  ? `No medications match "${search}"`
-                  : 'Add the first medication to the catalog.'
+                  ? `No peptides match "${search}"`
+                  : 'Add the first peptide to the catalog.'
               }
             />
           }
@@ -196,9 +196,9 @@ export default function MedicationsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Medications</Text>
+          <Text style={styles.title}>Peptides</Text>
           <Text style={styles.subtitle}>
-            {isStaff ? 'Medication catalog' : 'Your active prescriptions'}
+            {isStaff ? 'Peptide catalog' : 'Your active prescriptions'}
           </Text>
         </View>
 

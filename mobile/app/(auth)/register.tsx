@@ -114,7 +114,7 @@ export default function RegisterScreen() {
           <View style={styles.header}>
             <Text style={styles.logo}>💊</Text>
             <Text style={styles.title}>Create account</Text>
-            <Text style={styles.subtitle}>Track your health and medications in one place</Text>
+            <Text style={styles.subtitle}>Track your health and peptides in one place</Text>
           </View>
 
           {/* Form */}

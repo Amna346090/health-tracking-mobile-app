@@ -45,7 +45,7 @@ export default function MedicationDetailScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.center}>
-          <Text style={styles.errorText}>{error ?? 'Medication not found'}</Text>
+          <Text style={styles.errorText}>{error ?? 'Peptide not found'}</Text>
         </View>
       </SafeAreaView>
     );

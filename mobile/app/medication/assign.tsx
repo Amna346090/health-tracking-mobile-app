@@ -89,13 +89,13 @@ export default function AssignMedicationScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Text style={styles.backText}>← Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Assign Medication</Text>
+            <Text style={styles.navTitle}>Assign Peptide</Text>
             <View style={styles.navSpacer} />
           </View>
 
-          {/* Medication badge */}
+          {/* Peptide badge */}
           <View style={styles.medBadge}>
-            <Text style={styles.medBadgeLabel}>Medication</Text>
+            <Text style={styles.medBadgeLabel}>Peptide</Text>
             <Text style={styles.medBadgeName}>{medicationName}</Text>
           </View>
 

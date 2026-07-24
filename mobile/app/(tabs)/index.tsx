@@ -144,7 +144,7 @@ export default function DashboardScreen() {
         <View style={styles.statsRow}>
           <StatBadge
             icon="💊"
-            label="Medications"
+            label="Peptides"
             value={isPatient && schedule.length > 0 ? String(schedule.length) : '—'}
           />
           <StatBadge
@@ -208,7 +208,7 @@ export default function DashboardScreen() {
         {/* ── Today's Medications ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Medications</Text>
+            <Text style={styles.sectionTitle}>Today's Peptides</Text>
             {isPatient && schedule.length > 0 && (
               <Text style={styles.sectionBadge}>{dueCount} due</Text>
             )}
@@ -219,7 +219,7 @@ export default function DashboardScreen() {
               <EmptyState
                 icon="💊"
                 title="Staff view"
-                subtitle="Patient medication schedules are managed via the Medications tab."
+                subtitle="Patient peptide schedules are managed via the Peptides tab."
               />
             </Card>
           ) : scheduleLoading ? (

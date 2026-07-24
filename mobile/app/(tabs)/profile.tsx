@@ -165,7 +165,7 @@ function NotificationSettings({ initial, userEmail }: { initial: { push: boolean
           <View style={notifStyles.row}>
             <View style={notifStyles.labelCol}>
               <Text style={notifStyles.label}>Push notifications</Text>
-              <Text style={notifStyles.sub}>Medication reminders on this device</Text>
+              <Text style={notifStyles.sub}>Peptide reminders on this device</Text>
             </View>
             <Switch
               value={push}
