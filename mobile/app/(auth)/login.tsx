@@ -2,14 +2,12 @@ import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
 import { useAuth } from '../../context/auth';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
@@ -97,16 +95,6 @@ export default function LoginScreen() {
 
             <Button label="Sign in" onPress={handleLogin} loading={loading} />
           </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account?</Text>
-            <Link href="/(auth)/register" asChild>
-              <Pressable hitSlop={8}>
-                <Text style={styles.footerLink}> Create account</Text>
-              </Pressable>
-            </Link>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -160,20 +148,5 @@ const styles = StyleSheet.create({
   formErrorText: {
     ...typography.body2,
     color: colors.danger,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: -spacing.sm,
-  },
-  footerText: {
-    ...typography.body2,
-    color: colors.text.secondary,
-  },
-  footerLink: {
-    ...typography.body2,
-    color: colors.primary,
-    fontWeight: '600',
   },
 });

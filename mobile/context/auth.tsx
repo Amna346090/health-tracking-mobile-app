@@ -11,11 +11,9 @@ import { setAccessToken, setRefreshCallback } from '../api/client';
 import {
   AuthUser,
   LoginResult,
-  RegisterInput,
   loginApi,
   logoutApi,
   refreshApi,
-  registerApi,
 } from '../api/auth';
 
 // ─── Keys ─────────────────────────────────────────────────────────────────────
@@ -32,7 +30,6 @@ export interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
-  register: (data: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -133,16 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await persist(result);
   }, [persist]);
 
-  const register = useCallback(async (data: RegisterInput) => {
-    await registerApi(data);
-    if (data.email && data.password) {
-      const result = await loginApi(data.email, data.password);
-      await persist(result);
-    }
-  }, [persist]);
-
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

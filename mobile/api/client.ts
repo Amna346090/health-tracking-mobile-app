@@ -11,6 +11,10 @@ export function setAccessToken(token: string | null): void {
   _accessToken = token;
 }
 
+export function getAccessToken(): string | null {
+  return _accessToken;
+}
+
 export function setRefreshCallback(fn: (() => Promise<boolean>) | null): void {
   _refreshCallback = fn;
 }
