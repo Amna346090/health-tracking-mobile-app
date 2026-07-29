@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { setAccessToken, setRefreshCallback } from '../api/client';
 import {
@@ -15,6 +16,15 @@ import {
   logoutApi,
   refreshApi,
 } from '../api/auth';
+
+// expo-secure-store has no web implementation in this SDK version — fall back to localStorage on web.
+const Store = Platform.OS === 'web'
+  ? {
+      setItemAsync: async (key: string, value: string) => { localStorage.setItem(key, value); },
+      getItemAsync: async (key: string) => localStorage.getItem(key),
+      deleteItemAsync: async (key: string) => { localStorage.removeItem(key); },
+    }
+  : SecureStore;
 
 // ─── Keys ─────────────────────────────────────────────────────────────────────
 
@@ -46,9 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const persist = useCallback(async (result: LoginResult) => {
     const { accessToken, refreshToken, user: userData } = result;
-    await SecureStore.setItemAsync(KEY.ACCESS, accessToken);
-    await SecureStore.setItemAsync(KEY.REFRESH, refreshToken);
-    await SecureStore.setItemAsync(KEY.USER, JSON.stringify(userData));
+    await Store.setItemAsync(KEY.ACCESS, accessToken);
+    await Store.setItemAsync(KEY.REFRESH, refreshToken);
+    await Store.setItemAsync(KEY.USER, JSON.stringify(userData));
     refreshTokenRef.current = refreshToken;
     setAccessToken(accessToken);
     setUser(userData);
@@ -56,9 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearStorage = useCallback(async () => {
     await Promise.all([
-      SecureStore.deleteItemAsync(KEY.ACCESS),
-      SecureStore.deleteItemAsync(KEY.REFRESH),
-      SecureStore.deleteItemAsync(KEY.USER),
+      Store.deleteItemAsync(KEY.ACCESS),
+      Store.deleteItemAsync(KEY.REFRESH),
+      Store.deleteItemAsync(KEY.USER),
     ]);
   }, []);
 
@@ -82,8 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!rt) return false;
     try {
       const tokens = await refreshApi(rt);
-      await SecureStore.setItemAsync(KEY.ACCESS, tokens.accessToken);
-      await SecureStore.setItemAsync(KEY.REFRESH, tokens.refreshToken);
+      await Store.setItemAsync(KEY.ACCESS, tokens.accessToken);
+      await Store.setItemAsync(KEY.REFRESH, tokens.refreshToken);
       refreshTokenRef.current = tokens.refreshToken;
       setAccessToken(tokens.accessToken);
       return true;
@@ -105,9 +115,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const [storedAccess, storedRefresh, storedUser] = await Promise.all([
-          SecureStore.getItemAsync(KEY.ACCESS),
-          SecureStore.getItemAsync(KEY.REFRESH),
-          SecureStore.getItemAsync(KEY.USER),
+          Store.getItemAsync(KEY.ACCESS),
+          Store.getItemAsync(KEY.REFRESH),
+          Store.getItemAsync(KEY.USER),
         ]);
 
         if (storedAccess && storedRefresh && storedUser) {
