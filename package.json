@@ -10,6 +10,10 @@
     "backend": "yarn workspace backend dev",
     "mobile": "yarn workspace mobile start",
     "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down"
+    "docker:down": "docker-compose down",
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }
