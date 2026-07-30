@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, shadows } from '../../theme';
 import { useAuth } from '../../context/auth';
 
@@ -13,6 +14,8 @@ function TabIcon({ name, color, size }: { name: IoniconName; color: string; size
 export default function TabLayout() {
   const { user } = useAuth();
   const isStaffOrAdmin = user?.role === 'STAFF' || user?.role === 'ADMIN';
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, spacing.sm);
 
   return (
     <Tabs
@@ -24,8 +27,8 @@ export default function TabLayout() {
           backgroundColor: colors.bg.card,
           borderTopColor: colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
-          height: Platform.OS === 'ios' ? 84 : 64,
-          paddingBottom: Platform.OS === 'ios' ? spacing.lg : spacing.sm,
+          height: 50 + bottomInset,
+          paddingBottom: bottomInset,
           paddingTop: spacing.sm,
           ...shadows.sm,
         },
