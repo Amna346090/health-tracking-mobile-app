@@ -7,23 +7,36 @@ import { sendEmail } from '../lib/email';
 const TOUCH_BASE_DUE = 'TOUCH_BASE_DUE';
 
 /**
- * Real (1-day-or-longer) thresholds are date-level, not time-of-day — they're only checked
- * and sent once daily, at a fixed hour, and repeat daily as long as the current cycle remains
- * unacknowledged. Sub-day thresholds (admin-only test values in minutes) are checked and sent
- * on every tick instead, so a 1-minute test threshold produces roughly one send per minute —
- * this only ever applies to test thresholds, real reminders are untouched by this path.
- * "Mark as contacted" is the only thing that silences a cycle, and only until the next one is due.
+ * Real (1-day-or-longer) thresholds are only checked once daily, at a fixed hour, so being
+ * "overdue" there naturally produces at most one send per day for as long as the cycle remains
+ * unacknowledged — no extra bookkeeping needed. Sub-day (test) thresholds are checked on every
+ * tick instead, so without a boundary-level dedup they'd fire on every single check for the whole
+ * remaining length of the cycle (e.g. every minute for the entire 10-minute span of a 10-minute
+ * threshold) instead of once per cycle. This checks whether a notification already exists for the
+ * CURRENT cycle boundary specifically, so a test threshold gets one send per boundary crossed —
+ * repeating again at the next boundary regardless of whether "Mark as contacted" was ever clicked.
  */
+async function alreadyNotifiedForCurrentCycle(patientId: number, cycleBoundary: Date): Promise<boolean> {
+  const existing = await prisma.notification.findFirst({
+    where: {
+      type: TOUCH_BASE_DUE,
+      patientId,
+      createdAt: { gte: cycleBoundary },
+    },
+  });
+  return !!existing;
+}
+
 export async function runTouchBaseReminderJob(): Promise<void> {
   const now = new Date();
   const isDailyTick = now.getUTCHours() === 8 && now.getUTCMinutes() === 0;
 
   const queue = await getOverdueOrNearingPatients();
-  const toNotify = queue.filter((item) => {
+  const candidates = queue.filter((item) => {
     if (!item.overdue) return false;
     return item.thresholdDays < 1 || isDailyTick;
   });
-  if (toNotify.length === 0) return;
+  if (candidates.length === 0) return;
 
   const staffUsers = await prisma.user.findMany({
     where: { role: { in: [Role.STAFF, Role.ADMIN] } },
@@ -31,7 +44,9 @@ export async function runTouchBaseReminderJob(): Promise<void> {
   });
   if (staffUsers.length === 0) return;
 
-  for (const item of toNotify) {
+  for (const item of candidates) {
+    if (item.thresholdDays < 1 && await alreadyNotifiedForCurrentCycle(item.id, item.dueAt)) continue;
+
     const patientName = `${item.user.firstName} ${item.user.lastName}`;
     const daysSince = item.lastContactAt
       ? Math.round((Date.now() - item.lastContactAt.getTime()) / (24 * 60 * 60 * 1000))
