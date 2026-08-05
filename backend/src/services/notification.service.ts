@@ -25,6 +25,13 @@ export async function markRead(id: number, requestingUserId: number) {
   });
 }
 
+export async function markAllRead(userId: number): Promise<void> {
+  await prisma.notification.updateMany({
+    where: { userId, readAt: null },
+    data: { readAt: new Date() },
+  });
+}
+
 export async function deleteNotification(id: number, requestingUserId: number): Promise<void> {
   const notification = await prisma.notification.findUnique({ where: { id } });
   if (!notification) throw new AppError('Notification not found', 404);
