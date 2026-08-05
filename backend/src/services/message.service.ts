@@ -42,14 +42,6 @@ export async function createMessage(data: CreateMessageInput) {
     include: { sender: { select: SENDER_SELECT } },
   });
 
-  // Sending a message counts as staff contact — resets the touch-base countdown.
-  prisma.patientProfile.update({
-    where: { id: data.patientId },
-    data: { lastContactAt: new Date() },
-  }).catch((e) => {
-    console.error(`[message] failed to update lastContactAt for patient ${data.patientId}:`, e);
-  });
-
   if (patient.user.notifPush && patient.user.pushToken) {
     const preview = data.body.length > 120 ? `${data.body.slice(0, 117)}...` : data.body;
     sendPushNotification(patient.user.pushToken, 'New message', preview, {

@@ -52,11 +52,12 @@ interface UpdatePatientInput {
   phone?: string | null;
   address?: string | null;
   touchBaseThresholdDays?: number | null;
+  touchBaseRemindersPaused?: boolean;
   providerId?: number | null;
 }
 
 export async function updatePatient(id: number, input: UpdatePatientInput) {
-  const { firstName, lastName, dateOfBirth, gender, healthIssue, avatarUrl, phone, address, touchBaseThresholdDays, providerId } = input;
+  const { firstName, lastName, dateOfBirth, gender, healthIssue, avatarUrl, phone, address, touchBaseThresholdDays, touchBaseRemindersPaused, providerId } = input;
 
   if (dateOfBirth !== undefined && isNaN(new Date(dateOfBirth).getTime())) {
     throw new AppError('Invalid dateOfBirth format', 400);
@@ -88,7 +89,15 @@ export async function updatePatient(id: number, input: UpdatePatientInput) {
         ...(avatarUrl !== undefined && { avatarUrl }),
         ...(phone !== undefined && { phone }),
         ...(address !== undefined && { address }),
-        ...(touchBaseThresholdDays !== undefined && { touchBaseThresholdDays }),
+        // Changing the threshold (including reverting to the global default) restarts the
+        // recurring reminder cycle from this moment — it is not a "last contacted" event.
+        ...(touchBaseThresholdDays !== undefined && { touchBaseThresholdDays, thresholdSetAt: new Date() }),
+        // Resuming (pausing = false) starts a fresh cycle, same as setting a new threshold —
+        // whatever time already elapsed while paused shouldn't count against the patient.
+        ...(touchBaseRemindersPaused !== undefined && {
+          touchBaseRemindersPaused,
+          ...(touchBaseRemindersPaused === false && { thresholdSetAt: new Date() }),
+        }),
         ...(providerId !== undefined && { providerId }),
       },
       include: { user: { select: USER_SELECT } },

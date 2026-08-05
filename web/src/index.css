@@ -408,6 +408,58 @@ button {
 .badge-submitted { background: var(--color-success-bg); color: var(--color-success); }
 .badge-overdue { background: var(--color-danger-bg); color: var(--color-danger); }
 
+/* ─── Toggle switch ──────────────────────────────────────────────────────── */
+
+.toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+}
+
+.toggle-switch-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.toggle-switch[aria-pressed="false"] .toggle-switch-label {
+  color: var(--color-text-muted);
+}
+
+.toggle-switch-track {
+  width: 36px;
+  height: 21px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  position: relative;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.toggle-switch[aria-pressed="false"] .toggle-switch-track {
+  background: var(--color-border);
+}
+
+.toggle-switch-thumb {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 2px;
+  left: 17px;
+  transition: left 0.15s;
+}
+
+.toggle-switch[aria-pressed="false"] .toggle-switch-thumb {
+  left: 2px;
+}
+
 /* ─── Rows ───────────────────────────────────────────────────────────────── */
 
 .row {

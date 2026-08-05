@@ -15,6 +15,11 @@ function daysSince(iso: string | null): string {
   return `${days} day${days !== 1 ? 's' : ''} ago`;
 }
 
+function formatThresholdDays(days: number): string {
+  if (days < 1) return `${Math.round(days * 1440)} min`;
+  return `${days} days`;
+}
+
 export function TouchBaseQueuePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -89,7 +94,7 @@ export function TouchBaseQueuePage() {
               <div className="row-body row-clickable" onClick={() => navigate(`/patients/${item.id}`)}>
                 <div className="row-name">{item.user.firstName} {item.user.lastName}</div>
                 <div className="row-sub">
-                  Last contact: {daysSince(item.lastContactAt)} · Threshold: {item.thresholdDays} days
+                  Last contact: {daysSince(item.lastContactAt)} · Threshold: {formatThresholdDays(item.thresholdDays)}
                 </div>
               </div>
               <span className={`badge badge-${item.overdue ? 'overdue' : 'pending'}`}>

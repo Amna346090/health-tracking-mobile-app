@@ -5,6 +5,8 @@ const PATIENT_USER_SELECT = {
   id: true,
   lastContactAt: true,
   touchBaseThresholdDays: true,
+  thresholdSetAt: true,
+  touchBaseRemindersPaused: true,
   providerId: true,
   createdAt: true,
   user: { select: { firstName: true, lastName: true, email: true } },
@@ -25,7 +27,35 @@ export interface TouchBaseQueueFilters {
   providerId?: number;
 }
 
-/** Patients who are overdue (past their threshold) or nearing it (within NEARING_WINDOW_DAYS). */
+/**
+ * The threshold is a fixed recurring cycle, not a "reset on contact" countdown: it repeats
+ * every `thresholdDays` from the moment it was set (thresholdSetAt), forever, regardless of
+ * contact. "Mark as contacted" (lastContactAt) only acknowledges the CURRENT cycle — it silences
+ * that cycle's daily reminder but does not shift or restart the schedule for future cycles.
+ */
+function computeDueDate(
+  thresholdSetAt: Date,
+  thresholdDays: number,
+  lastContactAt: Date | null,
+  now: number,
+): { dueAt: Date; overdue: boolean } {
+  const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
+  const periodsElapsed = Math.floor((now - thresholdSetAt.getTime()) / thresholdMs);
+
+  if (periodsElapsed >= 1) {
+    const currentCycleBoundary = new Date(thresholdSetAt.getTime() + periodsElapsed * thresholdMs);
+    const acknowledgedThisCycle =
+      lastContactAt !== null && lastContactAt.getTime() >= currentCycleBoundary.getTime();
+    if (!acknowledgedThisCycle) {
+      return { dueAt: currentCycleBoundary, overdue: true };
+    }
+    return { dueAt: new Date(thresholdSetAt.getTime() + (periodsElapsed + 1) * thresholdMs), overdue: false };
+  }
+
+  return { dueAt: new Date(thresholdSetAt.getTime() + thresholdMs), overdue: false };
+}
+
+/** Patients who are overdue (past their current cycle, unacknowledged) or nearing their next cycle. */
 export async function getOverdueOrNearingPatients(filters: TouchBaseQueueFilters = {}): Promise<TouchBaseQueueItem[]> {
   const settings = await getTouchBaseSettings();
   const patients = await prisma.patientProfile.findMany({
@@ -41,17 +71,18 @@ export async function getOverdueOrNearingPatients(filters: TouchBaseQueueFilters
 
   const results: TouchBaseQueueItem[] = [];
   for (const p of patients) {
-    const thresholdDays = p.touchBaseThresholdDays ?? settings.defaultThresholdDays;
-    const anchor = p.lastContactAt ?? p.createdAt;
-    const dueAt = new Date(anchor.getTime() + thresholdDays * 24 * 60 * 60 * 1000);
+    if (p.touchBaseRemindersPaused) continue;
 
-    if (dueAt.getTime() <= nearingCutoff) {
+    const thresholdDays = p.touchBaseThresholdDays ?? settings.defaultThresholdDays;
+    const { dueAt, overdue } = computeDueDate(p.thresholdSetAt, thresholdDays, p.lastContactAt, now);
+
+    if (overdue || dueAt.getTime() <= nearingCutoff) {
       results.push({
         id: p.id,
         lastContactAt: p.lastContactAt,
         thresholdDays,
         dueAt,
-        overdue: dueAt.getTime() <= now,
+        overdue,
         user: p.user,
       });
     }
