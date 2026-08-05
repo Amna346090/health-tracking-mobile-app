@@ -25,6 +25,14 @@ export async function markRead(id: number, requestingUserId: number) {
   });
 }
 
+export async function deleteNotification(id: number, requestingUserId: number): Promise<void> {
+  const notification = await prisma.notification.findUnique({ where: { id } });
+  if (!notification) throw new AppError('Notification not found', 404);
+  if (notification.userId !== requestingUserId) throw new AppError('Forbidden', 403);
+
+  await prisma.notification.delete({ where: { id } });
+}
+
 export interface CreateNotificationInput {
   userId: number;
   type: string;

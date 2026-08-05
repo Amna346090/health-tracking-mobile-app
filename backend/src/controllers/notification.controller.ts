@@ -29,3 +29,11 @@ export async function markRead(req: Request, res: Response, next: NextFunction):
     res.json({ status: 'ok', data: notification });
   } catch (err) { next(err); }
 }
+
+export async function deleteNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = parseId(req.params.id);
+    await notificationService.deleteNotification(id, req.user!.id);
+    res.json({ status: 'ok', data: null });
+  } catch (err) { next(err); }
+}
