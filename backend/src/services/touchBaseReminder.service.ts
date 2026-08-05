@@ -7,29 +7,23 @@ import { sendEmail } from '../lib/email';
 const TOUCH_BASE_DUE = 'TOUCH_BASE_DUE';
 
 /**
- * Only notifies once per "crossing" — if a Notification of this type already exists for
- * the patient created after their current lastContactAt, they've already been flagged for
- * this stretch of silence, so we don't nag daily like the test-request overdue reminders do.
+ * Real (1-day-or-longer) thresholds are date-level, not time-of-day — they're only checked
+ * and sent once daily, at a fixed hour, and repeat daily as long as the current cycle remains
+ * unacknowledged. Sub-day thresholds (admin-only test values in minutes) are checked and sent
+ * on every tick instead, so a 1-minute test threshold produces roughly one send per minute —
+ * this only ever applies to test thresholds, real reminders are untouched by this path.
+ * "Mark as contacted" is the only thing that silences a cycle, and only until the next one is due.
  */
-async function alreadyNotified(patientId: number, lastContactAt: Date | null): Promise<boolean> {
-  const existing = await prisma.notification.findFirst({
-    where: {
-      type: TOUCH_BASE_DUE,
-      patientId,
-      ...(lastContactAt && { createdAt: { gt: lastContactAt } }),
-    },
-  });
-  return !!existing;
-}
-
-/** Touch-base due dates are date-level, not time-of-day — runs once daily at a fixed hour. */
 export async function runTouchBaseReminderJob(): Promise<void> {
   const now = new Date();
-  if (now.getUTCHours() !== 8 || now.getUTCMinutes() !== 0) return;
+  const isDailyTick = now.getUTCHours() === 8 && now.getUTCMinutes() === 0;
 
   const queue = await getOverdueOrNearingPatients();
-  const overdue = queue.filter((item) => item.overdue);
-  if (overdue.length === 0) return;
+  const toNotify = queue.filter((item) => {
+    if (!item.overdue) return false;
+    return item.thresholdDays < 1 || isDailyTick;
+  });
+  if (toNotify.length === 0) return;
 
   const staffUsers = await prisma.user.findMany({
     where: { role: { in: [Role.STAFF, Role.ADMIN] } },
@@ -37,9 +31,7 @@ export async function runTouchBaseReminderJob(): Promise<void> {
   });
   if (staffUsers.length === 0) return;
 
-  for (const item of overdue) {
-    if (await alreadyNotified(item.id, item.lastContactAt)) continue;
-
+  for (const item of toNotify) {
     const patientName = `${item.user.firstName} ${item.user.lastName}`;
     const daysSince = item.lastContactAt
       ? Math.round((Date.now() - item.lastContactAt.getTime()) / (24 * 60 * 60 * 1000))

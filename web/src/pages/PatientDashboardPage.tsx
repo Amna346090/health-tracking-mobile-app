@@ -32,6 +32,7 @@ import { getTestRequests, updateTestRequest } from '../api/testRequests';
 import type { TestRequest } from '../api/testRequests';
 import { TestRequestModal } from '../components/TestRequestModal';
 import { Spinner } from '../components/Spinner';
+import { useAuth } from '../context/AuthContext';
 
 const FEELING_EMOJI: Record<string, string> = {
   GREAT: '😄',
@@ -97,11 +98,23 @@ const TOUCH_BASE_THRESHOLD_PRESETS: { label: string; days: number }[] = [
   { label: '3 months', days: 90 },
 ];
 
+// Admin-only, for verifying the reminder pipeline actually fires without waiting days/weeks.
+const TEST_THRESHOLD_PRESETS: { label: string; days: number }[] = [
+  { label: '1 min', days: 1 / 1440 },
+  { label: '5 min', days: 5 / 1440 },
+  { label: '10 min', days: 10 / 1440 },
+];
+
 const TEST_REQUEST_STATUS_LABEL: Record<TestRequest['status'], string> = {
   PENDING: 'Pending',
   SUBMITTED: 'Submitted',
   CANCELLED: 'Cancelled',
 };
+
+function formatThresholdDays(days: number): string {
+  if (days < 1) return `${Math.round(days * 1440)} min`;
+  return `${days} days`;
+}
 
 function isOverdue(req: TestRequest): boolean {
   return req.status === 'PENDING' && new Date(req.dueDate).getTime() < Date.now();
@@ -128,6 +141,8 @@ export function PatientDashboardPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const pid = Number(patientId);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   const [patient, setPatient] = useState<PatientRow | null>(null);
   const [summary, setSummary] = useState<PatientSummary | null>(null);
@@ -204,6 +219,12 @@ export function PatientDashboardPage() {
     setPatient(updated);
   }
 
+  async function handleTogglePause() {
+    if (!patient) return;
+    const updated = await updatePatient(pid, { touchBaseRemindersPaused: !patient.touchBaseRemindersPaused });
+    setPatient(updated);
+  }
+
   if (loading) return <Spinner />;
   if (!patient) return <div className="empty-state">Patient not found.</div>;
 
@@ -267,9 +288,19 @@ export function PatientDashboardPage() {
       <div className="section">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h2 className="section-title" style={{ margin: 0 }}>Touch-Base</h2>
-          <button className="btn btn-secondary btn-sm" disabled={markingContacted} onClick={handleMarkContacted}>
-            <HeartPulse size={13} strokeWidth={2.2} />
-            {markingContacted ? 'Saving…' : 'Mark as contacted'}
+          <button
+            type="button"
+            className="toggle-switch"
+            role="switch"
+            aria-pressed={!patient.touchBaseRemindersPaused}
+            onClick={handleTogglePause}
+          >
+            <span className="toggle-switch-label">
+              {patient.touchBaseRemindersPaused ? 'Reminders paused' : 'Reminders active'}
+            </span>
+            <span className="toggle-switch-track">
+              <span className="toggle-switch-thumb" />
+            </span>
           </button>
         </div>
         <div className="card">
@@ -280,30 +311,68 @@ export function PatientDashboardPage() {
                 {patient.lastContactAt ? formatWhen(patient.lastContactAt) : 'Never'}
               </div>
             </div>
-            <div>
-              <div className="info-item-label">Threshold</div>
-              <div className="info-item-value">
-                {patient.touchBaseThresholdDays ? `${patient.touchBaseThresholdDays} days (custom)` : 'Global default'}
-              </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <button className="btn btn-secondary btn-sm" disabled={markingContacted} onClick={handleMarkContacted}>
+                <HeartPulse size={13} strokeWidth={2.2} />
+                {markingContacted ? 'Saving…' : 'Mark as contacted'}
+              </button>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
-            {TOUCH_BASE_THRESHOLD_PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                className={`btn btn-sm ${patient.touchBaseThresholdDays === preset.days ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => handleSetThreshold(preset.days)}
-              >
-                {preset.label}
-              </button>
-            ))}
-            <button
-              className={`btn btn-sm ${patient.touchBaseThresholdDays === null ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => handleSetThreshold(null)}
-            >
-              Use default
-            </button>
-          </div>
+
+          {patient.touchBaseRemindersPaused ? (
+            <p style={{ fontSize: 12.5, color: 'var(--color-text-muted)', marginTop: 14, marginBottom: 0 }}>
+              Reminders paused for this patient. Turn back on and set a threshold to resume.
+            </p>
+          ) : (
+            <>
+              <div className="info-grid" style={{ marginTop: 14 }}>
+                <div>
+                  <div className="info-item-label">Threshold</div>
+                  <div className="info-item-value">
+                    {patient.touchBaseThresholdDays
+                      ? `${formatThresholdDays(patient.touchBaseThresholdDays)} (custom)`
+                      : 'Global default'}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
+                {TOUCH_BASE_THRESHOLD_PRESETS.map((preset) => (
+                  <button
+                    key={preset.label}
+                    className={`btn btn-sm ${patient.touchBaseThresholdDays === preset.days ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleSetThreshold(preset.days)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+                <button
+                  className={`btn btn-sm ${patient.touchBaseThresholdDays === null ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => handleSetThreshold(null)}
+                >
+                  Use default
+                </button>
+              </div>
+
+              {isAdmin && (
+                <>
+                  <div className="info-item-label" style={{ marginTop: 16, marginBottom: 8 }}>
+                    Test threshold (admin only)
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {TEST_THRESHOLD_PRESETS.map((preset) => (
+                      <button
+                        key={preset.label}
+                        className={`btn btn-sm ${patient.touchBaseThresholdDays === preset.days ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handleSetThreshold(preset.days)}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 

@@ -109,13 +109,5 @@ export async function updateAppointment(id: number, data: UpdateAppointmentInput
     },
   });
 
-  // A completed appointment counts as staff contact — resets the touch-base countdown.
-  if (data.status === AppointmentStatus.COMPLETED) {
-    await prisma.patientProfile.update({
-      where: { id: exists.patientId },
-      data: { lastContactAt: new Date() },
-    });
-  }
-
   return updated;
 }

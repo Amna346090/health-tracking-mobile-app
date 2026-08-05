@@ -120,21 +120,23 @@ model RefreshToken {
 // ─── Patient ──────────────────────────────────────────────────────────────────
 
 model PatientProfile {
-  id                     Int       @id @default(autoincrement())
-  userId                 Int       @unique
-  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dateOfBirth            DateTime? @db.Date
-  gender                 Gender?
-  healthIssue            String?
-  avatarUrl              String?
-  phone                  String?
-  address                String?
-  lastContactAt          DateTime?
-  touchBaseThresholdDays Int?
-  providerId             Int?
-  provider               Provider? @relation(fields: [providerId], references: [id])
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  id                       Int       @id @default(autoincrement())
+  userId                   Int       @unique
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateOfBirth              DateTime? @db.Date
+  gender                   Gender?
+  healthIssue              String?
+  avatarUrl                String?
+  phone                    String?
+  address                  String?
+  lastContactAt            DateTime?
+  touchBaseThresholdDays   Float?
+  thresholdSetAt           DateTime  @default(now())
+  touchBaseRemindersPaused Boolean   @default(false)
+  providerId               Int?
+  provider                 Provider? @relation(fields: [providerId], references: [id])
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   medicationAssignments   MedicationAssignment[]
   healthLogs              HealthLog[]
