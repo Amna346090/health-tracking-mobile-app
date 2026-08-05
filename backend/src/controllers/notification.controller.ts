@@ -30,6 +30,13 @@ export async function markRead(req: Request, res: Response, next: NextFunction):
   } catch (err) { next(err); }
 }
 
+export async function markAllRead(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    await notificationService.markAllRead(req.user!.id);
+    res.json({ status: 'ok', data: null });
+  } catch (err) { next(err); }
+}
+
 export async function deleteNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = parseId(req.params.id);

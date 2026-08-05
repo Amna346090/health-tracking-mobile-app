@@ -18,5 +18,8 @@ export const getUnreadCount = () => api.get<{ count: number }>('/notifications/u
 export const markNotificationRead = (id: number) =>
   api.patch<Notification>(`/notifications/${id}/read`);
 
+export const markAllNotificationsRead = () =>
+  api.patch<void>('/notifications/read-all');
+
 export const deleteNotification = (id: number) =>
   api.delete<void>(`/notifications/${id}`);
