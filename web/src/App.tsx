@@ -14,6 +14,7 @@ import { TestRequestsPage } from './pages/TestRequestsPage';
 import { TouchBaseQueuePage } from './pages/TouchBaseQueuePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ManageUsersPage } from './pages/ManageUsersPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
             <Route path="/appointments" element={<AppointmentsPage />} />
             <Route path="/test-requests" element={<TestRequestsPage />} />
             <Route path="/touch-base" element={<TouchBaseQueuePage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             <Route
               path="/users"
               element={

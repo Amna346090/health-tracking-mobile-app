@@ -304,19 +304,17 @@ export function PatientDashboardPage() {
           </button>
         </div>
         <div className="card">
-          <div className="info-grid">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
             <div>
               <div className="info-item-label">Last contact</div>
               <div className="info-item-value">
                 {patient.lastContactAt ? formatWhen(patient.lastContactAt) : 'Never'}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <button className="btn btn-secondary btn-sm" disabled={markingContacted} onClick={handleMarkContacted}>
-                <HeartPulse size={13} strokeWidth={2.2} />
-                {markingContacted ? 'Saving…' : 'Mark as contacted'}
-              </button>
-            </div>
+            <button className="btn btn-secondary btn-sm" disabled={markingContacted} onClick={handleMarkContacted}>
+              <HeartPulse size={13} strokeWidth={2.2} />
+              {markingContacted ? 'Saving…' : 'Mark as contacted'}
+            </button>
           </div>
 
           {patient.touchBaseRemindersPaused ? (
