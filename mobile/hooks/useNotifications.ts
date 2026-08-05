@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { registerPushToken } from '../api/notifications';
 
@@ -35,12 +36,17 @@ export function useNotifications(isLoggedIn: boolean): void {
         const { status } = await Notifications.requestPermissionsAsync();
         if (status !== 'granted') return;
 
-        // getExpoPushTokenAsync requires a projectId in standalone builds;
-        // in Expo Go it resolves automatically.
-        const { data: token } = await Notifications.getExpoPushTokenAsync();
+        // getExpoPushTokenAsync requires an explicit projectId outside of Expo Go
+        // (standalone/EAS builds don't infer it automatically).
+        const projectId =
+          Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+        const { data: token } = await Notifications.getExpoPushTokenAsync(
+          projectId ? { projectId } : undefined,
+        );
         await registerPushToken(token);
-      } catch {
-        // Non-fatal — push notifications are optional
+      } catch (e) {
+        // Non-fatal — push notifications are optional, but log for diagnosability
+        console.warn('[push] failed to register for push notifications:', e);
       }
     })();
 
