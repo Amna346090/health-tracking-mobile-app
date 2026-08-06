@@ -97,8 +97,8 @@ export function TouchBaseQueuePage() {
                   Last contact: {daysSince(item.lastContactAt)} · Threshold: {formatThresholdDays(item.thresholdDays)}
                 </div>
               </div>
-              <span className={`badge badge-${item.overdue ? 'overdue' : 'pending'}`}>
-                {item.overdue ? 'Overdue' : 'Nearing'}
+              <span className={`badge badge-${item.overdue ? 'overdue' : 'nearing'}`}>
+                {item.overdue ? 'Overdue' : 'Due Soon'}
               </span>
               <button
                 className="btn btn-secondary btn-sm"
