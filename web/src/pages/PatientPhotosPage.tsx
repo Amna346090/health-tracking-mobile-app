@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import { getPatientById } from '../api/patients';
 import type { PatientRow } from '../api/patients';
-import { getPhotos } from '../api/photos';
+import { getPhotos, deletePhoto } from '../api/photos';
 import type { Photo } from '../api/photos';
+import { PhotoModal } from '../components/PhotoModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { Spinner } from '../components/Spinner';
 
 export function PatientPhotosPage() {
@@ -15,6 +17,8 @@ export function PatientPhotosPage() {
   const [patient, setPatient] = useState<PatientRow | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [photoModal, setPhotoModal] = useState<'new' | Photo | null>(null);
+  const [deletingPhoto, setDeletingPhoto] = useState<Photo | null>(null);
 
   useEffect(() => {
     Promise.all([getPatientById(pid), getPhotos(pid)])
@@ -41,6 +45,10 @@ export function PatientPhotosPage() {
           <h1 className="page-title">{name}</h1>
           <p className="page-subtitle">{photos.length} photo{photos.length !== 1 ? 's' : ''}</p>
         </div>
+        <button className="btn btn-primary" onClick={() => setPhotoModal('new')}>
+          <Plus size={14} strokeWidth={2.2} />
+          Upload Photo
+        </button>
       </div>
 
       {photos.length === 0 ? (
@@ -57,10 +65,49 @@ export function PatientPhotosPage() {
                   {' · '}
                   {photo.uploadedBy.firstName} {photo.uploadedBy.lastName}
                 </div>
+                <div className="row-actions" style={{ marginTop: 8, marginLeft: 0 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setPhotoModal(photo)}>
+                    <Pencil size={12} strokeWidth={2.2} />
+                    Edit
+                  </button>
+                  <button className="btn btn-danger btn-sm" onClick={() => setDeletingPhoto(photo)}>
+                    <Trash2 size={12} strokeWidth={2.2} />
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {photoModal && (
+        <PhotoModal
+          patientId={pid}
+          editingPhoto={photoModal !== 'new' ? photoModal : undefined}
+          onClose={() => setPhotoModal(null)}
+          onSaved={(saved) => {
+            setPhotos((prev) =>
+              prev.some((p) => p.id === saved.id)
+                ? prev.map((p) => (p.id === saved.id ? saved : p))
+                : [saved, ...prev],
+            );
+            setPhotoModal(null);
+          }}
+        />
+      )}
+
+      {deletingPhoto && (
+        <ConfirmModal
+          title="Delete Photo"
+          message="Remove this photo permanently? This cannot be undone."
+          confirmLabel="Delete"
+          onClose={() => setDeletingPhoto(null)}
+          onConfirm={async () => {
+            await deletePhoto(deletingPhoto.id);
+            setPhotos((prev) => prev.filter((p) => p.id !== deletingPhoto.id));
+          }}
+        />
       )}
     </div>
   );

@@ -10,14 +10,16 @@ import {
   Image,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/auth';
-import { colors, spacing, typography } from '../../theme';
-import { getPhotoById, deletePhoto, type Photo } from '../../api/photos';
+import { colors, radius, spacing, typography } from '../../theme';
+import { getPhotoById, updatePhoto, deletePhoto, type Photo } from '../../api/photos';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -41,6 +43,11 @@ export default function PhotoDetailScreen() {
   const [deleting, setDeleting] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
+  const [editing, setEditing] = useState(false);
+  const [newAsset, setNewAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [editCaption, setEditCaption] = useState('');
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     getPhotoById(photoId)
       .then(setPhoto)
@@ -48,7 +55,7 @@ export default function PhotoDetailScreen() {
       .finally(() => setLoading(false));
   }, [photoId]);
 
-  const canDelete =
+  const canManage =
     user?.role === 'ADMIN' ||
     user?.role === 'STAFF' ||
     (user?.role === 'PATIENT' && photo?.uploadedBy.id === user.id);
@@ -74,6 +81,48 @@ export default function PhotoDetailScreen() {
     ]);
   }
 
+  function startEditing() {
+    if (!photo) return;
+    setEditCaption(photo.caption ?? '');
+    setNewAsset(null);
+    setEditing(true);
+  }
+
+  async function pickReplacement() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission required', 'Allow access to your photo library in Settings.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.82,
+    });
+    if (!result.canceled) setNewAsset(result.assets[0]);
+  }
+
+  async function handleSaveEdit() {
+    if (!photo) return;
+    setSaving(true);
+    try {
+      const updated = await updatePhoto(photo.id, {
+        patientId: photo.patientId,
+        uri: newAsset?.uri,
+        mimeType: newAsset?.mimeType ?? 'image/jpeg',
+        filename: newAsset?.fileName ?? 'photo.jpg',
+        caption: editCaption.trim() || null,
+      });
+      setPhoto(updated);
+      setEditing(false);
+      setNewAsset(null);
+    } catch (e) {
+      Alert.alert('Could not save changes', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -97,38 +146,69 @@ export default function PhotoDetailScreen() {
     <View style={styles.bg}>
       {/* Top controls */}
       <SafeAreaView edges={['top']} style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={() => (editing ? setEditing(false) : router.back())} style={styles.closeBtn}>
           <Text style={styles.closeBtnText}>✕</Text>
         </TouchableOpacity>
-        {canDelete && (
-          <TouchableOpacity onPress={confirmDelete} disabled={deleting} style={styles.deleteBtn}>
-            {deleting
-              ? <ActivityIndicator color={colors.danger} size="small" />
-              : <Text style={styles.deleteBtnText}>Delete</Text>
-            }
-          </TouchableOpacity>
+        {canManage && !editing && (
+          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <TouchableOpacity onPress={startEditing} style={styles.actionBtn}>
+              <Text style={styles.editBtnText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={confirmDelete} disabled={deleting} style={styles.actionBtn}>
+              {deleting
+                ? <ActivityIndicator color={colors.danger} size="small" />
+                : <Text style={styles.deleteBtnText}>Delete</Text>
+              }
+            </TouchableOpacity>
+          </View>
         )}
       </SafeAreaView>
 
       {/* Full-screen image */}
       <Image
-        source={{ uri: photo.url }}
+        source={{ uri: newAsset?.uri ?? photo.url }}
         style={styles.image}
         resizeMode="contain"
       />
 
-      {/* Bottom info overlay */}
-      <SafeAreaView edges={['bottom']} style={styles.overlay}>
-        <Text style={styles.date}>{formatDate(photo.uploadedAt)}</Text>
-        {photo.caption && (
-          <Text style={styles.caption}>{photo.caption}</Text>
-        )}
-        {photo.uploadedBy.role !== 'PATIENT' && (
-          <Text style={styles.staffTag}>
-            Added by {photo.uploadedBy.firstName} {photo.uploadedBy.lastName} (staff)
-          </Text>
-        )}
-      </SafeAreaView>
+      {editing ? (
+        <SafeAreaView edges={['bottom']} style={styles.editPanel}>
+          <TouchableOpacity style={styles.replaceBtn} onPress={pickReplacement} disabled={saving}>
+            <Text style={styles.replaceBtnText}>{newAsset ? 'Choose a different photo' : 'Replace photo'}</Text>
+          </TouchableOpacity>
+          <TextInput
+            style={styles.captionInput}
+            value={editCaption}
+            onChangeText={setEditCaption}
+            placeholder="Add a caption (optional)"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+          />
+          <View style={styles.editActions}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)} disabled={saving}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={handleSaveEdit} disabled={saving}>
+              {saving
+                ? <ActivityIndicator color={colors.text.inverse} size="small" />
+                : <Text style={styles.saveBtnText}>Save changes</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      ) : (
+        /* Bottom info overlay */
+        <SafeAreaView edges={['bottom']} style={styles.overlay}>
+          <Text style={styles.date}>{formatDate(photo.uploadedAt)}</Text>
+          {photo.caption && (
+            <Text style={styles.caption}>{photo.caption}</Text>
+          )}
+          {photo.uploadedBy.role !== 'PATIENT' && (
+            <Text style={styles.staffTag}>
+              Added by {photo.uploadedBy.firstName} {photo.uploadedBy.lastName} (staff)
+            </Text>
+          )}
+        </SafeAreaView>
+      )}
     </View>
   );
 }
@@ -152,7 +232,8 @@ const styles = StyleSheet.create({
   },
   closeBtn:     { padding: spacing.sm },
   closeBtnText: { ...(typography.h3 as object), color: '#fff' },
-  deleteBtn:     { padding: spacing.sm },
+  actionBtn:     { padding: spacing.sm },
+  editBtnText:   { ...(typography.body1 as object), color: '#fff', fontWeight: '600' as const },
   deleteBtnText: { ...(typography.body1 as object), color: colors.danger, fontWeight: '600' as const },
 
   image: { width: SCREEN_W, height: SCREEN_H },
@@ -173,4 +254,52 @@ const styles = StyleSheet.create({
   staffTag: { ...(typography.caption as object), color: colors.warning },
 
   errorText: { ...(typography.body1 as object), color: colors.danger },
+
+  editPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    gap: spacing.sm,
+  },
+  replaceBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  replaceBtnText: { ...(typography.body2 as object), color: '#fff', fontWeight: '600' as const },
+  captionInput: {
+    ...(typography.body1 as object),
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  editActions: { flexDirection: 'row', gap: spacing.sm },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    alignItems: 'center',
+  },
+  cancelBtnText: { ...(typography.label as object), color: '#fff' },
+  saveBtn: {
+    flex: 2,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  saveBtnDisabled: { opacity: 0.6 },
+  saveBtnText: { ...(typography.label as object), color: colors.text.inverse, fontWeight: '600' as const },
 });
