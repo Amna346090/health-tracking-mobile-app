@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, typography, radius, shadows } from '../theme';
 import { DoseStatusBadge } from './DoseStatusBadge';
-import type { TodayScheduleItem, MedicationAssignment } from '../api/assignments';
+import type { TodayScheduleItem, MedicationAssignment, DoseStatus } from '../api/assignments';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -20,6 +20,21 @@ const FOOD_LABEL: Record<string, string> = {
   WITHOUT_FOOD: 'Without food',
   EITHER: 'With or without food',
 };
+
+// Times are stored as literal UTC "HH:MM" strings (the backend matches them against its own
+// UTC clock) — comparing against the device's current UTC time keeps this consistent with
+// when the reminder actually fires, even though neither one accounts for the patient's timezone yet.
+function currentUtcHHMM(): string {
+  const now = new Date();
+  return `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+function computeTodayStatus(item: TodayScheduleItem): DoseStatus | 'DUE' | 'UPCOMING' {
+  if (item.todayLog) return item.todayLog.status;
+  if (item.timesOfDay.length === 0) return 'DUE';
+  const earliestTime = [...item.timesOfDay].sort()[0];
+  return currentUtcHHMM() >= earliestTime ? 'DUE' : 'UPCOMING';
+}
 
 function formatDoseDetail(
   quantityPerDose: number | null,
@@ -45,7 +60,7 @@ interface ScheduleCardProps {
 
 export function TodayMedicationCard({ item, onMarkTaken, disabled }: ScheduleCardProps) {
   const alreadyLogged = item.todayLog !== null;
-  const status = item.todayLog?.status ?? 'DUE';
+  const status = computeTodayStatus(item);
   const doseDetail = formatDoseDetail(
     item.medication.quantityPerDose,
     item.medication.form,
