@@ -84,13 +84,41 @@ export async function getPhoto(req: Request, res: Response, next: NextFunction):
   } catch (err) { next(err); }
 }
 
+export async function updatePhoto(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const photoId = parseId(req.params.id);
+    const existing = await photoService.getPhotoById(photoId);
+    await assertPatientAccess(req, existing.patientId);
+
+    const { url, key, caption } = req.body as {
+      url?: string;
+      key?: string | null;
+      caption?: string | null;
+    };
+
+    const { photo, previousKey } = await photoService.updatePhoto(
+      photoId,
+      { url, key, caption },
+      req.user!.id,
+    );
+
+    if (previousKey) {
+      deleteObject(previousKey).catch((e) => {
+        console.error(`[photo] S3 delete failed for key "${previousKey}":`, e);
+      });
+    }
+
+    res.json({ status: 'ok', data: photo });
+  } catch (err) { next(err); }
+}
+
 export async function removePhoto(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const photoId = parseId(req.params.id);
     const photo   = await photoService.getPhotoById(photoId);
     await assertPatientAccess(req, photo.patientId);
 
-    const { key } = await photoService.deletePhoto(photoId);
+    const { key } = await photoService.deletePhoto(photoId, req.user!.id);
 
     // Best-effort S3 deletion — don't fail the request if storage cleanup errors
     if (key) {

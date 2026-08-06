@@ -1,7 +1,7 @@
 // Auth endpoints — use plain fetch so the 401-retry loop never fires.
 // register/logout require the caller's own bearer token (staff creating a
 // patient, or a logged-in user logging out); login/refresh need none.
-import { getAccessToken } from './client';
+import { api, getAccessToken } from './client';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
@@ -90,3 +90,7 @@ export const refreshApi = (refreshToken: string) =>
 
 export const logoutApi = (refreshToken: string) =>
   post<unknown>('/auth/logout', { refreshToken });
+
+// Uses the shared client (with its normal 401-retry) since this runs throughout
+// the session, not just at login — an expired token here should just refresh and retry.
+export const getMeApi = () => api.get<AuthUser>('/auth/me');

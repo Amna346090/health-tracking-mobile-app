@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Switch,
@@ -214,8 +215,14 @@ const notifStyles = StyleSheet.create({
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try { await refreshUser(); } finally { setRefreshing(false); }
+  }
 
   function confirmLogout() {
     Alert.alert('Sign out', 'Are you sure you want to sign out?', [
@@ -240,6 +247,7 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
         {/* Avatar + name */}
         <View style={styles.avatarSection}>

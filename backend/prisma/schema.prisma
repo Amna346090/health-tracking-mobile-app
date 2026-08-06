@@ -107,6 +107,7 @@ model User {
   testRequestsCreated   TestRequest[]          @relation("TestRequestedBy")
   notifications         Notification[]
   healthMetricsCreated  HealthMetric[]         @relation("HealthMetricCreatedBy")
+  uploadAuditLogs       UploadAuditLog[]       @relation("UploadAuditPerformedBy")
 }
 
 model RefreshToken {
@@ -153,6 +154,7 @@ model PatientProfile {
   testRequestReminderLogs TestRequestReminderLog[]
   notifications           Notification[]
   healthMetrics           HealthMetric[]
+  uploadAuditLogs         UploadAuditLog[]
 
   @@index([providerId])
 }
@@ -248,6 +250,37 @@ model Photo {
   uploadedById Int
   uploadedBy   User           @relation("PhotoUploadedBy", fields: [uploadedById], references: [id])
   uploadedAt   DateTime       @default(now())
+
+  @@index([patientId])
+}
+
+// ─── Upload audit trail ────────────────────────────────────────────────────────
+// Independent of Photo/Document rows so a record survives even after the file itself
+// is deleted — entityId intentionally has no FK, since the row it once pointed to may
+// no longer exist.
+
+enum UploadEntityType {
+  PHOTO
+  DOCUMENT
+}
+
+enum UploadAuditAction {
+  UPLOADED
+  EDITED
+  DELETED
+}
+
+model UploadAuditLog {
+  id            Int               @id @default(autoincrement())
+  patientId     Int
+  patient       PatientProfile    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  entityType    UploadEntityType
+  entityId      Int
+  action        UploadAuditAction
+  detail        String?
+  performedById Int
+  performedBy   User              @relation("UploadAuditPerformedBy", fields: [performedById], references: [id])
+  createdAt     DateTime          @default(now())
 
   @@index([patientId])
 }

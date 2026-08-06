@@ -33,6 +33,8 @@ import type { TestRequest } from '../api/testRequests';
 import { TestRequestModal } from '../components/TestRequestModal';
 import { Spinner } from '../components/Spinner';
 import { useAuth } from '../context/AuthContext';
+import { getUploadHistory } from '../api/uploadAudit';
+import type { UploadAuditLogEntry } from '../api/uploadAudit';
 
 const FEELING_EMOJI: Record<string, string> = {
   GREAT: '😄',
@@ -111,6 +113,18 @@ const TEST_REQUEST_STATUS_LABEL: Record<TestRequest['status'], string> = {
   CANCELLED: 'Cancelled',
 };
 
+const UPLOAD_ACTION_LABEL: Record<UploadAuditLogEntry['action'], string> = {
+  UPLOADED: 'uploaded',
+  EDITED: 'edited',
+  DELETED: 'deleted',
+};
+
+const UPLOAD_ACTION_ICON: Record<UploadAuditLogEntry['action'], string> = {
+  UPLOADED: '⬆️',
+  EDITED: '✏️',
+  DELETED: '🗑️',
+};
+
 function formatThresholdDays(days: number): string {
   if (days < 1) return `${Math.round(days * 1440)} min`;
   return `${days} days`;
@@ -165,6 +179,7 @@ export function PatientDashboardPage() {
   const [metricType, setMetricType] = useState<HealthMetricType>('CHOLESTEROL_LDL');
   const [metricTrend, setMetricTrend] = useState<MetricTrendPoint[]>([]);
   const [metricEntries, setMetricEntries] = useState<HealthMetric[]>([]);
+  const [uploadHistory, setUploadHistory] = useState<UploadAuditLogEntry[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -184,6 +199,10 @@ export function PatientDashboardPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [pid]);
+
+  useEffect(() => {
+    if (isAdmin) getUploadHistory(pid).then(setUploadHistory).catch(() => {});
+  }, [pid, isAdmin]);
 
   useEffect(() => {
     getAllProviders().then(setProviders).catch(() => {});
@@ -651,6 +670,34 @@ export function PatientDashboardPage() {
           View documents
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="section">
+          <h2 className="section-title">Upload History</h2>
+          {uploadHistory.length === 0 ? (
+            <div className="empty-state">No photo or document activity yet.</div>
+          ) : (
+            <div className="card">
+              <div className="timeline-list">
+                {uploadHistory.map((entry) => (
+                  <div key={entry.id} className="timeline-row">
+                    <span className="timeline-icon">{UPLOAD_ACTION_ICON[entry.action]}</span>
+                    <div>
+                      <div className="timeline-title">
+                        {entry.performedBy.firstName} {entry.performedBy.lastName} {UPLOAD_ACTION_LABEL[entry.action]} a {entry.entityType.toLowerCase()}
+                      </div>
+                      {entry.detail && <div className="timeline-sub">{entry.detail}</div>}
+                    </div>
+                    <span className="timeline-time">
+                      {new Date(entry.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="section">
         <h2 className="section-title">Recent Activity</h2>

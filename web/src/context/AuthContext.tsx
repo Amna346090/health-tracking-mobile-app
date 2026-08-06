@@ -57,20 +57,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearStorage();
   }, [clearStorage]);
 
-  const doRefresh = useCallback(async (): Promise<boolean> => {
+  // Refresh tokens are single-use (the server rotates them). If two requests both hit a
+  // 401 around the same moment and each independently call refreshApi(), the first one
+  // consumes the token and the second — now using an already-used token — gets rejected
+  // and would wrongly trigger a full logout. Sharing one in-flight promise means every
+  // concurrent caller gets the same outcome instead of racing each other.
+  const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
+
+  const doRefresh = useCallback((): Promise<boolean> => {
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+
     const rt = refreshTokenRef.current;
-    if (!rt) return false;
-    try {
-      const tokens = await refreshApi(rt);
-      localStorage.setItem(KEY.ACCESS, tokens.accessToken);
-      localStorage.setItem(KEY.REFRESH, tokens.refreshToken);
-      refreshTokenRef.current = tokens.refreshToken;
-      setAccessToken(tokens.accessToken);
-      return true;
-    } catch {
-      await logout();
-      return false;
-    }
+    if (!rt) return Promise.resolve(false);
+
+    const attempt = (async () => {
+      try {
+        const tokens = await refreshApi(rt);
+        localStorage.setItem(KEY.ACCESS, tokens.accessToken);
+        localStorage.setItem(KEY.REFRESH, tokens.refreshToken);
+        refreshTokenRef.current = tokens.refreshToken;
+        setAccessToken(tokens.accessToken);
+        return true;
+      } catch {
+        await logout();
+        return false;
+      } finally {
+        refreshPromiseRef.current = null;
+      }
+    })();
+
+    refreshPromiseRef.current = attempt;
+    return attempt;
   }, [logout]);
 
   useEffect(() => {

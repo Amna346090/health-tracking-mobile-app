@@ -78,3 +78,57 @@ export async function uploadDocument(opts: UploadDocumentOptions): Promise<Docum
     fileType: mimeType,
   });
 }
+
+// ─── Update (replace file and/or tag) ─────────────────────────────────────────
+
+export interface UpdateDocumentOptions {
+  patientId: number;
+  uri?: string;
+  mimeType?: string;
+  filename?: string;
+  tag?: string | null;
+  onProgress?: (fraction: number) => void;
+}
+
+/** Same presign → S3 → save flow as uploadDocument, but PATCHes an existing document. */
+export async function updateDocument(id: number, opts: UpdateDocumentOptions): Promise<Document> {
+  const { patientId, uri, mimeType, filename, tag, onProgress } = opts;
+
+  let fileFields: { url?: string; key?: string; fileType?: string } = {};
+
+  if (uri) {
+    const presign = await api.post<PresignResult>(`/patients/${patientId}/documents/presign`, {
+      filename: filename ?? 'document',
+      contentType: mimeType ?? 'application/octet-stream',
+    });
+
+    const localRes = await fetch(uri);
+    const blob = await localRes.blob();
+
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', presign.uploadUrl);
+      xhr.setRequestHeader('Content-Type', mimeType ?? 'application/octet-stream');
+      if (onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(e.loaded / e.total);
+        };
+      }
+      xhr.onload = () => (xhr.status < 400 ? resolve() : reject(new Error(`Upload HTTP ${xhr.status}`)));
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(blob);
+    });
+    onProgress?.(1);
+
+    fileFields = { url: presign.publicUrl, key: presign.key, fileType: mimeType };
+  }
+
+  return api.patch<Document>(`/documents/${id}`, {
+    ...fileFields,
+    ...(tag !== undefined && { tag }),
+  });
+}
+
+export function deleteDocument(id: number): Promise<unknown> {
+  return api.delete(`/documents/${id}`);
+}

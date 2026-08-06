@@ -95,3 +95,53 @@ export async function uploadPhoto(opts: UploadOptions): Promise<Photo> {
     healthLogId: healthLogId ?? null,
   });
 }
+
+// ─── Update (replace file and/or caption) ─────────────────────────────────────
+
+export interface UpdatePhotoOptions {
+  patientId: number;
+  uri?: string;
+  mimeType?: string;
+  filename?: string;
+  caption?: string | null;
+  onProgress?: (fraction: number) => void;
+}
+
+/** Same presign → S3 → save flow as uploadPhoto, but PATCHes an existing photo. */
+export async function updatePhoto(id: number, opts: UpdatePhotoOptions): Promise<Photo> {
+  const { patientId, uri, mimeType, filename, caption, onProgress } = opts;
+
+  let fileFields: { url?: string; key?: string } = {};
+
+  if (uri) {
+    const presign = await api.post<PresignResult>(`/patients/${patientId}/photos/presign`, {
+      filename: filename ?? 'photo.jpg',
+      contentType: mimeType ?? 'image/jpeg',
+    });
+
+    const localRes = await fetch(uri);
+    const blob = await localRes.blob();
+
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', presign.uploadUrl);
+      xhr.setRequestHeader('Content-Type', mimeType ?? 'image/jpeg');
+      if (onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(e.loaded / e.total);
+        };
+      }
+      xhr.onload = () => (xhr.status < 400 ? resolve() : reject(new Error(`S3 upload HTTP ${xhr.status}`)));
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(blob);
+    });
+    onProgress?.(1);
+
+    fileFields = { url: presign.publicUrl, key: presign.key };
+  }
+
+  return api.patch<Photo>(`/photos/${id}`, {
+    ...fileFields,
+    ...(caption !== undefined && { caption }),
+  });
+}

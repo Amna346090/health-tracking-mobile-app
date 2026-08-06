@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { Role } from '@prisma/client';
-import { authenticate, requireRoles } from '../middleware/auth.middleware';
+import { authenticate } from '../middleware/auth.middleware';
 import { getDocument, updateDocument, removeDocument } from '../controllers/document.controller';
 
 // Mounted at /api/documents — for operations on individual documents by ID
@@ -9,7 +8,10 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/:id', getDocument);
-router.patch('/:id', requireRoles(Role.STAFF, Role.ADMIN), updateDocument);
+// Editing (tag, or replacing the file) was staff-only back when only the CRM's tag
+// editor used this — now a patient can also edit their own document, so
+// assertPatientAccess (inside updateDocument) is the real gate, same as delete below.
+router.patch('/:id', updateDocument);
 router.delete('/:id', removeDocument);
 
 export default router;
