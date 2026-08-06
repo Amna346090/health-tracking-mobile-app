@@ -114,7 +114,9 @@ router.patch('/:patientId/appointments/:id', updateAppointment);
 
 // ─── Message sub-routes ────────────────────────────────────────────────────────
 router.get('/:patientId/messages', listMessages);
-router.post('/:patientId/messages', requireRoles(Role.STAFF, Role.ADMIN), sendMessage);
+// Two-way conversation: any authenticated role may post — assertPatientAccess (inside
+// sendMessage) is the real gate, scoping a PATIENT to only their own thread.
+router.post('/:patientId/messages', sendMessage);
 router.patch('/:patientId/messages/:id/read', markRead);
 
 // ─── Test/scan request sub-routes ──────────────────────────────────────────────
