@@ -60,6 +60,7 @@ import {
   createMetric,
   deleteMetric,
 } from '../controllers/healthMetric.controller';
+import { getUploadHistory } from '../controllers/uploadAudit.controller';
 
 const router = Router();
 
@@ -102,6 +103,9 @@ router.post('/:patientId/photos', savePhoto);
 router.post('/:patientId/documents/presign', getDocumentPresignedUrl);
 router.get('/:patientId/documents', listDocuments);
 router.post('/:patientId/documents', createDocument);
+
+// ─── Upload audit history (photos + documents) ─────────────────────────────────
+router.get('/:patientId/upload-history', requireRoles(Role.ADMIN), getUploadHistory);
 
 // ─── Timeline + Summary ───────────────────────────────────────────────────────
 router.get('/:patientId/timeline', getPatientTimeline);

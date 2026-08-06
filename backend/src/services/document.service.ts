@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
+import { logUploadAudit } from './uploadAudit.service';
 
 const UPLOADER_SELECT = {
   id: true,
@@ -56,7 +57,7 @@ export async function createDocument(data: CreateDocumentInput) {
     }
   }
 
-  return prisma.document.create({
+  const document = await prisma.document.create({
     data: {
       patientId: data.patientId,
       url: data.url,
@@ -68,43 +69,88 @@ export async function createDocument(data: CreateDocumentInput) {
     },
     include: { uploadedBy: { select: UPLOADER_SELECT } },
   });
+
+  await logUploadAudit({
+    patientId: data.patientId,
+    entityType: 'DOCUMENT',
+    entityId: document.id,
+    action: 'UPLOADED',
+    performedById: data.uploadedById,
+  });
+
+  return document;
 }
 
-// ─── Update (tag / attach to visit) ───────────────────────────────────────────
+// ─── Update (replace file, tag, or attach to visit) ───────────────────────────
 
+export interface UpdateDocumentInput {
+  url?: string;
+  key?: string | null;
+  fileType?: string;
+  tag?: string | null;
+  appointmentId?: number | null;
+}
+
+/** Updates the record; returns the previous S3 key so the caller can clean up storage if the file was replaced. */
 export async function updateDocument(
   id: number,
-  data: Partial<{ tag: string | null; appointmentId: number | null }>,
-) {
-  const exists = await prisma.document.findUnique({ where: { id } });
-  if (!exists) throw new AppError('Document not found', 404);
+  data: UpdateDocumentInput,
+  performedById: number,
+): Promise<{ document: Awaited<ReturnType<typeof getDocumentById>>; previousKey: string | null }> {
+  const existing = await prisma.document.findUnique({ where: { id } });
+  if (!existing) throw new AppError('Document not found', 404);
 
   if (data.appointmentId !== undefined && data.appointmentId !== null) {
     const appointment = await prisma.appointment.findUnique({ where: { id: data.appointmentId } });
-    if (!appointment || appointment.patientId !== exists.patientId) {
+    if (!appointment || appointment.patientId !== existing.patientId) {
       throw new AppError('Appointment does not belong to this patient', 400);
     }
   }
 
-  return prisma.document.update({
+  const fileReplaced = data.url !== undefined && data.url !== existing.url;
+
+  const document = await prisma.document.update({
     where: { id },
     data: {
+      ...(data.url !== undefined && { url: data.url }),
+      ...(data.key !== undefined && { key: data.key }),
+      ...(data.fileType !== undefined && { fileType: data.fileType }),
       ...(data.tag !== undefined && { tag: data.tag }),
       ...(data.appointmentId !== undefined && { appointmentId: data.appointmentId }),
     },
     include: { uploadedBy: { select: UPLOADER_SELECT } },
   });
+
+  await logUploadAudit({
+    patientId: existing.patientId,
+    entityType: 'DOCUMENT',
+    entityId: id,
+    action: 'EDITED',
+    performedById,
+    detail: fileReplaced ? 'Replaced file' : 'Updated tag',
+  });
+
+  return { document, previousKey: fileReplaced ? existing.key : null };
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
 /** Removes the DB record and returns the S3 key so the caller can clean up storage. */
-export async function deleteDocument(id: number): Promise<{ key: string | null }> {
+export async function deleteDocument(id: number, performedById: number): Promise<{ key: string | null }> {
   const document = await prisma.document.findUnique({
     where: { id },
     select: { id: true, key: true, patientId: true, uploadedById: true },
   });
   if (!document) throw new AppError('Document not found', 404);
   await prisma.document.delete({ where: { id } });
+
+  await logUploadAudit({
+    patientId: document.patientId,
+    entityType: 'DOCUMENT',
+    entityId: id,
+    action: 'DELETED',
+    performedById,
+  });
+
   return { key: document.key };
 }

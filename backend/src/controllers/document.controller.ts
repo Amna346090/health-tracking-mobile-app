@@ -89,12 +89,30 @@ export async function getDocument(req: Request, res: Response, next: NextFunctio
 export async function updateDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = parseId(req.params.id);
-    const document = await documentService.getDocumentById(id);
-    await assertPatientAccess(req, document.patientId);
+    const existing = await documentService.getDocumentById(id);
+    await assertPatientAccess(req, existing.patientId);
 
-    const { tag, appointmentId } = req.body as { tag?: string | null; appointmentId?: number | null };
-    const updated = await documentService.updateDocument(id, { tag, appointmentId });
-    res.json({ status: 'ok', data: updated });
+    const { url, key, fileType, tag, appointmentId } = req.body as {
+      url?: string;
+      key?: string | null;
+      fileType?: string;
+      tag?: string | null;
+      appointmentId?: number | null;
+    };
+
+    const { document, previousKey } = await documentService.updateDocument(
+      id,
+      { url, key, fileType, tag, appointmentId },
+      req.user!.id,
+    );
+
+    if (previousKey) {
+      deleteObject(previousKey).catch((e) => {
+        console.error(`[document] S3 delete failed for key "${previousKey}":`, e);
+      });
+    }
+
+    res.json({ status: 'ok', data: document });
   } catch (err) { next(err); }
 }
 
@@ -104,7 +122,7 @@ export async function removeDocument(req: Request, res: Response, next: NextFunc
     const document = await documentService.getDocumentById(id);
     await assertPatientAccess(req, document.patientId);
 
-    const { key } = await documentService.deleteDocument(id);
+    const { key } = await documentService.deleteDocument(id, req.user!.id);
 
     if (key) {
       deleteObject(key).catch((e) => {
