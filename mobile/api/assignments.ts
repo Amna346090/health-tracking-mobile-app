@@ -58,6 +58,7 @@ export function createAssignment(
   data: {
     medicationId: number;
     frequency: string;
+    timesPerDay?: number;
     timesOfDay: string[];
     startDate: string;
     endDate?: string | null;
@@ -68,6 +69,25 @@ export function createAssignment(
 
 export function prescriptionPdfPath(patientId: number, id: number): string {
   return `/patients/${patientId}/assignments/${id}/prescription.pdf`;
+}
+
+export function deactivateAssignment(patientId: number, id: number): Promise<void> {
+  return api.delete<void>(`/patients/${patientId}/assignments/${id}`);
+}
+
+export function updateAssignment(
+  patientId: number,
+  id: number,
+  data: {
+    frequency?: string;
+    timesPerDay?: number;
+    timesOfDay?: string[];
+    startDate?: string;
+    endDate?: string | null;
+    refillsAllowed?: number | null;
+  },
+): Promise<MedicationAssignment> {
+  return api.patch<MedicationAssignment>(`/patients/${patientId}/assignments/${id}`, data);
 }
 
 export function getLogsForAssignment(
