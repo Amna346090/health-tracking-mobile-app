@@ -1,3 +1,4 @@
+import { Role } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 import { sendPushNotification } from '../lib/expoPush';
@@ -42,8 +43,23 @@ export async function createMessage(data: CreateMessageInput) {
     include: { sender: { select: SENDER_SELECT } },
   });
 
-  if (patient.user.notifPush && patient.user.pushToken) {
-    const preview = data.body.length > 120 ? `${data.body.slice(0, 117)}...` : data.body;
+  const preview = data.body.length > 120 ? `${data.body.slice(0, 117)}...` : data.body;
+
+  if (message.sender.role === Role.PATIENT) {
+    // Patient replying — notify every staff/admin user, mirroring how touch-base alerts work.
+    const staffUsers = await prisma.user.findMany({
+      where: { role: { in: [Role.STAFF, Role.ADMIN] }, notifPush: true, pushToken: { not: null } },
+      select: { id: true, pushToken: true },
+    });
+    for (const staff of staffUsers) {
+      sendPushNotification(staff.pushToken!, 'New patient message', preview, {
+        messageId: message.id,
+        patientId: data.patientId,
+      }).catch((e) => {
+        console.error(`[message] push failed for user ${staff.id}:`, e instanceof Error ? e.message : e);
+      });
+    }
+  } else if (patient.user.notifPush && patient.user.pushToken) {
     sendPushNotification(patient.user.pushToken, 'New message', preview, {
       messageId: message.id,
       patientId: data.patientId,

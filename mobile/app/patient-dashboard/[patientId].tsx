@@ -303,7 +303,7 @@ export default function PatientDashboardScreen() {
           <Text style={crmStyles.sectionTitle}>QUICK LINKS</Text>
           <View style={crmStyles.quickLinks}>
             <QuickLink icon="📈"  label="Health logs"    onPress={() => router.push(`/health-log/${pid}`)} />
-            <QuickLink icon="⏰"  label="Peptides"    onPress={() => router.push(`/assignment/${pid}`)} />
+            <QuickLink icon="⏰"  label="Peptides"    onPress={() => router.push(`/peptides/${pid}`)} />
             <QuickLink icon="🕐"  label="Full timeline"  onPress={() => router.push(`/history/${pid}`)} />
             <QuickLink icon="📷"  label="Progress photos" onPress={() => router.push(`/photos/${pid}`)} />
           </View>

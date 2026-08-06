@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText, ClipboardCheck, HeartPulse } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText, ClipboardCheck, HeartPulse, Trash2 } from 'lucide-react';
 import { getPatientById, updatePatient } from '../api/patients';
 import { getAllProviders } from '../api/providers';
 import type { Provider } from '../api/providers';
@@ -16,7 +16,7 @@ import type { WeightPoint } from '../components/WeightChart';
 import { MetricChart } from '../components/MetricChart';
 import { getMetrics, getMetricTrend, HEALTH_METRIC_TYPE_LABEL } from '../api/healthMetrics';
 import type { HealthMetric, HealthMetricType, MetricTrendPoint } from '../api/healthMetrics';
-import { getAssignments, prescriptionPdfPath } from '../api/assignments';
+import { getAssignments, prescriptionPdfPath, deactivateAssignment } from '../api/assignments';
 import type { MedicationAssignment } from '../api/assignments';
 import { AssignMedicationModal } from '../components/AssignMedicationModal';
 import { downloadFile } from '../api/client';
@@ -154,7 +154,8 @@ export function PatientDashboardPage() {
   const [testRequests, setTestRequests] = useState<TestRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
-  const [showAssign, setShowAssign] = useState(false);
+  const [assignmentModal, setAssignmentModal] = useState<'new' | MedicationAssignment | null>(null);
+  const [deletingAssignment, setDeletingAssignment] = useState<MedicationAssignment | null>(null);
   const [appointmentModal, setAppointmentModal] = useState<'new' | Appointment | null>(null);
   const [cancelingAppointment, setCancelingAppointment] = useState<Appointment | null>(null);
   const [showSendMessage, setShowSendMessage] = useState(false);
@@ -467,7 +468,7 @@ export function PatientDashboardPage() {
       <div className="section">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h2 className="section-title" style={{ margin: 0 }}>Peptides</h2>
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowAssign(true)}>
+          <button className="btn btn-secondary btn-sm" onClick={() => setAssignmentModal('new')}>
             <Pill size={13} strokeWidth={2.2} />
             Assign Peptide
           </button>
@@ -491,13 +492,29 @@ export function PatientDashboardPage() {
                       : 'Schedule not set yet'}
                   </div>
                 </div>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => downloadFile(prescriptionPdfPath(pid, a.id), `${a.medication.name}-prescription.pdf`)}
-                >
-                  <FileDown size={13} strokeWidth={2.2} />
-                  PDF
-                </button>
+                <div className="row-actions">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => downloadFile(prescriptionPdfPath(pid, a.id), `${a.medication.name}-prescription.pdf`)}
+                  >
+                    <FileDown size={13} strokeWidth={2.2} />
+                    PDF
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setAssignmentModal(a)}
+                  >
+                    <Pencil size={13} strokeWidth={2.2} />
+                    Edit
+                  </button>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => setDeletingAssignment(a)}
+                  >
+                    <Trash2 size={13} strokeWidth={2.2} />
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -670,11 +687,19 @@ export function PatientDashboardPage() {
         />
       )}
 
-      {showAssign && (
+      {assignmentModal && (
         <AssignMedicationModal
           patientId={pid}
-          onClose={() => setShowAssign(false)}
-          onAssigned={(assignment) => { setAssignments((prev) => [assignment, ...prev]); setShowAssign(false); }}
+          editingAssignment={assignmentModal !== 'new' ? assignmentModal : undefined}
+          onClose={() => setAssignmentModal(null)}
+          onSaved={(assignment) => {
+            setAssignments((prev) =>
+              prev.some((a) => a.id === assignment.id)
+                ? prev.map((a) => (a.id === assignment.id ? assignment : a))
+                : [assignment, ...prev],
+            );
+            setAssignmentModal(null);
+          }}
         />
       )}
 
@@ -703,6 +728,19 @@ export function PatientDashboardPage() {
           onConfirm={async () => {
             const updated = await updateAppointment(pid, cancelingAppointment.id, { status: 'CANCELLED' });
             setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+          }}
+        />
+      )}
+
+      {deletingAssignment && (
+        <ConfirmModal
+          title="Delete Peptide"
+          message={`Remove ${deletingAssignment.medication.name} from this patient's active peptides? This also stops its dose reminders.`}
+          confirmLabel="Delete"
+          onClose={() => setDeletingAssignment(null)}
+          onConfirm={async () => {
+            await deactivateAssignment(pid, deletingAssignment.id);
+            setAssignments((prev) => prev.filter((a) => a.id !== deletingAssignment.id));
           }}
         />
       )}

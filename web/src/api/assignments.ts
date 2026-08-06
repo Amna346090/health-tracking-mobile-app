@@ -44,8 +44,23 @@ export interface CreateAssignmentInput {
 export const createAssignment = (patientId: number, data: CreateAssignmentInput) =>
   api.post<MedicationAssignment>(`/patients/${patientId}/assignments`, data);
 
+export interface UpdateAssignmentInput {
+  frequency?: string;
+  timesPerDay?: number;
+  timesOfDay?: string[];
+  startDate?: string;
+  endDate?: string | null;
+  refillsAllowed?: number | null;
+}
+
+export const updateAssignment = (patientId: number, id: number, data: UpdateAssignmentInput) =>
+  api.patch<MedicationAssignment>(`/patients/${patientId}/assignments/${id}`, data);
+
 export const recordRefill = (patientId: number, id: number) =>
   api.post<MedicationAssignment>(`/patients/${patientId}/assignments/${id}/refill`);
+
+export const deactivateAssignment = (patientId: number, id: number) =>
+  api.delete<void>(`/patients/${patientId}/assignments/${id}`);
 
 export const prescriptionPdfPath = (patientId: number, id: number) =>
   `/patients/${patientId}/assignments/${id}/prescription.pdf`;

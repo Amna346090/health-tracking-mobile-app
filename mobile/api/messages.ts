@@ -17,3 +17,7 @@ export function getMessages(patientId: number): Promise<Message[]> {
 export function markMessageRead(patientId: number, id: number): Promise<Message> {
   return api.patch<Message>(`/patients/${patientId}/messages/${id}/read`);
 }
+
+export function sendMessage(patientId: number, body: string): Promise<Message> {
+  return api.post<Message>(`/patients/${patientId}/messages`, { body });
+}
