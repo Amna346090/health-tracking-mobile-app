@@ -4,6 +4,7 @@ import { Role, Gender } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt';
 import { AppError } from '../middleware/errorHandler';
+import { getOrCreateAdminProvider } from './provider.service';
 
 const SAFE_USER_SELECT = {
   id: true,
@@ -87,6 +88,8 @@ export async function register(input: RegisterInput, requestedByRole: Role) {
   // No email means there's no way to log in unless we hand the account a username.
   const generatedUsername = email ? undefined : await generateUsername(firstName, lastName);
 
+  const defaultProvider = role === Role.PATIENT ? await getOrCreateAdminProvider() : null;
+
   const passwordWasGenerated = !password;
   const finalPassword = password ?? generatePassword();
   const passwordHash = await bcrypt.hash(finalPassword, 12);
@@ -107,6 +110,7 @@ export async function register(input: RegisterInput, requestedByRole: Role) {
             healthIssue: healthIssue ?? null,
             phone: phone ?? null,
             address: address ?? null,
+            providerId: defaultProvider?.id ?? null,
           },
         },
       }),

@@ -135,3 +135,48 @@ export async function createLog(req: Request, res: Response, next: NextFunction)
     res.status(201).json({ status: 'ok', data: log });
   } catch (err) { next(err); }
 }
+
+// ─── Peptide order history ──────────────────────────────────────────────────────
+
+export async function listOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patientId = parseId(req.params.patientId);
+    await assertPatientAccess(req, patientId);
+    const assignmentId = parseId(req.params.id);
+    const orders = await assignmentService.getOrdersForAssignment(assignmentId);
+    res.json({ status: 'ok', data: orders });
+  } catch (err) { next(err); }
+}
+
+export async function createOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patientId = parseId(req.params.patientId);
+    await assertPatientAccess(req, patientId);
+    const assignmentId = parseId(req.params.id);
+    const { date, dose, note } = req.body as { date?: string; dose?: string; note?: string };
+
+    if (!date || !dose?.trim()) {
+      res.status(400).json({ status: 'error', message: 'date and dose are required' });
+      return;
+    }
+
+    const order = await assignmentService.createOrder({
+      assignmentId,
+      date,
+      dose: dose.trim(),
+      note: note?.trim() || null,
+      createdById: req.user!.id,
+    });
+    res.status(201).json({ status: 'ok', data: order });
+  } catch (err) { next(err); }
+}
+
+export async function removeOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patientId = parseId(req.params.patientId);
+    await assertPatientAccess(req, patientId);
+    const orderId = parseId(req.params.orderId);
+    await assignmentService.deleteOrder(orderId);
+    res.json({ status: 'ok', data: null });
+  } catch (err) { next(err); }
+}

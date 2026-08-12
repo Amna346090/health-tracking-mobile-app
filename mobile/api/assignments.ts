@@ -106,3 +106,31 @@ export function logDose(
 ): Promise<MedicationLog> {
   return api.post<MedicationLog>(`/assignments/${assignmentId}/logs`, data);
 }
+
+// ─── Peptide order history (dose progression log) ──────────────────────────────
+
+export interface MedicationOrder {
+  id: number;
+  assignmentId: number;
+  date: string;
+  dose: string;
+  note: string | null;
+  createdAt: string;
+  createdBy: { id: number; firstName: string; lastName: string; role: string };
+}
+
+export function getOrders(patientId: number, assignmentId: number): Promise<MedicationOrder[]> {
+  return api.get<MedicationOrder[]>(`/patients/${patientId}/assignments/${assignmentId}/orders`);
+}
+
+export function createOrder(
+  patientId: number,
+  assignmentId: number,
+  data: { date: string; dose: string; note?: string },
+): Promise<MedicationOrder> {
+  return api.post<MedicationOrder>(`/patients/${patientId}/assignments/${assignmentId}/orders`, data);
+}
+
+export function deleteOrder(patientId: number, assignmentId: number, orderId: number): Promise<void> {
+  return api.delete<void>(`/patients/${patientId}/assignments/${assignmentId}/orders/${orderId}`);
+}

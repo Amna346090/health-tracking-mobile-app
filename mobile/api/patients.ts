@@ -10,6 +10,10 @@ export interface PatientRow {
   avatarUrl: string | null;
   phone: string | null;
   address: string | null;
+  lastContactAt: string | null;
+  touchBaseThresholdDays: number | null;
+  touchBaseRemindersPaused: boolean;
+  providerId: number | null;
   createdAt: string;
   user: { id: number; firstName: string; lastName: string; email: string | null; username: string | null };
 }
@@ -26,6 +30,9 @@ export interface UpdatePatientInput {
   healthIssue?: string | null;
   phone?: string | null;
   address?: string | null;
+  providerId?: number | null;
+  touchBaseThresholdDays?: number | null;
+  touchBaseRemindersPaused?: boolean;
 }
 
 export function updatePatient(id: number, data: UpdatePatientInput): Promise<PatientRow> {

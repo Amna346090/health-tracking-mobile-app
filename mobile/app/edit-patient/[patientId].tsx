@@ -18,7 +18,10 @@ import { DateField } from '../../components/DateField';
 import { Input } from '../../components/Input';
 import { ChipPicker } from '../../components/ChipPicker';
 import { getPatientById, updatePatient } from '../../api/patients';
+import { getAllProviders } from '../../api/providers';
+import type { Provider } from '../../api/providers';
 import type { Gender } from '../../api/auth';
+import { STAFF_FEATURES_ENABLED } from '../../config';
 
 const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: 'MALE', label: 'Male' },
@@ -35,6 +38,7 @@ interface FormValues {
   healthIssue: string;
   phone: string;
   address: string;
+  providerId: number | null;
 }
 
 export default function EditPatientScreen() {
@@ -45,6 +49,7 @@ export default function EditPatientScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [values, setValues] = useState<FormValues | null>(null);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,10 +63,12 @@ export default function EditPatientScreen() {
           healthIssue: p.healthIssue ?? '',
           phone: p.phone ?? '',
           address: p.address ?? '',
+          providerId: p.providerId,
         });
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load patient'))
       .finally(() => setLoading(false));
+    if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
   }, [pid]);
 
   function set(field: keyof FormValues) {
@@ -80,6 +87,7 @@ export default function EditPatientScreen() {
         healthIssue: values.healthIssue.trim() || null,
         phone: values.phone.trim() || null,
         address: values.address.trim() || null,
+        providerId: values.providerId,
       });
       router.back();
     } catch (e) {
@@ -147,6 +155,18 @@ export default function EditPatientScreen() {
             <Input label="Health issue / condition" value={values.healthIssue} onChangeText={set('healthIssue')} />
             <Input label="Phone" value={values.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
             <Input label="Address" value={values.address} onChangeText={set('address')} />
+
+            {STAFF_FEATURES_ENABLED && (
+              <ChipPicker
+                label="Assigned provider"
+                options={[
+                  { value: '', label: 'Unassigned (all staff)' },
+                  ...providers.map((p) => ({ value: String(p.id), label: `${p.user.firstName} ${p.user.lastName}` })),
+                ]}
+                value={values.providerId ? String(values.providerId) : ''}
+                onChange={(v) => setValues((cur) => (cur ? { ...cur, providerId: v ? Number(v) : null } : cur))}
+              />
+            )}
 
             <Button label="Save changes" onPress={handleSave} loading={saving} />
           </View>

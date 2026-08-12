@@ -51,12 +51,20 @@ function NavigationGuard() {
       <Stack.Screen name="patient-dashboard/[patientId]" options={{ animation: 'slide_from_right' }} />
       {/* Appointments — patient request/reschedule, staff read-only */}
       <Stack.Screen name="appointments/[patientId]" options={{ animation: 'slide_from_right' }} />
+      {/* Appointments — fleet-wide board, staff/admin only */}
+      <Stack.Screen name="appointments/index" options={{ animation: 'slide_from_right' }} />
       {/* Messages inbox */}
       <Stack.Screen name="messages/[patientId]" options={{ animation: 'slide_from_right' }} />
       {/* Document uploads */}
       <Stack.Screen name="documents/[patientId]" options={{ animation: 'slide_from_right' }} />
+      {/* Staff-only internal notes */}
+      <Stack.Screen name="notes/[patientId]" options={{ animation: 'slide_from_right' }} />
+      {/* Notifications inbox (admin-only for now) */}
+      <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
       {/* Test/scan requests */}
       <Stack.Screen name="test-requests/[patientId]" options={{ animation: 'slide_from_right' }} />
+      {/* Test/scan requests — fleet-wide board, staff/admin only */}
+      <Stack.Screen name="test-requests/index" options={{ animation: 'slide_from_right' }} />
       {/* Health metrics (cholesterol, lipid profile, etc.) */}
       <Stack.Screen name="health-metrics/[patientId]" options={{ animation: 'slide_from_right' }} />
     </Stack>

@@ -28,6 +28,23 @@ export async function getProviderByUserId(userId: number) {
   });
 }
 
+/**
+ * Staff functionality is currently hidden from the UI — going forward there's
+ * a single admin. New patients default onto that admin's panel (instead of
+ * unassigned) so a future re-enabled staff member doesn't see them by default.
+ * Creates the admin's Provider row on first use since ADMIN accounts don't get
+ * one automatically at registration (only STAFF does).
+ */
+export async function getOrCreateAdminProvider() {
+  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, orderBy: { createdAt: 'asc' } });
+  if (!admin) return null;
+
+  const existing = await prisma.provider.findUnique({ where: { userId: admin.id } });
+  if (existing) return existing;
+
+  return prisma.provider.create({ data: { userId: admin.id } });
+}
+
 export interface UpdateProviderInput {
   npi?: string | null;
   credentials?: string | null;

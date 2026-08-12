@@ -53,11 +53,23 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <TabIcon name="medical-outline" color={color} size={size} />,
         }}
       />
+      {/* Health Log tab — patients self-log here; staff/admin reach a patient's
+          log via Patients tab → patient profile → Health logs instead. */}
       <Tabs.Screen
         name="health-log"
         options={{
           title: 'Health Log',
+          href: isStaffOrAdmin ? null : undefined,
           tabBarIcon: ({ color, size }) => <TabIcon name="pulse-outline" color={color} size={size} />,
+        }}
+      />
+      {/* Touch-Base Queue — staff/admin only, replaces Health Log in their tab bar */}
+      <Tabs.Screen
+        name="touch-base-queue"
+        options={{
+          title: 'Touch-Base',
+          href: isStaffOrAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => <TabIcon name="heart-outline" color={color} size={size} />,
         }}
       />
       {/* Patients tab — hidden from PATIENT role via href: null */}
