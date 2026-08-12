@@ -1,7 +1,7 @@
 /**
  * Messages inbox screen — two-way conversation between a patient and their care team.
- * Patients (viewing their own id) can read and reply. Staff/admin (viewing another
- * patient's id) get the same thread, read-only (no compose box, no mark-as-read).
+ * Both the patient (viewing their own id) and staff/admin (viewing any patient's id)
+ * can read and reply from here.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -48,6 +48,7 @@ export default function MessagesScreen() {
   const { user } = useAuth();
   const pid = Number(patientId);
   const isOwnPatient = user?.role === 'PATIENT' && user.patientProfile?.id === pid;
+  const canSend = isOwnPatient || user?.role !== 'PATIENT';
   const listRef = useRef<FlatList<Message>>(null);
 
   // Oldest first, top to bottom — a plain chronological list, same as the CRM's thread view.
@@ -71,7 +72,7 @@ export default function MessagesScreen() {
   useEffect(() => { load(); }, [load]);
 
   async function handlePress(message: Message) {
-    if (!isOwnPatient || message.readAt) return;
+    if (message.sender.id === user?.id || message.readAt) return;
     try {
       const updated = await markMessageRead(pid, message.id);
       setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
@@ -127,14 +128,14 @@ export default function MessagesScreen() {
           renderItem={({ item, index }) => {
             const olderNeighbor = messages[index - 1];
             const showDivider = !olderNeighbor || dayLabel(olderNeighbor.createdAt) !== dayLabel(item.createdAt);
-            const isMine = isOwnPatient && item.sender.role === 'PATIENT';
+            const isMine = item.sender.id === user?.id;
             return (
               <View>
                 {showDivider && (
                   <View style={styles.dayDivider}><Text style={styles.dayDividerText}>{dayLabel(item.createdAt)}</Text></View>
                 )}
                 <TouchableOpacity
-                  activeOpacity={isOwnPatient && !item.readAt ? 0.7 : 1}
+                  activeOpacity={item.sender.id !== user?.id && !item.readAt ? 0.7 : 1}
                   onPress={() => handlePress(item)}
                   style={isMine ? styles.bubbleWrapMine : styles.bubbleWrapTheirs}
                 >
@@ -154,7 +155,7 @@ export default function MessagesScreen() {
           }}
         />
 
-        {isOwnPatient && (
+        {canSend && (
           <View style={styles.composeRow}>
             <TextInput
               style={styles.composeInput}

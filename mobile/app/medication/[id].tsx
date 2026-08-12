@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   StyleSheet,
   Text,
   View,
@@ -8,18 +9,22 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
-import { getMedicationById, type Medication } from '../../api/medications';
+import { getMedicationById, deleteMedication, type Medication } from '../../api/medications';
+import { useAuth } from '../../context/auth';
 
 export default function MedicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const medId = Number(id);
 
   const [medication, setMedication] = useState<Medication | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     getMedicationById(medId)
@@ -33,6 +38,32 @@ export default function MedicationDetailScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
       </SafeAreaView>
+    );
+  }
+
+  function handleDelete() {
+    if (!medication) return;
+    Alert.alert(
+      'Delete peptide?',
+      `Delete ${medication.dosage ? `${medication.name} · ${medication.dosage}` : medication.name}? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteMedication(medication.id);
+              router.back();
+            } catch (e) {
+              Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
     );
   }
 
@@ -97,6 +128,15 @@ export default function MedicationDetailScreen() {
         >
           <Text style={styles.assignBtnText}>Assign to Patient</Text>
         </TouchableOpacity>
+
+        {user?.role === 'ADMIN' && (
+          <View style={styles.deleteRow}>
+            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} disabled={deleting}>
+              <Feather name="trash-2" size={13} color={colors.danger} />
+              <Text style={styles.deleteBtnText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,4 +209,16 @@ const styles = StyleSheet.create({
   assignBtnText: { ...typography.body1, fontWeight: '600' as const, color: colors.text.inverse },
 
   errorText: { ...typography.body1, color: colors.danger },
+
+  deleteRow: { marginTop: spacing.lg },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.dangerBg,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+  },
+  deleteBtnText: { ...typography.label, color: colors.danger, fontWeight: '600' as const },
 });

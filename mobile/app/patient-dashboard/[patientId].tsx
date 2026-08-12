@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -16,18 +18,46 @@ import { FEELING_EMOJI } from '../../components/FeelingPicker';
 import { getWeightTrend, type FeelingStatus, type WeightDataPoint } from '../../api/healthLog';
 import { Avatar } from '../../components/Avatar';
 import { WeightChart } from '../../components/WeightChart';
+import { Feather } from '@expo/vector-icons';
 import { markContacted } from '../../api/touchBase';
 import { getAllProviders, type Provider } from '../../api/providers';
+import { updatePatient } from '../../api/patients';
+import { deleteUser } from '../../api/users';
+import { Dropdown } from '../../components/Dropdown';
+import { STAFF_FEATURES_ENABLED } from '../../config';
+import { useAuth } from '../../context/auth';
 
 interface PatientMeta {
   id: number;
-  user: { firstName: string; lastName: string; email: string | null; username: string | null };
+  user: { id: number; firstName: string; lastName: string; email: string | null; username: string | null };
   dateOfBirth: string | null;
   gender: string | null;
   healthIssue: string | null;
   avatarUrl: string | null;
   lastContactAt: string | null;
   providerId: number | null;
+  touchBaseThresholdDays: number | null;
+  touchBaseRemindersPaused: boolean;
+}
+
+const TOUCH_BASE_THRESHOLD_PRESETS: { label: string; days: number }[] = [
+  { label: '1 week', days: 7 },
+  { label: '2 weeks', days: 14 },
+  { label: '1 month', days: 30 },
+  { label: '2 months', days: 60 },
+  { label: '3 months', days: 90 },
+];
+
+// Admin-only, for verifying the reminder pipeline actually fires without waiting days/weeks.
+const TEST_THRESHOLD_PRESETS: { label: string; days: number }[] = [
+  { label: '1 minute', days: 1 / 1440 },
+  { label: '5 minutes', days: 5 / 1440 },
+  { label: '10 minutes', days: 10 / 1440 },
+];
+
+function formatThresholdDays(days: number): string {
+  if (days < 1) return `${Math.round(days * 1440)} min`;
+  return `${days} days`;
 }
 
 function formatLastContact(iso: string | null): string {
@@ -172,6 +202,8 @@ export default function PatientDashboardScreen() {
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const pid = Number(patientId);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   const [patient,  setPatient]  = useState<PatientMeta | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -194,7 +226,7 @@ export default function PatientDashboardScreen() {
   }, [pid]);
 
   useEffect(() => {
-    getAllProviders().then(setProviders).catch(() => {});
+    if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
   }, []);
 
   async function handleMarkContacted() {
@@ -205,6 +237,36 @@ export default function PatientDashboardScreen() {
     } finally {
       setMarkingContacted(false);
     }
+  }
+
+  async function handleSetThreshold(days: number | null) {
+    const updated = await updatePatient(pid, { touchBaseThresholdDays: days });
+    setPatient((prev) => (prev ? { ...prev, touchBaseThresholdDays: updated.touchBaseThresholdDays } : prev));
+  }
+
+  function handleDeletePatient() {
+    if (!patient) return;
+    Alert.alert(
+      'Delete patient?',
+      `Delete ${patient.user.firstName} ${patient.user.lastName}? This permanently removes their account and all associated health data. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteUser(patient.user.id);
+            router.back();
+          },
+        },
+      ],
+    );
+  }
+
+  async function handleTogglePause() {
+    if (!patient) return;
+    const updated = await updatePatient(pid, { touchBaseRemindersPaused: !patient.touchBaseRemindersPaused });
+    setPatient((prev) => (prev ? { ...prev, touchBaseRemindersPaused: updated.touchBaseRemindersPaused } : prev));
   }
 
   if (loading) {
@@ -261,22 +323,91 @@ export default function PatientDashboardScreen() {
           <View style={crmStyles.section}>
             <View style={crmStyles.sectionRow}>
               <Text style={crmStyles.sectionTitle}>TOUCH-BASE</Text>
-              <TouchableOpacity onPress={handleMarkContacted} disabled={markingContacted}>
-                <Text style={crmStyles.viewAll}>{markingContacted ? 'Saving…' : 'Mark as contacted'}</Text>
-              </TouchableOpacity>
+              <View style={crmStyles.toggleRow}>
+                <Text style={crmStyles.toggleLabel}>
+                  {patient.touchBaseRemindersPaused ? 'Reminders paused' : 'Reminders active'}
+                </Text>
+                <Switch
+                  value={!patient.touchBaseRemindersPaused}
+                  onValueChange={handleTogglePause}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor="#fff"
+                />
+              </View>
             </View>
             <View style={crmStyles.infoCard}>
-              <InfoItem label="Last contact" value={formatLastContact(patient.lastContactAt)} />
-              <InfoItem
-                label="Provider"
-                value={(() => {
-                  const provider = providers.find((p) => p.id === patient.providerId);
-                  return provider ? `${provider.user.firstName} ${provider.user.lastName}` : 'Unassigned (all staff)';
-                })()}
-              />
+              <View style={crmStyles.lastContactRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={crmStyles.infoLabel}>Last contact</Text>
+                  <Text style={crmStyles.infoValue}>{formatLastContact(patient.lastContactAt)}</Text>
+                </View>
+                <TouchableOpacity
+                  style={crmStyles.markContactedBtn}
+                  disabled={markingContacted}
+                  onPress={handleMarkContacted}
+                >
+                  <Feather name="heart" size={12} color={colors.primary} />
+                  <Text style={crmStyles.markContactedText}>{markingContacted ? 'Saving…' : 'Mark as contacted'}</Text>
+                </TouchableOpacity>
+              </View>
+              {STAFF_FEATURES_ENABLED && (
+                <InfoItem
+                  label="Provider"
+                  value={(() => {
+                    const provider = providers.find((p) => p.id === patient.providerId);
+                    return provider ? `${provider.user.firstName} ${provider.user.lastName}` : 'Unassigned (all staff)';
+                  })()}
+                />
+              )}
+
+              {patient.touchBaseRemindersPaused && (
+                <Text style={crmStyles.pausedNote}>
+                  Reminders paused for this patient. Turn back on to resume.
+                </Text>
+              )}
+              <>
+                  <View style={crmStyles.infoRowNoBorder}>
+                    <Text style={crmStyles.infoLabel}>Threshold</Text>
+                    <Text style={crmStyles.infoValue}>
+                      {patient.touchBaseThresholdDays ? `${formatThresholdDays(patient.touchBaseThresholdDays)} (custom)` : 'Global default'}
+                    </Text>
+                  </View>
+                  <View style={{ marginTop: spacing.sm, marginBottom: spacing.sm }}>
+                    <Dropdown
+                      options={[
+                        { value: 'default', label: 'Use default' },
+                        ...(!TOUCH_BASE_THRESHOLD_PRESETS.some((p) => p.days === patient.touchBaseThresholdDays) && patient.touchBaseThresholdDays !== null
+                          ? [{ value: String(patient.touchBaseThresholdDays), label: `${formatThresholdDays(patient.touchBaseThresholdDays)} (custom)` }]
+                          : []),
+                        ...TOUCH_BASE_THRESHOLD_PRESETS.map((preset) => ({ value: String(preset.days), label: preset.label })),
+                      ]}
+                      value={patient.touchBaseThresholdDays !== null ? String(patient.touchBaseThresholdDays) : 'default'}
+                      onChange={(v) => handleSetThreshold(v === 'default' ? null : Number(v))}
+                    />
+                  </View>
+
+                  {isAdmin && (
+                    <View style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>
+                      <Text style={[crmStyles.infoLabel, { marginBottom: spacing.xs }]}>Test threshold</Text>
+                      <Dropdown
+                        options={[
+                          { value: '', label: 'Choose a test threshold…' },
+                          ...TEST_THRESHOLD_PRESETS.map((preset) => ({ value: String(preset.days), label: preset.label })),
+                        ]}
+                        value={TEST_THRESHOLD_PRESETS.some((p) => p.days === patient.touchBaseThresholdDays) ? String(patient.touchBaseThresholdDays) : ''}
+                        onChange={(v) => v && handleSetThreshold(Number(v))}
+                      />
+                    </View>
+                  )}
+                </>
             </View>
           </View>
         )}
+
+        {/* Notes — pinned near the top since it's used most often */}
+        <View style={crmStyles.quickLinks}>
+          <QuickLink icon="📝" label="Notes" onPress={() => router.push(`/notes/${pid}`)} />
+        </View>
 
         {/* Summary stats */}
         {summary && (
@@ -306,6 +437,11 @@ export default function PatientDashboardScreen() {
             <QuickLink icon="⏰"  label="Peptides"    onPress={() => router.push(`/peptides/${pid}`)} />
             <QuickLink icon="🕐"  label="Full timeline"  onPress={() => router.push(`/history/${pid}`)} />
             <QuickLink icon="📷"  label="Progress photos" onPress={() => router.push(`/photos/${pid}`)} />
+            <QuickLink icon="📄"  label="Documents" onPress={() => router.push(`/documents/${pid}`)} />
+            <QuickLink icon="🗓️"  label="Appointments" onPress={() => router.push(`/appointments/${pid}`)} />
+            <QuickLink icon="💬"  label="Messages" onPress={() => router.push(`/messages/${pid}`)} />
+            <QuickLink icon="🧪"  label="Test/scan requests" onPress={() => router.push(`/test-requests/${pid}`)} />
+            <QuickLink icon="🩺"  label="Health metrics" onPress={() => router.push(`/health-metrics/${pid}`)} />
           </View>
         </View>
 
@@ -328,6 +464,13 @@ export default function PatientDashboardScreen() {
             </View>
           </View>
         )}
+
+        <View style={crmStyles.deleteRow}>
+          <TouchableOpacity style={crmStyles.deleteBtn} onPress={handleDeletePatient}>
+            <Feather name="trash-2" size={13} color={colors.danger} />
+            <Text style={crmStyles.deleteBtnText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -371,6 +514,23 @@ const crmStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   viewAll: { ...(typography.label as object), color: colors.primary },
+
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  toggleLabel: { ...(typography.caption as object), color: colors.text.secondary },
+  lastContactRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingVertical: spacing.sm },
+  markContactedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
+  },
+  markContactedText: { ...(typography.label as object), color: colors.primary, fontWeight: '600' as const },
+  infoRowNoBorder: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm },
+  pausedNote: { ...(typography.caption as object), color: colors.text.muted, paddingTop: spacing.xs, paddingBottom: spacing.sm },
 
   statsRow: { flexDirection: 'row', flexWrap: 'wrap' as const, gap: spacing.sm },
   statCard: {
@@ -449,4 +609,16 @@ const crmStyles = StyleSheet.create({
   miniSub:   { ...(typography.caption as object), color: colors.text.secondary },
   miniTime:  { ...(typography.caption as object), color: colors.text.muted },
   divider:   { height: 1, backgroundColor: colors.border },
+
+  deleteRow: { alignItems: 'flex-end', paddingVertical: spacing.sm },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.dangerBg,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
+  },
+  deleteBtnText: { ...(typography.label as object), color: colors.danger, fontWeight: '600' as const },
 });

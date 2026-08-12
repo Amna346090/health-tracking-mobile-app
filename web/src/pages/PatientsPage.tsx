@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, UserPlus, Trash2 } from 'lucide-react';
+import { Search, ChevronRight, UserPlus } from 'lucide-react';
 import { getAllPatients } from '../api/patients';
 import type { PatientRow } from '../api/patients';
 import { getAllProviders } from '../api/providers';
 import type { Provider } from '../api/providers';
-import { deleteUser } from '../api/users';
 import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { AddPatientModal } from '../components/AddPatientModal';
-import { ConfirmModal } from '../components/ConfirmModal';
 import { Spinner } from '../components/Spinner';
+import { STAFF_FEATURES_ENABLED } from '../config';
 
 function initialsOf(row: PatientRow): string {
   const { firstName, lastName } = row.user;
@@ -38,10 +36,9 @@ export function PatientsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<PatientRow | null>(null);
 
   useEffect(() => {
-    if (isAdmin) getAllProviders().then(setProviders).catch(() => {});
+    if (STAFF_FEATURES_ENABLED && isAdmin) getAllProviders().then(setProviders).catch(() => {});
   }, [isAdmin]);
 
   useEffect(() => {
@@ -84,7 +81,7 @@ export function PatientsPage() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        {isAdmin && (
+        {STAFF_FEATURES_ENABLED && isAdmin && (
           <select className="select-filter" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)}>
             <option value="">All providers</option>
             {providers.map((p) => (
@@ -115,17 +112,6 @@ export function PatientsPage() {
                     .join(' · ')}
                 </div>
               </div>
-              {isAdmin && (
-                <div className="row-actions">
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={(e: MouseEvent) => { e.stopPropagation(); setDeleteTarget(p); }}
-                  >
-                    <Trash2 size={13} strokeWidth={2.2} />
-                    Delete
-                  </button>
-                </div>
-              )}
               <div className="chevron"><ChevronRight size={18} /></div>
             </div>
           ))}
@@ -136,19 +122,6 @@ export function PatientsPage() {
         <AddPatientModal
           onClose={() => setShowAdd(false)}
           onCreated={(patientId) => navigate(`/patients/${patientId}`)}
-        />
-      )}
-
-      {deleteTarget && (
-        <ConfirmModal
-          title="Delete Patient"
-          message={`Delete ${deleteTarget.user.firstName} ${deleteTarget.user.lastName}? This permanently removes their account and all associated health data (logs, medications, photos, documents). This cannot be undone.`}
-          confirmLabel="Delete patient"
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={async () => {
-            await deleteUser(deleteTarget.user.id);
-            setPatients((prev) => prev.filter((row) => row.id !== deleteTarget.id));
-          }}
         />
       )}
     </div>

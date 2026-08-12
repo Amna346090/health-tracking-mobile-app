@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/auth';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
@@ -14,6 +15,7 @@ import { getSummary, type PatientSummary } from '../../api/timeline';
 import { getAppointments, type Appointment } from '../../api/appointments';
 import { getMessages, type Message } from '../../api/messages';
 import { getTestRequests, type TestRequest } from '../../api/testRequests';
+import { getUnreadCount } from '../../api/notifications';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -33,8 +35,10 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const router   = useRouter();
   const isPatient = user?.role === 'PATIENT';
+  const isAdmin = user?.role === 'ADMIN';
   const patientId = user?.patientProfile?.id ?? null;
 
+  const [unreadCount, setUnreadCount] = useState(0);
   const [schedule,        setSchedule]        = useState<TodayScheduleItem[]>([]);
   const [recentLogs,      setRecentLogs]      = useState<HealthLog[]>([]);
   const [summary,         setSummary]         = useState<PatientSummary | null>(null);
@@ -74,6 +78,14 @@ export default function DashboardScreen() {
   useEffect(() => {
     if (isPatient) loadPatientData();
   }, [isPatient, loadPatientData]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const refresh = () => getUnreadCount().then((r) => setUnreadCount(r.count)).catch(() => {});
+    refresh();
+    const interval = setInterval(refresh, 30000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
 
   const handleMarkTaken = useCallback(async (assignmentId: number) => {
     setMarkingId(assignmentId);
@@ -125,10 +137,22 @@ export default function DashboardScreen() {
                 {user?.firstName} {user?.lastName}
               </Text>
             </View>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.firstName?.[0]?.toUpperCase() ?? '?'}
-              </Text>
+            <View style={styles.headerActions}>
+              {isAdmin && (
+                <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/notifications')}>
+                  <Feather name="bell" size={19} color={colors.text.primary} />
+                  {unreadCount > 0 && (
+                    <View style={styles.bellBadge}>
+                      <Text style={styles.bellBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {user?.firstName?.[0]?.toUpperCase() ?? '?'}
+                </Text>
+              </View>
             </View>
           </View>
           <Text style={styles.dateText}>
@@ -140,24 +164,80 @@ export default function DashboardScreen() {
           </Text>
         </View>
 
-        {/* ── Quick stats row ── */}
-        <View style={styles.statsRow}>
-          <StatBadge
-            icon="💊"
-            label="Peptides"
-            value={isPatient && schedule.length > 0 ? String(schedule.length) : '—'}
-          />
-          <StatBadge
-            icon="✅"
-            label="Taken today"
-            value={isPatient && schedule.length > 0 ? String(takenCount) : '—'}
-          />
-          <StatBadge
-            icon="📊"
-            label="Adherence"
-            value={adherence !== null ? `${adherence}%` : '—'}
-          />
-        </View>
+        {/* ── Quick stats row (patients only) ── */}
+        {isPatient && (
+          <View style={styles.statsRow}>
+            <StatBadge icon="💊" label="Peptides" value={schedule.length > 0 ? String(schedule.length) : '—'} />
+            <StatBadge icon="✅" label="Taken today" value={schedule.length > 0 ? String(takenCount) : '—'} />
+            <StatBadge icon="📊" label="Adherence" value={adherence !== null ? `${adherence}%` : '—'} />
+          </View>
+        )}
+
+        {/* ── Care team quick links (staff/admin only) ── */}
+        {!isPatient && (
+          <View style={styles.section}>
+            <TouchableOpacity style={styles.navCard} onPress={() => router.push('/(tabs)/patients')} activeOpacity={0.8}>
+              <View style={styles.navCardLeft}>
+                <Feather name="users" size={18} color={colors.primary} />
+                <View>
+                  <Text style={styles.navCardText}>Patients</Text>
+                  <Text style={styles.navCardSubtext}>View and manage all patients</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navCard} onPress={() => router.push('/(tabs)/medications')} activeOpacity={0.8}>
+              <View style={styles.navCardLeft}>
+                <Feather name="package" size={18} color={colors.primary} />
+                <View>
+                  <Text style={styles.navCardText}>Peptides</Text>
+                  <Text style={styles.navCardSubtext}>Manage peptide types and doses</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navCard} onPress={() => router.push('/(tabs)/touch-base-queue')} activeOpacity={0.8}>
+              <View style={styles.navCardLeft}>
+                <Feather name="heart" size={18} color={colors.primary} />
+                <View>
+                  <Text style={styles.navCardText}>Touch-Base</Text>
+                  <Text style={styles.navCardSubtext}>Patients due for a check-in</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navCard} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
+              <View style={styles.navCardLeft}>
+                <Feather name="bell" size={18} color={colors.primary} />
+                <View>
+                  <Text style={styles.navCardText}>Notifications</Text>
+                  <Text style={styles.navCardSubtext}>Alerts and updates for your account</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navCard} onPress={() => router.push('/appointments')} activeOpacity={0.8}>
+              <View style={styles.navCardLeft}>
+                <Feather name="calendar" size={18} color={colors.primary} />
+                <View>
+                  <Text style={styles.navCardText}>Appointments</Text>
+                  <Text style={styles.navCardSubtext}>Upcoming visits with patients</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navCard} onPress={() => router.push('/test-requests')} activeOpacity={0.8}>
+              <View style={styles.navCardLeft}>
+                <Feather name="clipboard" size={18} color={colors.primary} />
+                <View>
+                  <Text style={styles.navCardText}>Test/scan requests</Text>
+                  <Text style={styles.navCardSubtext}>Lab and imaging orders to track</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.text.muted} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── Health summary (patients only) ── */}
         {isPatient && summary && (
@@ -205,24 +285,17 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* ── Today's Medications ── */}
+        {/* ── Today's Medications (patients only) ── */}
+        {isPatient && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Today's Peptides</Text>
-            {isPatient && schedule.length > 0 && (
+            {schedule.length > 0 && (
               <Text style={styles.sectionBadge}>{dueCount} due</Text>
             )}
           </View>
 
-          {!isPatient ? (
-            <Card>
-              <EmptyState
-                icon="💊"
-                title="Staff view"
-                subtitle="Patient peptide schedules are managed via the Peptides tab."
-              />
-            </Card>
-          ) : scheduleLoading ? (
+          {scheduleLoading ? (
             <Card style={styles.loadingCard}>
               <ActivityIndicator color={colors.primary} />
             </Card>
@@ -245,6 +318,7 @@ export default function DashboardScreen() {
             ))
           )}
         </View>
+        )}
 
         {/* ── Upcoming Appointments ── */}
         {isPatient && (
@@ -330,6 +404,20 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {/* ── Notes (from your care team) ── */}
+        {isPatient && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Notes</Text>
+            </View>
+            <TouchableOpacity onPress={() => patientId && router.push(`/notes/${patientId}`)}>
+              <Card>
+                <Text style={summaryStyles.viewAll}>View notes from your care team →</Text>
+              </Card>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Test/Scan Requests ── */}
         {isPatient && (
           <View style={styles.section}>
@@ -369,20 +457,13 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* ── Recent Health Logs ── */}
+        {/* ── Recent Health Logs (patients only) ── */}
+        {isPatient && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Health Logs</Text>
           </View>
-          {!isPatient ? (
-            <Card>
-              <EmptyState
-                icon="📈"
-                title="Staff view"
-                subtitle="Patient health logs are managed via the Health Log tab."
-              />
-            </Card>
-          ) : scheduleLoading ? (
+          {scheduleLoading ? (
             <Card style={styles.loadingCard}>
               <ActivityIndicator color={colors.primary} />
             </Card>
@@ -398,6 +479,7 @@ export default function DashboardScreen() {
             recentLogs.map((log) => <HealthLogCard key={log.id} log={log} />)
           )}
         </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -466,6 +548,30 @@ const styles = StyleSheet.create({
   greetingLabel: { ...typography.body1, color: colors.text.secondary },
   greetingName: { ...typography.h1, color: colors.text.primary },
   dateText: { ...typography.body2, color: colors.text.muted },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 4 },
+  bellBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.bg.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: { fontSize: 10, fontWeight: '600' as const, color: colors.text.inverse },
   avatar: {
     width: 48,
     height: 48,
@@ -473,10 +579,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
   },
   avatarText: { ...typography.h3, color: colors.primary },
   statsRow: { flexDirection: 'row', gap: spacing.sm },
+  navCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.bg.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  navCardLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  navCardText: { ...typography.body1, fontWeight: '500' as const, color: colors.text.primary },
+  navCardSubtext: { ...typography.caption, color: colors.text.muted, marginTop: 1 },
   section: { gap: spacing.sm },
   sectionHeader: {
     flexDirection: 'row',

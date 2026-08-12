@@ -108,6 +108,8 @@ model User {
   notifications         Notification[]
   healthMetricsCreated  HealthMetric[]         @relation("HealthMetricCreatedBy")
   uploadAuditLogs       UploadAuditLog[]       @relation("UploadAuditPerformedBy")
+  notesAuthored         Note[]                 @relation("NoteAuthoredBy")
+  medicationOrdersLogged MedicationOrder[]     @relation("MedicationOrderCreatedBy")
 }
 
 model RefreshToken {
@@ -155,6 +157,7 @@ model PatientProfile {
   notifications           Notification[]
   healthMetrics           HealthMetric[]
   uploadAuditLogs         UploadAuditLog[]
+  notes                   Note[]
 
   @@index([providerId])
 }
@@ -199,6 +202,7 @@ model MedicationAssignment {
 
   logs         MedicationLog[]
   reminderLogs ReminderLog[]
+  orders       MedicationOrder[]
 
   @@index([patientId])
   @@index([medicationId])
@@ -347,6 +351,41 @@ model AppointmentReminderLog {
   @@unique([appointmentId, offsetLabel, channel])
   @@index([patientId])
   @@index([appointmentId])
+}
+
+// ─── Notes ────────────────────────────────────────────────────────────────────
+// Free-text staff notes on a patient (e.g. "paid for this month"). Admin/staff only —
+// never shown to the patient. Multiple notes per patient, newest first.
+
+model Note {
+  id        Int            @id @default(autoincrement())
+  patientId Int
+  patient   PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  body      String
+  authorId  Int
+  author    User           @relation("NoteAuthoredBy", fields: [authorId], references: [id])
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([patientId])
+}
+
+// ─── Peptide order history ──────────────────────────────────────────────────────
+// A dated log of past orders/dose levels for a patient's peptide assignment, so
+// staff can see dose progression over time. Admin/staff only, mobile-only feature.
+
+model MedicationOrder {
+  id           Int                  @id @default(autoincrement())
+  assignmentId Int
+  assignment   MedicationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  date         DateTime             @db.Date
+  dose         String
+  note         String?
+  createdById  Int
+  createdBy    User                 @relation("MedicationOrderCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime             @default(now())
+
+  @@index([assignmentId])
 }
 
 // ─── Documents ────────────────────────────────────────────────────────────────

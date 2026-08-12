@@ -6,6 +6,7 @@ import type { PatientRow, Gender } from '../api/patients';
 import { getAllProviders } from '../api/providers';
 import type { Provider } from '../api/providers';
 import { ApiError } from '../api/client';
+import { STAFF_FEATURES_ENABLED } from '../config';
 
 interface Props {
   patient: PatientRow;
@@ -27,7 +28,7 @@ export function EditPatientModal({ patient, onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getAllProviders().then(setProviders).catch(() => {});
+    if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
   }, []);
 
   async function handleSubmit(e: FormEvent) {
@@ -101,15 +102,17 @@ export function EditPatientModal({ patient, onClose, onSaved }: Props) {
           <input id="ep-address" value={address} onChange={(e) => setAddress(e.target.value)} />
         </div>
 
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label htmlFor="ep-provider">Assigned provider</label>
-          <select id="ep-provider" value={providerId} onChange={(e) => setProviderId(e.target.value)}>
-            <option value="">— Unassigned (visible to all staff) —</option>
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}</option>
-            ))}
-          </select>
-        </div>
+        {STAFF_FEATURES_ENABLED && (
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label htmlFor="ep-provider">Assigned provider</label>
+            <select id="ep-provider" value={providerId} onChange={(e) => setProviderId(e.target.value)}>
+              <option value="">— Unassigned (visible to all staff) —</option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>

@@ -14,6 +14,9 @@ import {
   updateAssignment,
   deactivateAssignment,
   recordRefill,
+  listOrders,
+  createOrder,
+  removeOrder,
 } from '../controllers/assignment.controller';
 import { downloadPrescription } from '../controllers/prescription.controller';
 import {
@@ -61,6 +64,7 @@ import {
   deleteMetric,
 } from '../controllers/healthMetric.controller';
 import { getUploadHistory } from '../controllers/uploadAudit.controller';
+import { listNotes, createNote, updateNote, removeNote } from '../controllers/note.controller';
 
 const router = Router();
 
@@ -83,6 +87,11 @@ router.delete('/:patientId/assignments/:id', requireRoles(Role.STAFF, Role.ADMIN
 router.post('/:patientId/assignments/:id/refill', requireRoles(Role.STAFF, Role.ADMIN), recordRefill);
 router.get('/:patientId/assignments/:id/prescription.pdf', downloadPrescription);
 
+// Peptide order history — staff/admin only, tracks dose progression over time.
+router.get('/:patientId/assignments/:id/orders', requireRoles(Role.STAFF, Role.ADMIN), listOrders);
+router.post('/:patientId/assignments/:id/orders', requireRoles(Role.STAFF, Role.ADMIN), createOrder);
+router.delete('/:patientId/assignments/:id/orders/:orderId', requireRoles(Role.STAFF, Role.ADMIN), removeOrder);
+
 // ─── Health-log sub-routes ────────────────────────────────────────────────────
 // /trend must come before /:logId on the health-logs segment
 router.get('/:patientId/health-logs/trend', getWeightTrend);
@@ -103,6 +112,13 @@ router.post('/:patientId/photos', savePhoto);
 router.post('/:patientId/documents/presign', getDocumentPresignedUrl);
 router.get('/:patientId/documents', listDocuments);
 router.post('/:patientId/documents', createDocument);
+
+// ─── Note sub-routes ────────────────────────────────────────────────────────────
+// Patients can view their own notes (read-only); only staff/admin can write.
+router.get('/:patientId/notes', listNotes);
+router.post('/:patientId/notes', requireRoles(Role.STAFF, Role.ADMIN), createNote);
+router.patch('/:patientId/notes/:noteId', requireRoles(Role.STAFF, Role.ADMIN), updateNote);
+router.delete('/:patientId/notes/:noteId', requireRoles(Role.STAFF, Role.ADMIN), removeNote);
 
 // ─── Upload audit history (photos + documents) ─────────────────────────────────
 router.get('/:patientId/upload-history', requireRoles(Role.ADMIN), getUploadHistory);

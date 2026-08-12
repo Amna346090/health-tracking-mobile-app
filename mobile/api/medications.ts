@@ -41,3 +41,7 @@ export function createMedication(data: MedicationInput): Promise<Medication> {
 export function updateMedication(id: number, data: Partial<MedicationInput>): Promise<Medication> {
   return api.patch<Medication>(`/medications/${id}`, data);
 }
+
+export function deleteMedication(id: number): Promise<void> {
+  return api.delete<void>(`/medications/${id}`);
+}

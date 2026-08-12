@@ -8,6 +8,7 @@ import type { Provider } from '../api/providers';
 import { useAuth } from '../context/AuthContext';
 import { Spinner } from '../components/Spinner';
 import { ApiError } from '../api/client';
+import { STAFF_FEATURES_ENABLED } from '../config';
 
 function daysSince(iso: string | null): string {
   if (!iso) return 'Never contacted';
@@ -32,7 +33,7 @@ export function TouchBaseQueuePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isAdmin) getAllProviders().then(setProviders).catch(() => {});
+    if (STAFF_FEATURES_ENABLED && isAdmin) getAllProviders().then(setProviders).catch(() => {});
   }, [isAdmin]);
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export function TouchBaseQueuePage() {
           <h1 className="page-title">Touch-Base Queue</h1>
           <p className="page-subtitle">{queue.length} patient{queue.length !== 1 ? 's' : ''} overdue or nearing their touch-base threshold</p>
         </div>
-        {isAdmin && (
+        {STAFF_FEATURES_ENABLED && isAdmin && (
           <select className="select-filter" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)}>
             <option value="">All providers</option>
             {providers.map((p) => (

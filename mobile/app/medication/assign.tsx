@@ -4,7 +4,6 @@ import {
   Text,
   View,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
@@ -19,6 +18,7 @@ import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { createAssignment } from '../../api/assignments';
 import { api } from '../../api/client';
 import { TimeField } from '../../components/TimeField';
+import { DateField } from '../../components/DateField';
 
 interface PatientOption {
   id: number;
@@ -217,24 +217,10 @@ export default function AssignMedicationScreen() {
           {/* Dates */}
           <View style={styles.row}>
             <View style={styles.flex}>
-              <Text style={styles.sectionLabel}>Start Date *</Text>
-              <TextInput
-                style={styles.input}
-                value={startDate}
-                onChangeText={setStartDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.text.muted}
-              />
+              <DateField label="Start Date *" value={startDate} onChange={setStartDate} />
             </View>
             <View style={styles.flex}>
-              <Text style={styles.sectionLabel}>End Date</Text>
-              <TextInput
-                style={styles.input}
-                value={endDate}
-                onChangeText={setEndDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.text.muted}
-              />
+              <DateField label="End Date" value={endDate} onChange={setEndDate} minimumDate={startDate ? new Date(`${startDate}T00:00:00`) : undefined} />
             </View>
           </View>
 

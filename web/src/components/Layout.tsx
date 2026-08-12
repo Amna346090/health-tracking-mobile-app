@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Users, ShieldCheck, LogOut, Activity, KeyRound, Pill, Calendar, ClipboardCheck, HeartPulse, Settings, Bell, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { STAFF_FEATURES_ENABLED } from '../config';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { NotificationsProvider, useNotificationsBadge } from '../context/NotificationsContext';
 
@@ -80,7 +81,7 @@ export function Layout() {
               <HeartPulse size={17} strokeWidth={2} />
               Touch-Base Queue
             </NavLink>
-            {user?.role === 'ADMIN' && (
+            {STAFF_FEATURES_ENABLED && user?.role === 'ADMIN' && (
               <NavLink to="/users" className={linkClass} onClick={closeMobileNav}>
                 <ShieldCheck size={17} strokeWidth={2} />
                 Manage Users

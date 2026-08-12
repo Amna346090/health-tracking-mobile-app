@@ -1,9 +1,9 @@
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { colors, radius, shadows, spacing } from '../theme';
 
 interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   /** 'raised' (default) adds a drop-shadow; 'outlined' uses a border instead. */
   variant?: 'raised' | 'outlined';
   padding?: number;

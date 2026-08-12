@@ -6,13 +6,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { DateField } from '../../components/DateField';
 import { TimeField } from '../../components/TimeField';
-import { getAssignments, deactivateAssignment, updateAssignment, type MedicationAssignment } from '../../api/assignments';
+import { Input } from '../../components/Input';
+import { downloadFile } from '../../api/client';
+import {
+  getAssignments, deactivateAssignment, updateAssignment, prescriptionPdfPath,
+  getOrders, createOrder, deleteOrder, type MedicationAssignment, type MedicationOrder,
+} from '../../api/assignments';
 
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'As needed', 'Weekly'];
 
@@ -23,6 +29,10 @@ const FREQUENCY_DEFAULT_COUNT: Record<string, number> = {
   'As needed': 0,
   'Weekly': 1,
 };
+
+function formatOrderDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 function timesForCount(current: string[], count: number): string[] {
   if (count <= current.length) return current.slice(0, count);
@@ -37,6 +47,7 @@ export default function PatientPeptidesScreen() {
   const [assignments, setAssignments] = useState<MedicationAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const [editingItem, setEditingItem] = useState<MedicationAssignment | null>(null);
   const [frequency, setFrequency] = useState(FREQUENCIES[0]);
@@ -46,11 +57,20 @@ export default function PatientPeptidesScreen() {
   const [refillsAllowed, setRefillsAllowed] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [orders, setOrders] = useState<Record<number, MedicationOrder[]>>({});
+  const [orderFormFor, setOrderFormFor] = useState<number | null>(null);
+  const [orderDate, setOrderDate] = useState('');
+  const [orderDose, setOrderDose] = useState('');
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getAssignments(pid);
       setAssignments(data);
+      const entries = await Promise.all(data.map((a) => getOrders(pid, a.id).then((o) => [a.id, o] as const)));
+      setOrders(Object.fromEntries(entries));
     } catch {
       // keep state
     } finally {
@@ -106,6 +126,53 @@ export default function PatientPeptidesScreen() {
       Alert.alert('Could not save changes', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDownloadPrescription(item: MedicationAssignment) {
+    setDownloadingId(item.id);
+    try {
+      const path = prescriptionPdfPath(pid, item.id);
+      const fileUri = await downloadFile(path, `prescription-${item.id}.pdf`);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
+      }
+    } catch (e) {
+      Alert.alert('Could not download prescription', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
+  function openOrderForm(assignmentId: number) {
+    setOrderFormFor(assignmentId);
+    setOrderDate(new Date().toISOString().slice(0, 10));
+    setOrderDose('');
+  }
+
+  async function handleSaveOrder(assignmentId: number) {
+    if (!orderDate || !orderDose.trim()) return;
+    setSavingOrder(true);
+    try {
+      const order = await createOrder(pid, assignmentId, { date: orderDate, dose: orderDose.trim() });
+      setOrders((prev) => ({ ...prev, [assignmentId]: [order, ...(prev[assignmentId] ?? [])] }));
+      setOrderFormFor(null);
+    } catch (e) {
+      Alert.alert('Could not save order', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
+  async function handleDeleteOrder(assignmentId: number, order: MedicationOrder) {
+    setDeletingOrderId(order.id);
+    try {
+      await deleteOrder(pid, assignmentId, order.id);
+      setOrders((prev) => ({ ...prev, [assignmentId]: (prev[assignmentId] ?? []).filter((o) => o.id !== order.id) }));
+    } catch (e) {
+      Alert.alert('Could not delete order', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setDeletingOrderId(null);
     }
   }
 
@@ -232,7 +299,56 @@ export default function PatientPeptidesScreen() {
                 </Text>
               </View>
             </View>
+
+            <View style={styles.ordersBlock}>
+              <Text style={styles.ordersLabel}>Order history</Text>
+              {(orders[item.id] ?? []).map((order) => (
+                <View key={order.id} style={styles.orderRow}>
+                  <Text style={styles.orderDate}>{formatOrderDate(order.date)}</Text>
+                  <Text style={styles.orderDose}>{order.dose}</Text>
+                  <TouchableOpacity onPress={() => handleDeleteOrder(item.id, order)} disabled={deletingOrderId === order.id}>
+                    <Text style={styles.orderDeleteText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {(orders[item.id] ?? []).length === 0 && orderFormFor !== item.id && (
+                <Text style={styles.ordersEmpty}>No orders logged yet.</Text>
+              )}
+
+              {orderFormFor === item.id ? (
+                <View style={styles.orderForm}>
+                  <View style={styles.row}>
+                    <View style={styles.half}>
+                      <DateField label="Date" value={orderDate} onChange={setOrderDate} />
+                    </View>
+                    <View style={styles.half}>
+                      <Input label="Dose" value={orderDose} onChangeText={setOrderDose} placeholder="e.g. 5mg" />
+                    </View>
+                  </View>
+                  <View style={styles.formActions}>
+                    <TouchableOpacity onPress={() => setOrderFormFor(null)} style={styles.cancelBtn}>
+                      <Text style={styles.cancelBtnText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        label={savingOrder ? 'Saving…' : 'Save order'}
+                        onPress={() => handleSaveOrder(item.id)}
+                        loading={savingOrder}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => openOrderForm(item.id)}>
+                  <Text style={styles.addOrderText}>+ Add order</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             <View style={styles.medActions}>
+              <TouchableOpacity onPress={() => handleDownloadPrescription(item)} disabled={downloadingId === item.id}>
+                <Text style={styles.actionLink}>{downloadingId === item.id ? 'Downloading…' : 'PDF'}</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => openEdit(item)}>
                 <Text style={styles.actionLink}>Edit</Text>
               </TouchableOpacity>
@@ -271,8 +387,18 @@ const styles = StyleSheet.create({
   medDosage: { ...typography.body2, color: colors.text.secondary },
   schedule: { ...typography.body2, color: colors.text.muted, marginTop: 2 },
 
-  medActions: { flexDirection: 'row', gap: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
+  medActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   actionLink: { ...typography.label, color: colors.primary, fontWeight: '600' as const },
+
+  ordersBlock: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm, gap: 4 },
+  ordersLabel: { ...typography.label, color: colors.text.muted, textTransform: 'uppercase' as const, letterSpacing: 0.5, marginBottom: 2 },
+  ordersEmpty: { ...typography.caption, color: colors.text.muted },
+  orderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 3 },
+  orderDate: { ...typography.body2, color: colors.text.primary, flex: 1 },
+  orderDose: { ...typography.body2, color: colors.text.secondary, marginRight: spacing.sm },
+  orderDeleteText: { ...typography.caption, color: colors.text.muted, paddingHorizontal: 4 },
+  orderForm: { gap: spacing.sm, marginTop: spacing.xs },
+  addOrderText: { ...typography.label, color: colors.primary, fontWeight: '600' as const, marginTop: 2 },
 
   formCard: { gap: spacing.md, marginBottom: spacing.md },
   formTitle: { ...typography.h4, color: colors.text.primary },

@@ -22,6 +22,8 @@ const LOG_USER_SELECT = {
   role: true,
 } as const;
 
+const ORDER_CREATED_BY_SELECT = LOG_USER_SELECT;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function todayBounds() {
@@ -222,4 +224,44 @@ export async function logDose(
     },
     include: { user: { select: LOG_USER_SELECT } },
   });
+}
+
+// ─── Peptide orders (dose history) ─────────────────────────────────────────────
+
+export async function getOrdersForAssignment(assignmentId: number) {
+  return prisma.medicationOrder.findMany({
+    where: { assignmentId },
+    orderBy: { date: 'desc' },
+    include: { createdBy: { select: ORDER_CREATED_BY_SELECT } },
+  });
+}
+
+export interface CreateOrderInput {
+  assignmentId: number;
+  date: string;
+  dose: string;
+  note?: string | null;
+  createdById: number;
+}
+
+export async function createOrder(data: CreateOrderInput) {
+  const assignment = await prisma.medicationAssignment.findUnique({ where: { id: data.assignmentId } });
+  if (!assignment) throw new AppError('Assignment not found', 404);
+
+  return prisma.medicationOrder.create({
+    data: {
+      assignmentId: data.assignmentId,
+      date: new Date(data.date),
+      dose: data.dose,
+      note: data.note ?? null,
+      createdById: data.createdById,
+    },
+    include: { createdBy: { select: ORDER_CREATED_BY_SELECT } },
+  });
+}
+
+export async function deleteOrder(id: number) {
+  const exists = await prisma.medicationOrder.findUnique({ where: { id } });
+  if (!exists) throw new AppError('Order not found', 404);
+  await prisma.medicationOrder.delete({ where: { id } });
 }

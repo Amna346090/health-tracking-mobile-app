@@ -18,6 +18,14 @@ export function getAppointments(patientId: number): Promise<Appointment[]> {
   return api.get<Appointment[]>(`/patients/${patientId}/appointments`);
 }
 
+export interface AppointmentWithPatient extends Appointment {
+  patient: { id: number; user: { firstName: string; lastName: string; email: string } };
+}
+
+export function getAllAppointments(): Promise<AppointmentWithPatient[]> {
+  return api.get<AppointmentWithPatient[]>('/appointments');
+}
+
 export function createAppointment(
   patientId: number,
   data: { scheduledFor: string; reason?: string | null; notes?: string | null },

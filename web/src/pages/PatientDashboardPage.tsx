@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText, ClipboardCheck, HeartPulse, Trash2 } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Camera, Pill, ClipboardList, Image as ImageIcon, Pencil, Calendar, MessageSquare, FileDown, FileText, ClipboardCheck, HeartPulse, Trash2, StickyNote } from 'lucide-react';
 import { getPatientById, updatePatient } from '../api/patients';
 import { getAllProviders } from '../api/providers';
 import type { Provider } from '../api/providers';
@@ -35,6 +35,8 @@ import { Spinner } from '../components/Spinner';
 import { useAuth } from '../context/AuthContext';
 import { getUploadHistory } from '../api/uploadAudit';
 import type { UploadAuditLogEntry } from '../api/uploadAudit';
+import { deleteUser } from '../api/users';
+import { STAFF_FEATURES_ENABLED } from '../config';
 
 const FEELING_EMOJI: Record<string, string> = {
   GREAT: '😄',
@@ -180,6 +182,7 @@ export function PatientDashboardPage() {
   const [metricTrend, setMetricTrend] = useState<MetricTrendPoint[]>([]);
   const [metricEntries, setMetricEntries] = useState<HealthMetric[]>([]);
   const [uploadHistory, setUploadHistory] = useState<UploadAuditLogEntry[]>([]);
+  const [deletingPatient, setDeletingPatient] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -205,7 +208,7 @@ export function PatientDashboardPage() {
   }, [pid, isAdmin]);
 
   useEffect(() => {
-    getAllProviders().then(setProviders).catch(() => {});
+    if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -292,15 +295,17 @@ export function PatientDashboardPage() {
               <div className="info-item-label">Phone</div>
               <div className="info-item-value">{patient.phone ?? '—'}</div>
             </div>
-            <div>
-              <div className="info-item-label">Provider</div>
-              <div className="info-item-value">
-                {(() => {
-                  const provider = providers.find((p) => p.id === patient.providerId);
-                  return provider ? `${provider.user.firstName} ${provider.user.lastName}` : 'Unassigned (all staff)';
-                })()}
+            {STAFF_FEATURES_ENABLED && (
+              <div>
+                <div className="info-item-label">Provider</div>
+                <div className="info-item-value">
+                  {(() => {
+                    const provider = providers.find((p) => p.id === patient.providerId);
+                    return provider ? `${provider.user.firstName} ${provider.user.lastName}` : 'Unassigned (all staff)';
+                  })()}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -353,44 +358,52 @@ export function PatientDashboardPage() {
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
+              <select
+                className="select-filter"
+                style={{ marginTop: 14 }}
+                value={patient.touchBaseThresholdDays ?? ''}
+                onChange={(e) => handleSetThreshold(e.target.value === '' ? null : Number(e.target.value))}
+              >
+                <option value="">Use default</option>
+                {!TOUCH_BASE_THRESHOLD_PRESETS.some((p) => p.days === patient.touchBaseThresholdDays) &&
+                  patient.touchBaseThresholdDays !== null && (
+                    <option value={patient.touchBaseThresholdDays}>{formatThresholdDays(patient.touchBaseThresholdDays)} (custom)</option>
+                  )}
                 {TOUCH_BASE_THRESHOLD_PRESETS.map((preset) => (
-                  <button
-                    key={preset.label}
-                    className={`btn btn-sm ${patient.touchBaseThresholdDays === preset.days ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => handleSetThreshold(preset.days)}
-                  >
-                    {preset.label}
-                  </button>
+                  <option key={preset.label} value={preset.days}>{preset.label}</option>
                 ))}
-                <button
-                  className={`btn btn-sm ${patient.touchBaseThresholdDays === null ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => handleSetThreshold(null)}
-                >
-                  Use default
-                </button>
-              </div>
+              </select>
 
               {isAdmin && (
                 <>
                   <div className="info-item-label" style={{ marginTop: 16, marginBottom: 8 }}>
                     Test threshold (admin only)
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <select
+                    className="select-filter"
+                    value={TEST_THRESHOLD_PRESETS.some((p) => p.days === patient.touchBaseThresholdDays) ? patient.touchBaseThresholdDays! : ''}
+                    onChange={(e) => e.target.value !== '' && handleSetThreshold(Number(e.target.value))}
+                  >
+                    <option value="" disabled>Choose a test threshold…</option>
                     {TEST_THRESHOLD_PRESETS.map((preset) => (
-                      <button
-                        key={preset.label}
-                        className={`btn btn-sm ${patient.touchBaseThresholdDays === preset.days ? 'btn-primary' : 'btn-secondary'}`}
-                        onClick={() => handleSetThreshold(preset.days)}
-                      >
-                        {preset.label}
-                      </button>
+                      <option key={preset.label} value={preset.days}>{preset.label}</option>
                     ))}
-                  </div>
+                  </select>
                 </>
               )}
             </>
           )}
+        </div>
+      </div>
+
+      <div className="section">
+        <div
+          className="card row-clickable"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}
+          onClick={() => navigate(`/patients/${pid}/notes`)}
+        >
+          <StickyNote size={16} color="var(--color-text-muted)" />
+          View notes
         </div>
       </div>
 
@@ -725,6 +738,30 @@ export function PatientDashboardPage() {
           </div>
         )}
       </div>
+
+      <div className="section" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          className="btn btn-sm"
+          style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: 'none' }}
+          onClick={() => setDeletingPatient(true)}
+        >
+          <Trash2 size={13} strokeWidth={2.2} />
+          Delete
+        </button>
+      </div>
+
+      {deletingPatient && (
+        <ConfirmModal
+          title="Delete Patient"
+          message={`Delete ${name}? This permanently removes their account and all associated health data (logs, medications, photos, documents). This cannot be undone.`}
+          confirmLabel="Delete patient"
+          onClose={() => setDeletingPatient(false)}
+          onConfirm={async () => {
+            await deleteUser(patient.user.id);
+            navigate('/patients');
+          }}
+        />
+      )}
 
       {showEdit && (
         <EditPatientModal

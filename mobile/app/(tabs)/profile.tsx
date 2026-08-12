@@ -20,6 +20,7 @@ import { MiniPhotoGrid, cellSize } from '../../components/PhotoGrid';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getPhotos, type Photo } from '../../api/photos';
 import { updateNotificationSettings } from '../../api/notifications';
+import { STAFF_FEATURES_ENABLED } from '../../config';
 
 const SCREEN_W = Dimensions.get('window').width;
 const GRID_W   = SCREEN_W - spacing.lg * 2;
@@ -312,7 +313,7 @@ export default function ProfileScreen() {
         />
 
         {/* Admin tools */}
-        {user.role === 'ADMIN' && (
+        {STAFF_FEATURES_ENABLED && user.role === 'ADMIN' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>ADMIN</Text>
             <Button
