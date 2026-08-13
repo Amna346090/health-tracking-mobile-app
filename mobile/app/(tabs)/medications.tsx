@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/auth';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
@@ -27,8 +28,10 @@ function PatientMedications({ patientId }: { patientId: number }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    if (isRefresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
     setError(null);
     try {
       const data = await getAssignments(patientId);
@@ -38,10 +41,11 @@ function PatientMedications({ patientId }: { patientId: number }) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      hasLoadedRef.current = true;
     }
   }, [patientId]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   if (loading) {
     return (
@@ -97,8 +101,10 @@ function StaffMedications() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async (query?: string, isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    if (isRefresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
     setError(null);
     try {
       const data = await getAllMedications(query || undefined);
@@ -108,10 +114,11 @@ function StaffMedications() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      hasLoadedRef.current = true;
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // Debounce search
   useEffect(() => {

@@ -3,10 +3,11 @@
  * Staff/admin have the same full upload/edit/delete rights on any patient's
  * documents, matching the CRM.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ExpoDocumentPicker from 'expo-document-picker';
 import { Feather } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -45,18 +46,21 @@ export default function DocumentsScreen() {
   const [replacement, setReplacement] = useState<ExpoDocumentPicker.DocumentPickerAsset | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       setDocuments(await getDocuments(pid));
     } catch {
       // keep state
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, [pid]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function openEdit(item: Document) {
     setEditingItem(item);

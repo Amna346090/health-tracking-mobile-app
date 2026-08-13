@@ -5,6 +5,7 @@ import prisma from '../lib/prisma';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt';
 import { AppError } from '../middleware/errorHandler';
 import { getOrCreateAdminProvider } from './provider.service';
+import { encrypt } from '../lib/credentials';
 
 const SAFE_USER_SELECT = {
   id: true,
@@ -93,12 +94,14 @@ export async function register(input: RegisterInput, requestedByRole: Role) {
   const passwordWasGenerated = !password;
   const finalPassword = password ?? generatePassword();
   const passwordHash = await bcrypt.hash(finalPassword, 12);
+  const encryptedPassword = encrypt(finalPassword);
 
   const user = await prisma.user.create({
     data: {
       email: email ?? null,
       username: generatedUsername ?? null,
       passwordHash,
+      encryptedPassword,
       role,
       firstName,
       lastName: lastName?.trim() || '',
@@ -227,8 +230,9 @@ export async function changePassword(userId: number, currentPassword: string, ne
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
+  const encryptedPassword = encrypt(newPassword);
   await prisma.$transaction([
-    prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+    prisma.user.update({ where: { id: userId }, data: { passwordHash, encryptedPassword } }),
     // Invalidate other sessions — this device's access token stays valid until it expires.
     prisma.refreshToken.deleteMany({ where: { userId } }),
   ]);

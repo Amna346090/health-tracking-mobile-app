@@ -9,6 +9,7 @@ export interface Appointment {
   reason: string | null;
   notes: string | null;
   status: AppointmentStatus;
+  durationMinutes: number | null;
   createdById: number;
   createdAt: string;
   updatedAt: string;
@@ -28,7 +29,7 @@ export function getAllAppointments(): Promise<AppointmentWithPatient[]> {
 
 export function createAppointment(
   patientId: number,
-  data: { scheduledFor: string; reason?: string | null; notes?: string | null },
+  data: { scheduledFor: string; reason?: string | null; notes?: string | null; durationMinutes?: number | null },
 ): Promise<Appointment> {
   return api.post<Appointment>(`/patients/${patientId}/appointments`, data);
 }
@@ -36,7 +37,7 @@ export function createAppointment(
 export function updateAppointment(
   patientId: number,
   id: number,
-  data: Partial<{ scheduledFor: string; reason: string | null; status: AppointmentStatus }>,
+  data: Partial<{ scheduledFor: string; reason: string | null; notes: string | null; status: AppointmentStatus; durationMinutes: number | null }>,
 ): Promise<Appointment> {
   return api.patch<Appointment>(`/patients/${patientId}/appointments/${id}`, data);
 }

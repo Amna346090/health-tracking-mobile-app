@@ -22,7 +22,10 @@ function toDate(value: string): Date | null {
 }
 
 function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  // Local date parts, not toISOString() — that converts to UTC and can roll the
+  // date back a day for anyone east of UTC (e.g. picking a date in PKT).
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function formatDisplay(d: Date): string {

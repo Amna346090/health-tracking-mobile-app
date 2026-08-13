@@ -59,7 +59,7 @@ function NavigationGuard() {
       <Stack.Screen name="documents/[patientId]" options={{ animation: 'slide_from_right' }} />
       {/* Staff-only internal notes */}
       <Stack.Screen name="notes/[patientId]" options={{ animation: 'slide_from_right' }} />
-      {/* Notifications inbox (admin-only for now) */}
+      {/* Notifications inbox — admin and patients */}
       <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
       {/* Test/scan requests */}
       <Stack.Screen name="test-requests/[patientId]" options={{ animation: 'slide_from_right' }} />

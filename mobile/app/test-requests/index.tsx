@@ -1,10 +1,11 @@
 /**
  * Fleet-wide test/scan requests board — staff/admin only. Mirrors web/src/pages/TestRequestsPage.tsx.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAllTestRequests, type TestRequestWithPatient, type TestRequestStatus } from '../../api/testRequests';
 
@@ -29,8 +30,10 @@ export default function TestRequestsQueueScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'overdue'>('all');
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async (refresh = false) => {
-    if (refresh) setRefreshing(true); else setLoading(true);
+    if (refresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
     try {
       setRequests(await getAllTestRequests(filter === 'overdue' ? { overdue: true } : undefined));
     } catch {
@@ -38,10 +41,11 @@ export default function TestRequestsQueueScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      hasLoadedRef.current = true;
     }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

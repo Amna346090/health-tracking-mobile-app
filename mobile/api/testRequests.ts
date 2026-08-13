@@ -34,3 +34,18 @@ export function submitTestRequest(patientId: number, id: number, documentId: num
     documentId,
   });
 }
+
+export function createTestRequest(
+  patientId: number,
+  data: { name: string; instructions?: string | null; dueDate: string },
+): Promise<TestRequest> {
+  return api.post<TestRequest>(`/patients/${patientId}/test-requests`, data);
+}
+
+export function updateTestRequest(
+  patientId: number,
+  id: number,
+  data: Partial<{ name: string; instructions: string | null; dueDate: string; status: TestRequestStatus }>,
+): Promise<TestRequest> {
+  return api.patch<TestRequest>(`/patients/${patientId}/test-requests/${id}`, data);
+}

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
+import { encrypt } from '../lib/credentials';
 
 const USER_SELECT = {
   id: true,
@@ -92,8 +93,9 @@ export async function resetPassword(targetId: number, newPassword: string) {
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
+  const encryptedPassword = encrypt(newPassword);
   await prisma.$transaction([
-    prisma.user.update({ where: { id: targetId }, data: { passwordHash } }),
+    prisma.user.update({ where: { id: targetId }, data: { passwordHash, encryptedPassword } }),
     // Force the account to re-authenticate everywhere with the new password.
     prisma.refreshToken.deleteMany({ where: { userId: targetId } }),
   ]);

@@ -29,7 +29,7 @@ export async function createMessage(data: CreateMessageInput) {
     where: { id: data.patientId },
     select: {
       id: true,
-      user: { select: { pushToken: true, notifPush: true } },
+      user: { select: { id: true, pushToken: true, notifPush: true } },
     },
   });
   if (!patient) throw new AppError('Patient not found', 404);
@@ -48,24 +48,48 @@ export async function createMessage(data: CreateMessageInput) {
   if (message.sender.role === Role.PATIENT) {
     // Patient replying — notify every staff/admin user, mirroring how touch-base alerts work.
     const staffUsers = await prisma.user.findMany({
-      where: { role: { in: [Role.STAFF, Role.ADMIN] }, notifPush: true, pushToken: { not: null } },
-      select: { id: true, pushToken: true },
+      where: { role: { in: [Role.STAFF, Role.ADMIN] } },
+      select: { id: true, pushToken: true, notifPush: true },
     });
     for (const staff of staffUsers) {
-      sendPushNotification(staff.pushToken!, 'New patient message', preview, {
+      prisma.notification.create({
+        data: {
+          userId: staff.id,
+          type: 'NEW_MESSAGE',
+          title: 'New patient message',
+          body: preview,
+          patientId: data.patientId,
+        },
+      }).catch((e) => console.error(`[message] failed to create notification for user ${staff.id}:`, e));
+
+      if (staff.notifPush && staff.pushToken) {
+        sendPushNotification(staff.pushToken, 'New patient message', preview, {
+          messageId: message.id,
+          patientId: data.patientId,
+        }).catch((e) => {
+          console.error(`[message] push failed for user ${staff.id}:`, e instanceof Error ? e.message : e);
+        });
+      }
+    }
+  } else {
+    prisma.notification.create({
+      data: {
+        userId: patient.user.id,
+        type: 'NEW_MESSAGE',
+        title: 'New message',
+        body: preview,
+        patientId: data.patientId,
+      },
+    }).catch((e) => console.error(`[message] failed to create notification for message ${message.id}:`, e));
+
+    if (patient.user.notifPush && patient.user.pushToken) {
+      sendPushNotification(patient.user.pushToken, 'New message', preview, {
         messageId: message.id,
         patientId: data.patientId,
       }).catch((e) => {
-        console.error(`[message] push failed for user ${staff.id}:`, e instanceof Error ? e.message : e);
+        console.error(`[message] push failed for message ${message.id}:`, e instanceof Error ? e.message : e);
       });
     }
-  } else if (patient.user.notifPush && patient.user.pushToken) {
-    sendPushNotification(patient.user.pushToken, 'New message', preview, {
-      messageId: message.id,
-      patientId: data.patientId,
-    }).catch((e) => {
-      console.error(`[message] push failed for message ${message.id}:`, e instanceof Error ? e.message : e);
-    });
   }
 
   return message;

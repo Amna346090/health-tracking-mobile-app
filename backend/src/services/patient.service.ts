@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 import { Gender } from '@prisma/client';
+import { decrypt } from '../lib/credentials';
 
 const USER_SELECT = {
   id: true,
@@ -40,6 +41,19 @@ export async function getPatientByUserId(userId: number) {
     where: { userId },
     include: { user: { select: USER_SELECT } },
   });
+}
+
+export async function getPatientCredentials(id: number) {
+  const profile = await prisma.patientProfile.findUnique({
+    where: { id },
+    select: { user: { select: { email: true, username: true, encryptedPassword: true } } },
+  });
+  if (!profile) throw new AppError('Patient not found', 404);
+
+  return {
+    identifier: profile.user.email ?? profile.user.username ?? null,
+    password: profile.user.encryptedPassword ? decrypt(profile.user.encryptedPassword) : null,
+  };
 }
 
 interface UpdatePatientInput {

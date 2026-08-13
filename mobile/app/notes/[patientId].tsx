@@ -2,10 +2,11 @@
  * Notes screen. Staff/admin can add, edit, and delete notes on any patient.
  * Patients (viewing their own id) get a read-only view — visible but not editable.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
@@ -38,18 +39,21 @@ export default function NotesScreen() {
   const [editBody, setEditBody] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       setNotes(await getNotes(pid));
     } catch {
       // keep state
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, [pid]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   async function handleAdd() {
     if (!newBody.trim()) return;

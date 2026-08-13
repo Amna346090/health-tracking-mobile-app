@@ -1,9 +1,9 @@
 /**
- * Appointments screen.
- * Patients (viewing their own id) can request, reschedule, and cancel appointments.
- * Staff/admin (viewing another patient's id) get a read-only list — booking happens on the web CRM.
+ * Appointments screen. Patients (viewing their own id) can request, reschedule, and
+ * cancel their own appointments. Staff/admin have the same create/reschedule/cancel
+ * rights on any patient's appointments, plus "Mark completed" — matching the CRM.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
@@ -74,6 +75,7 @@ export default function AppointmentsScreen() {
   const { user } = useAuth();
   const pid = Number(patientId);
   const isOwnPatient = user?.role === 'PATIENT' && user.patientProfile?.id === pid;
+  const canManage = isOwnPatient || user?.role !== 'PATIENT';
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,10 +84,14 @@ export default function AppointmentsScreen() {
   const [date, setDate] = useState(todayISO());
   const [time, setTime] = useState('09:00');
   const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState('30');
   const [saving, setSaving] = useState(false);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const data = await getAppointments(pid);
       setAppointments(data.sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime()));
@@ -93,16 +99,19 @@ export default function AppointmentsScreen() {
       // keep state
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, [pid]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function openRequestForm() {
     setEditingId(null);
     setDate(todayISO());
     setTime('09:00');
     setReason('');
+    setNotes('');
+    setDurationMinutes('30');
     setShowForm(true);
   }
 
@@ -120,6 +129,8 @@ export default function AppointmentsScreen() {
     setDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
     setTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
     setReason(appointment.reason ?? '');
+    setNotes(appointment.notes ?? '');
+    setDurationMinutes(appointment.durationMinutes ? String(appointment.durationMinutes) : '30');
     setShowForm(true);
   }
 
@@ -127,11 +138,22 @@ export default function AppointmentsScreen() {
     setSaving(true);
     try {
       const scheduledFor = new Date(`${date}T${time}:00`).toISOString();
+      const parsedDuration = durationMinutes.trim() ? Number(durationMinutes) : null;
       if (editingId !== null) {
-        const updated = await updateAppointment(pid, editingId, { scheduledFor, reason: reason.trim() || null });
+        const updated = await updateAppointment(pid, editingId, {
+          scheduledFor,
+          reason: reason.trim() || null,
+          ...(!isOwnPatient && { notes: notes.trim() || null }),
+          durationMinutes: parsedDuration,
+        });
         setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
       } else {
-        const created = await createAppointment(pid, { scheduledFor, reason: reason.trim() || null });
+        const created = await createAppointment(pid, {
+          scheduledFor,
+          reason: reason.trim() || null,
+          ...(!isOwnPatient && { notes: notes.trim() || null }),
+          durationMinutes: parsedDuration,
+        });
         setAppointments((prev) => [...prev, created]);
       }
       setShowForm(false);
@@ -140,6 +162,15 @@ export default function AppointmentsScreen() {
       Alert.alert('Could not save appointment', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleMarkCompleted(appointment: Appointment) {
+    try {
+      const updated = await updateAppointment(pid, appointment.id, { status: 'COMPLETED' });
+      setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    } catch (e) {
+      Alert.alert('Could not update', e instanceof Error ? e.message : 'Please try again.');
     }
   }
 
@@ -163,7 +194,7 @@ export default function AppointmentsScreen() {
 
   const Header = (
     <View>
-      {isOwnPatient && (
+      {canManage && (
         <View style={styles.navRow}>
           <TouchableOpacity
             style={[styles.addBtn, showForm && styles.addBtnActive]}
@@ -171,7 +202,7 @@ export default function AppointmentsScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.addBtnText, showForm && styles.addBtnTextActive]}>
-              {showForm ? '✕' : '+ Request Appointment'}
+              {showForm ? '✕' : isOwnPatient ? '+ Request Appointment' : '+ Schedule Appointment'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -202,18 +233,43 @@ export default function AppointmentsScreen() {
               <TimeField label="Time" value={time} onChange={setTime} />
             </View>
           </View>
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Reason (optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={reason}
-              onChangeText={setReason}
-              placeholder="e.g. Follow-up checkup"
-              placeholderTextColor={colors.text.muted}
-            />
+          <View style={styles.row}>
+            <View style={styles.half}>
+              <Text style={styles.fieldLabel}>Reason (optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={reason}
+                onChangeText={setReason}
+                placeholder="e.g. Follow-up checkup"
+                placeholderTextColor={colors.text.muted}
+              />
+            </View>
+            <View style={styles.half}>
+              <Text style={styles.fieldLabel}>Duration (min)</Text>
+              <TextInput
+                style={styles.input}
+                value={durationMinutes}
+                onChangeText={setDurationMinutes}
+                keyboardType="number-pad"
+                placeholder="30"
+                placeholderTextColor={colors.text.muted}
+              />
+            </View>
           </View>
+          {canManage && !isOwnPatient && (
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Notes (optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Internal notes"
+                placeholderTextColor={colors.text.muted}
+              />
+            </View>
+          )}
           <Button
-            label={saving ? 'Saving…' : editingId !== null ? 'Save changes' : 'Request appointment'}
+            label={saving ? 'Saving…' : editingId !== null ? 'Save changes' : isOwnPatient ? 'Request appointment' : 'Schedule appointment'}
             onPress={handleSave}
             loading={saving}
           />
@@ -250,7 +306,7 @@ export default function AppointmentsScreen() {
             <EmptyState
               icon="🗓️"
               title="No appointments yet"
-              subtitle={isOwnPatient ? "Tap 'Request Appointment' to book one." : 'This patient has no appointments yet.'}
+              subtitle={canManage ? 'Tap the button above to book one.' : 'This patient has no appointments yet.'}
             />
           ) : null
         }
@@ -267,11 +323,16 @@ export default function AppointmentsScreen() {
                 </Text>
               </View>
             </View>
-            {isOwnPatient && (item.status === 'SCHEDULED' || item.status === 'RESCHEDULED') && (
+            {canManage && (item.status === 'SCHEDULED' || item.status === 'RESCHEDULED') && (
               <View style={styles.aptActions}>
                 <TouchableOpacity onPress={() => openRescheduleForm(item)}>
                   <Text style={styles.actionLink}>Reschedule</Text>
                 </TouchableOpacity>
+                {!isOwnPatient && (
+                  <TouchableOpacity onPress={() => handleMarkCompleted(item)}>
+                    <Text style={styles.actionLink}>Mark completed</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => handleCancel(item)}>
                   <Text style={[styles.actionLink, { color: colors.danger }]}>Cancel</Text>
                 </TouchableOpacity>

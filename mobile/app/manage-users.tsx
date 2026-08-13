@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useAuth } from '../context/auth';
 import { getAllUsers, deleteUser, type ManagedUser } from '../api/users';
@@ -95,7 +96,7 @@ export default function ManageUsersScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function goToResetPassword(target: ManagedUser) {
     router.push({

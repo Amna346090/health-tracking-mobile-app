@@ -1,7 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { onPushEvent } from '../../lib/pushEvents';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/auth';
 import { Card } from '../../components/Card';
@@ -36,6 +38,7 @@ export default function DashboardScreen() {
   const router   = useRouter();
   const isPatient = user?.role === 'PATIENT';
   const isAdmin = user?.role === 'ADMIN';
+  const showsNotificationsBell = isAdmin || isPatient;
   const patientId = user?.patientProfile?.id ?? null;
 
   const [unreadCount, setUnreadCount] = useState(0);
@@ -49,9 +52,11 @@ export default function DashboardScreen() {
   const [refreshing,      setRefreshing]      = useState(false);
   const [markingId,       setMarkingId]       = useState<number | null>(null);
 
+  const hasLoadedPatientDataRef = useRef(false);
+
   const loadPatientData = useCallback(async (isRefresh = false) => {
     if (!patientId) return;
-    if (isRefresh) setRefreshing(true); else setScheduleLoading(true);
+    if (isRefresh) setRefreshing(true); else if (!hasLoadedPatientDataRef.current) setScheduleLoading(true);
     try {
       const [scheduleData, logsData, summaryData, appointmentsData, messagesData, testRequestsData] = await Promise.all([
         getTodaySchedule(patientId),
@@ -72,20 +77,33 @@ export default function DashboardScreen() {
     } finally {
       setScheduleLoading(false);
       setRefreshing(false);
+      hasLoadedPatientDataRef.current = true;
     }
   }, [patientId]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (isPatient) loadPatientData();
+  }, [isPatient, loadPatientData]));
+
+  // Live refresh: a push arrives while this chat is open, or an existing patient
+  // message/appointment/test-request thread has moved — quietly refetch.
+  useEffect(() => {
+    if (!isPatient) return;
+    return onPushEvent('notification', () => loadPatientData());
   }, [isPatient, loadPatientData]);
 
+  const refreshUnreadCount = useCallback(() => {
+    if (!showsNotificationsBell) return;
+    getUnreadCount().then((r) => setUnreadCount(r.count)).catch(() => {});
+  }, [showsNotificationsBell]);
+
+  useFocusEffect(useCallback(() => { refreshUnreadCount(); }, [refreshUnreadCount]));
+
+  // Live refresh: push arrives while dashboard is open → update the bell badge instantly.
   useEffect(() => {
-    if (!isAdmin) return;
-    const refresh = () => getUnreadCount().then((r) => setUnreadCount(r.count)).catch(() => {});
-    refresh();
-    const interval = setInterval(refresh, 30000);
-    return () => clearInterval(interval);
-  }, [isAdmin]);
+    if (!showsNotificationsBell) return;
+    return onPushEvent('notification', refreshUnreadCount);
+  }, [showsNotificationsBell, refreshUnreadCount]);
 
   const handleMarkTaken = useCallback(async (assignmentId: number) => {
     setMarkingId(assignmentId);
@@ -138,7 +156,7 @@ export default function DashboardScreen() {
               </Text>
             </View>
             <View style={styles.headerActions}>
-              {isAdmin && (
+              {showsNotificationsBell && (
                 <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/notifications')}>
                   <Feather name="bell" size={19} color={colors.text.primary} />
                   {unreadCount > 0 && (

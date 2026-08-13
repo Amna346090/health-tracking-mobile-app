@@ -38,3 +38,12 @@ export interface UpdatePatientInput {
 export function updatePatient(id: number, data: UpdatePatientInput): Promise<PatientRow> {
   return api.patch<PatientRow>(`/patients/${id}`, data);
 }
+
+export interface PatientCredentials {
+  identifier: string | null;
+  password: string | null;
+}
+
+export function getPatientCredentials(id: number): Promise<PatientCredentials> {
+  return api.get<PatientCredentials>(`/patients/${id}/credentials`);
+}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { getTimeline, type TimelineEvent } from '../../api/timeline';
 import { FEELING_EMOJI } from '../../components/FeelingPicker';
@@ -150,9 +151,11 @@ export default function HistoryScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore,     setHasMore]     = useState(true);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async (reset = false) => {
     const before = reset ? undefined : events[events.length - 1]?.timestamp;
-    if (reset) setLoading(true); else setLoadingMore(true);
+    if (reset) { if (!hasLoadedRef.current) setLoading(true); } else { setLoadingMore(true); }
     try {
       const data = await getTimeline(pid, { limit: PAGE, before });
       setEvents((prev) => reset ? data : [...prev, ...data]);
@@ -162,10 +165,11 @@ export default function HistoryScreen() {
     } finally {
       setLoading(false);
       setLoadingMore(false);
+      hasLoadedRef.current = true;
     }
   }, [pid, events]);
 
-  useEffect(() => { load(true); }, [pid]);
+  useFocusEffect(useCallback(() => { load(true); }, [pid]));
 
   const listItems = buildList(events);
 

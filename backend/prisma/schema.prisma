@@ -85,6 +85,7 @@ model User {
   email        String?  @unique
   username     String?  @unique
   passwordHash String
+  encryptedPassword String?
   role         Role     @default(PATIENT)
   firstName    String
   lastName     String

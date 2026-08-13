@@ -1,6 +1,7 @@
 /**
  * Full photo gallery for a patient.
- * Used by both patients (own photos) and staff (any patient).
+ * Used by both patients (own photos) and staff (any patient) — both can upload here now,
+ * matching the CRM's admin upload tool.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -12,8 +13,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors, spacing, typography } from '../../theme';
+import { useFocusEffect } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
+import { colors, radius, spacing, typography } from '../../theme';
 import { PhotoGrid } from '../../components/PhotoGrid';
+import { PhotoPicker } from '../../components/PhotoPicker';
+import { useAuth } from '../../context/auth';
 import { getPhotos, type Photo } from '../../api/photos';
 
 const PAGE = 30;
@@ -21,17 +26,21 @@ const PAGE = 30;
 export default function PhotoGalleryScreen() {
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const pid = Number(patientId);
+  const isOwnPatient = user?.role === 'PATIENT' && user.patientProfile?.id === pid;
+  const canUpload = isOwnPatient || user?.role !== 'PATIENT';
 
   const [photos,     setPhotos]     = useState<Photo[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore,    setHasMore]    = useState(true);
+  const [showPicker, setShowPicker] = useState(false);
 
-  const load = useCallback(async (reset = false) => {
+  const load = useCallback(async (reset = false, silent = false) => {
     const offset = reset ? 0 : photos.length;
-    if (reset) setRefreshing(true); else if (offset === 0) setLoading(true); else setLoadingMore(true);
+    if (reset) { if (!silent) setRefreshing(true); } else if (offset === 0) setLoading(true); else setLoadingMore(true);
     try {
       const data = await getPhotos(pid, { limit: PAGE, offset });
       setPhotos(reset ? data : (prev) => [...prev, ...data]);
@@ -45,7 +54,7 @@ export default function PhotoGalleryScreen() {
     }
   }, [pid, photos.length]);
 
-  useEffect(() => { load(true); }, [pid]);
+  useFocusEffect(useCallback(() => { load(true, true); }, [pid]));
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) load();
@@ -73,7 +82,13 @@ export default function PhotoGalleryScreen() {
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Progress Photos</Text>
-        <View style={{ width: 60 }} />
+        {canUpload ? (
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowPicker((v) => !v)}>
+            <Feather name={showPicker ? 'x' : 'plus'} size={20} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 60 }} />
+        )}
       </View>
 
       <PhotoGrid
@@ -82,6 +97,19 @@ export default function PhotoGalleryScreen() {
         onEndReached={handleLoadMore}
         refreshing={refreshing}
         onRefresh={() => load(true)}
+        ListHeaderComponent={
+          canUpload && showPicker ? (
+            <View style={styles.pickerWrap}>
+              <PhotoPicker
+                patientId={pid}
+                onUploaded={(photo) => {
+                  setPhotos((prev) => [photo, ...prev]);
+                  setShowPicker(false);
+                }}
+              />
+            </View>
+          ) : undefined
+        }
         ListFooterComponent={
           loadingMore
             ? <View style={styles.footerLoader}><ActivityIndicator color={colors.primary} /></View>
@@ -106,4 +134,13 @@ const styles = StyleSheet.create({
   backText: { ...(typography.body1 as object), color: '#fff' },
   title:    { ...(typography.h4 as object), color: '#fff' },
   footerLoader: { paddingVertical: spacing.lg, alignItems: 'center' },
+  addBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerWrap: { padding: spacing.md },
 });

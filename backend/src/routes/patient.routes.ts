@@ -5,6 +5,7 @@ import {
   getAllPatients,
   getOwnProfile,
   getPatientById,
+  getPatientCredentials,
   updatePatient,
 } from '../controllers/patient.controller';
 import {
@@ -122,6 +123,9 @@ router.delete('/:patientId/notes/:noteId', requireRoles(Role.STAFF, Role.ADMIN),
 
 // ─── Upload audit history (photos + documents) ─────────────────────────────────
 router.get('/:patientId/upload-history', requireRoles(Role.ADMIN), getUploadHistory);
+
+// ─── Login credentials (auto-generated, admin-only view) ───────────────────────
+router.get('/:patientId/credentials', requireRoles(Role.ADMIN), getPatientCredentials);
 
 // ─── Timeline + Summary ───────────────────────────────────────────────────────
 router.get('/:patientId/timeline', getPatientTimeline);

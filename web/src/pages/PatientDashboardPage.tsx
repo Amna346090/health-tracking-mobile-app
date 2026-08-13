@@ -37,6 +37,8 @@ import { getUploadHistory } from '../api/uploadAudit';
 import type { UploadAuditLogEntry } from '../api/uploadAudit';
 import { deleteUser } from '../api/users';
 import { STAFF_FEATURES_ENABLED } from '../config';
+import { PatientCredentialsModal } from '../components/PatientCredentialsModal';
+import { ResetPasswordModal } from '../components/ResetPasswordModal';
 
 const FEELING_EMOJI: Record<string, string> = {
   GREAT: '😄',
@@ -183,6 +185,8 @@ export function PatientDashboardPage() {
   const [metricEntries, setMetricEntries] = useState<HealthMetric[]>([]);
   const [uploadHistory, setUploadHistory] = useState<UploadAuditLogEntry[]>([]);
   const [deletingPatient, setDeletingPatient] = useState(false);
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -266,6 +270,24 @@ export function PatientDashboardPage() {
         <div className="row-body">
           <div className="row-name" style={{ fontSize: 19 }}>{name}</div>
           <div className="row-sub">{patient.user.email ?? patient.user.username}</div>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setShowCredentials(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                marginTop: 4,
+                fontSize: 12.5,
+                fontWeight: 500,
+                color: 'var(--color-primary)',
+                cursor: 'pointer',
+              }}
+            >
+              View login credentials
+            </button>
+          )}
         </div>
       </div>
 
@@ -760,6 +782,23 @@ export function PatientDashboardPage() {
             await deleteUser(patient.user.id);
             navigate('/patients');
           }}
+        />
+      )}
+
+      {showCredentials && (
+        <PatientCredentialsModal
+          patientId={pid}
+          patientName={name}
+          onClose={() => setShowCredentials(false)}
+          onResetPassword={() => { setShowCredentials(false); setShowResetPassword(true); }}
+        />
+      )}
+
+      {showResetPassword && (
+        <ResetPasswordModal
+          userId={patient.user.id}
+          userName={name}
+          onClose={() => setShowResetPassword(false)}
         />
       )}
 
