@@ -2,10 +2,11 @@
  * Staff/admin view of a specific patient's active peptide assignments — edit or delete
  * (deactivate) one. Patients manage their own peptides from the Peptides tab instead.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
@@ -64,8 +65,10 @@ export default function PatientPeptidesScreen() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const data = await getAssignments(pid);
       setAssignments(data);
@@ -75,10 +78,11 @@ export default function PatientPeptidesScreen() {
       // keep state
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, [pid]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function openEdit(item: MedicationAssignment) {
     setEditingItem(item);

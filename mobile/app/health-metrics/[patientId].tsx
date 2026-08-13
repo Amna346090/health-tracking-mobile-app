@@ -5,7 +5,7 @@
  * attaching a supporting report via the same DocumentPicker used for general
  * document uploads.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
@@ -66,8 +67,10 @@ export default function HealthMetricsScreen() {
   const [attachedDoc, setAttachedDoc] = useState<Document | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const [entriesData, trendData] = await Promise.all([
         getMetrics(pid, metricType),
@@ -79,10 +82,11 @@ export default function HealthMetricsScreen() {
       // keep state
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, [pid, metricType]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   async function handleSave() {
     const parsed = parseFloat(value);

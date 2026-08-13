@@ -2,7 +2,7 @@
  * Staff/admin view of a specific patient's health log.
  * Accessible via the Health Log tab → patient list.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { HealthLogCard } from '../../components/HealthLogCard';
@@ -69,8 +70,10 @@ export default function PatientHealthLogScreen() {
   const [notes,   setNotes]   = useState('');
   const [saving,  setSaving]  = useState(false);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    if (isRefresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
     try {
       const [patientData, logData, trendData] = await Promise.all([
         api.get<PatientMeta>(`/patients/${pid}`),
@@ -85,10 +88,11 @@ export default function PatientHealthLogScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      hasLoadedRef.current = true;
     }
   }, [pid]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleSave = async () => {
     if (!date.trim()) { Alert.alert('Date required'); return; }

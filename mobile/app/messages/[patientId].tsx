@@ -18,10 +18,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { useAuth } from '../../context/auth';
 import { getMessages, markMessageRead, sendMessage, type Message } from '../../api/messages';
+import { onPushEvent } from '../../lib/pushEvents';
 
 function dayLabel(iso: string): string {
   const d = new Date(iso);
@@ -51,14 +53,15 @@ export default function MessagesScreen() {
   const canSend = isOwnPatient || user?.role !== 'PATIENT';
   const listRef = useRef<FlatList<Message>>(null);
 
-  // Oldest first, top to bottom — a plain chronological list, same as the CRM's thread view.
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const data = await getMessages(pid);
       setMessages([...data].reverse());
@@ -66,10 +69,25 @@ export default function MessagesScreen() {
       // keep state
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, [pid]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Scrolls to the newest message. Fires several times over half a second —
+  // a full list refetch can take a moment to lay out, so one attempt isn't
+  // enough to guarantee the list has actually finished growing yet.
+  const scrollToBottom = useCallback(() => {
+    for (const delay of [0, 50, 150, 350]) {
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), delay);
+    }
+  }, []);
+
+  // Live refresh: a reply arrives from the other party while this chat is open.
+  useEffect(() => onPushEvent(`message:${pid}`, () => {
+    load().then(scrollToBottom);
+  }), [pid, load, scrollToBottom]);
 
   async function handlePress(message: Message) {
     if (message.sender.id === user?.id || message.readAt) return;
@@ -89,7 +107,7 @@ export default function MessagesScreen() {
       const message = await sendMessage(pid, body);
       setMessages((prev) => [...prev, message]);
       setDraft('');
-      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+      scrollToBottom();
     } catch (e) {
       Alert.alert('Could not send message', e instanceof Error ? e.message : 'Please try again.');
     } finally {

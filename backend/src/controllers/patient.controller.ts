@@ -60,6 +60,21 @@ export async function getPatientById(req: Request, res: Response, next: NextFunc
   }
 }
 
+export async function getPatientCredentials(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = parseInt(req.params.patientId, 10);
+    if (isNaN(id)) {
+      res.status(400).json({ status: 'error', message: 'Invalid patient ID' });
+      return;
+    }
+
+    const credentials = await patientService.getPatientCredentials(id);
+    res.json({ status: 'ok', data: credentials });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function updatePatient(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = parseInt(req.params.id, 10);

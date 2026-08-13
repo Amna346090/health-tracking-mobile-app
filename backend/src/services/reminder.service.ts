@@ -30,6 +30,7 @@ export async function runReminderJob(): Promise<void> {
           id: true,
           user: {
             select: {
+              id: true,
               email: true,
               firstName: true,
               pushToken: true,
@@ -55,6 +56,16 @@ export async function runReminderJob(): Promise<void> {
     if (user.notifPush && user.pushToken)      channels.push(ReminderChannel.PUSH);
     if (user.notifEmail && user.email)         channels.push(ReminderChannel.EMAIL);
     if (channels.length === 0) continue;
+
+    prisma.notification.create({
+      data: {
+        userId: user.id,
+        type: 'MEDICATION_REMINDER',
+        title,
+        body,
+        patientId: patient.id,
+      },
+    }).catch((e) => console.error(`[reminder] failed to create notification for assignment ${assignment.id}:`, e));
 
     for (const channel of channels) {
       // Atomic create — unique constraint prevents double-send even if job overlaps

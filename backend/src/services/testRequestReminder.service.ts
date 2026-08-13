@@ -16,7 +16,7 @@ function addDays(date: Date, days: number): Date {
 }
 
 async function sendReminder(
-  testRequest: { id: number; name: string; dueDate: Date; patient: { id: number; user: { email: string | null; pushToken: string | null } } },
+  testRequest: { id: number; name: string; dueDate: Date; patient: { id: number; user: { id: number; email: string | null; pushToken: string | null } } },
   offsetLabel: string,
   bodyText: string,
 ): Promise<void> {
@@ -24,6 +24,16 @@ async function sendReminder(
   const { user } = patient;
   const title = 'Test/Scan Reminder';
   const htmlBody = `<p>${bodyText}</p>`;
+
+  prisma.notification.create({
+    data: {
+      userId: user.id,
+      type: 'TEST_REQUEST_REMINDER',
+      title,
+      body: bodyText,
+      patientId: patient.id,
+    },
+  }).catch((e) => console.error(`[test-request reminder] failed to create notification for test request ${testRequest.id}:`, e));
 
   // Same policy as appointment reminders — always both channels, not gated behind the
   // patient's general notifPush/notifEmail preference, since this is a care-coordination requirement.
@@ -86,7 +96,7 @@ const PATIENT_INCLUDE = {
   patient: {
     select: {
       id: true,
-      user: { select: { email: true, pushToken: true } },
+      user: { select: { id: true, email: true, pushToken: true } },
     },
   },
 } as const;

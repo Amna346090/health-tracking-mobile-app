@@ -78,3 +78,11 @@ export interface UpdatePatientInput {
 
 export const updatePatient = (id: number, data: UpdatePatientInput) =>
   api.patch<PatientRow>(`/patients/${id}`, data);
+
+export interface PatientCredentials {
+  identifier: string | null;
+  password: string | null;
+}
+
+export const getPatientCredentials = (id: number) =>
+  api.get<PatientCredentials>(`/patients/${id}/credentials`);

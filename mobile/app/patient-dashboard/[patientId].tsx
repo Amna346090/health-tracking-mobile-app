@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { api } from '../../api/client';
 import { getTimeline, getSummary, type TimelineEvent, type PatientSummary } from '../../api/timeline';
@@ -26,6 +27,36 @@ import { deleteUser } from '../../api/users';
 import { Dropdown } from '../../components/Dropdown';
 import { STAFF_FEATURES_ENABLED } from '../../config';
 import { useAuth } from '../../context/auth';
+import { getUploadHistory, type UploadAuditLogEntry } from '../../api/uploadAudit';
+
+const UPLOAD_ACTION_LABEL: Record<UploadAuditLogEntry['action'], string> = {
+  UPLOADED: 'uploaded',
+  EDITED: 'edited',
+  DELETED: 'deleted',
+};
+
+const UPLOAD_ACTION_ICON: Record<UploadAuditLogEntry['action'], string> = {
+  UPLOADED: '⬆️',
+  EDITED: '✏️',
+  DELETED: '🗑️',
+};
+
+function UploadHistoryRow({ entry }: { entry: UploadAuditLogEntry }) {
+  return (
+    <View style={crmStyles.miniEvent}>
+      <Text style={crmStyles.miniIcon}>{UPLOAD_ACTION_ICON[entry.action]}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={crmStyles.miniTitle}>
+          {entry.performedBy.firstName} {entry.performedBy.lastName} {UPLOAD_ACTION_LABEL[entry.action]} a {entry.entityType.toLowerCase()}
+        </Text>
+        {entry.detail && <Text style={crmStyles.miniSub}>{entry.detail}</Text>}
+      </View>
+      <Text style={crmStyles.miniTime}>
+        {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+      </Text>
+    </View>
+  );
+}
 
 interface PatientMeta {
   id: number;
@@ -212,9 +243,10 @@ export default function PatientDashboardScreen() {
   const [trend,    setTrend]    = useState<WeightDataPoint[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [markingContacted, setMarkingContacted] = useState(false);
+  const [uploadHistory, setUploadHistory] = useState<UploadAuditLogEntry[]>([]);
 
-  useEffect(() => {
-    Promise.all([
+  const load = useCallback(() => {
+    return Promise.all([
       api.get<PatientMeta>(`/patients/${pid}`),
       getSummary(pid),
       getTimeline(pid, { limit: 5 }),
@@ -225,9 +257,15 @@ export default function PatientDashboardScreen() {
       .finally(() => setLoading(false));
   }, [pid]);
 
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
   useEffect(() => {
     if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
   }, []);
+
+  useFocusEffect(useCallback(() => {
+    if (isAdmin) getUploadHistory(pid).then(setUploadHistory).catch(() => {});
+  }, [isAdmin, pid]));
 
   async function handleMarkContacted() {
     setMarkingContacted(true);
@@ -298,6 +336,18 @@ export default function PatientDashboardScreen() {
           <View>
             <Text style={crmStyles.patientName}>{patientName}</Text>
             <Text style={crmStyles.patientEmail}>{patient?.user.email ?? patient?.user.username}</Text>
+            {isAdmin && patient && (
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: '/patient-credentials/[patientId]',
+                    params: { patientId: String(pid), userId: String(patient.user.id), name: patientName },
+                  })
+                }
+              >
+                <Text style={crmStyles.credentialsLink}>View login credentials</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -445,6 +495,25 @@ export default function PatientDashboardScreen() {
           </View>
         </View>
 
+        {/* Upload history (admin-only) */}
+        {isAdmin && (
+          <View style={crmStyles.section}>
+            <Text style={crmStyles.sectionTitle}>UPLOAD HISTORY</Text>
+            {uploadHistory.length === 0 ? (
+              <Text style={crmStyles.emptyText}>No photo or document activity yet.</Text>
+            ) : (
+              <View style={crmStyles.timelineCard}>
+                {uploadHistory.map((entry, i) => (
+                  <View key={entry.id}>
+                    <UploadHistoryRow entry={entry} />
+                    {i < uploadHistory.length - 1 && <View style={crmStyles.divider} />}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Recent activity */}
         {timeline.length > 0 && (
           <View style={crmStyles.section}>
@@ -504,6 +573,7 @@ const crmStyles = StyleSheet.create({
   },
   patientName:   { ...(typography.h4 as object), color: colors.text.primary },
   patientEmail:  { ...(typography.caption as object), color: colors.text.muted },
+  credentialsLink: { ...(typography.caption as object), color: colors.primary, marginTop: 2 },
 
   section:     { gap: spacing.sm },
   sectionRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -514,6 +584,7 @@ const crmStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   viewAll: { ...(typography.label as object), color: colors.primary },
+  emptyText: { ...(typography.body2 as object), color: colors.text.muted },
 
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   toggleLabel: { ...(typography.caption as object), color: colors.text.secondary },

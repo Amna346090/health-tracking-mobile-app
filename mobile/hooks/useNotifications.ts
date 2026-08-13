@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { registerPushToken } from '../api/notifications';
+import { emitPushEvent } from '../lib/pushEvents';
 
 // Configure how incoming notifications are presented while the app is foregrounded
 Notifications.setNotificationHandler({
@@ -17,6 +18,7 @@ Notifications.setNotificationHandler({
 export function useNotifications(isLoggedIn: boolean): void {
   const router = useRouter();
   const responseListenerRef = useRef<Notifications.Subscription | null>(null);
+  const receivedListenerRef = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -50,6 +52,26 @@ export function useNotifications(isLoggedIn: boolean): void {
       }
     })();
 
+    // Live refresh: notification arrives while the app is open → tell whichever
+    // screen cares, so it can quietly refetch instead of showing stale data.
+    receivedListenerRef.current = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        const data = notification.request.content.data as Record<string, unknown>;
+        if (typeof data.messageId === 'number' && typeof data.patientId === 'number') {
+          emitPushEvent(`message:${data.patientId}`);
+        }
+        if (typeof data.appointmentId === 'number' && typeof data.patientId === 'number') {
+          emitPushEvent(`appointments:${data.patientId}`);
+        }
+        if (typeof data.testRequestId === 'number' && typeof data.patientId === 'number') {
+          emitPushEvent(`testRequests:${data.patientId}`);
+        }
+        // Every push to staff/admin also has a matching row in the in-app Notification
+        // list and drives the bell badge — refresh both whenever any push lands.
+        emitPushEvent('notification');
+      },
+    );
+
     // Deep-link: tap on notification → open the relevant detail screen
     responseListenerRef.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
@@ -72,6 +94,10 @@ export function useNotifications(isLoggedIn: boolean): void {
       if (responseListenerRef.current) {
         Notifications.removeNotificationSubscription(responseListenerRef.current);
         responseListenerRef.current = null;
+      }
+      if (receivedListenerRef.current) {
+        Notifications.removeNotificationSubscription(receivedListenerRef.current);
+        receivedListenerRef.current = null;
       }
     };
   }, [isLoggedIn]);

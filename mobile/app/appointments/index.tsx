@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAllAppointments, type AppointmentWithPatient, type AppointmentStatus } from '../../api/appointments';
 
@@ -46,7 +47,7 @@ export default function AppointmentsQueueScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

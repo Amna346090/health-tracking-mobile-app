@@ -34,6 +34,7 @@ export async function runAppointmentReminderJob(): Promise<void> {
             id: true,
             user: {
               select: {
+                id: true,
                 email: true,
                 firstName: true,
                 pushToken: true,
@@ -53,6 +54,16 @@ export async function runAppointmentReminderJob(): Promise<void> {
       const when = appointment.scheduledFor.toLocaleString();
       const body = `You have an appointment on ${when}${appointment.reason ? ` (${appointment.reason})` : ''}`;
       const htmlBody = `<p>${body}</p>`;
+
+      prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: 'APPOINTMENT_REMINDER',
+          title,
+          body,
+          patientId: patient.id,
+        },
+      }).catch((e) => console.error(`[appointment reminder] failed to create notification for appointment ${appointment.id}:`, e));
 
       // Appointment/touch-base reminders always go out on both channels — unlike medication
       // reminders, these aren't gated behind the patient's general notifPush/notifEmail

@@ -29,8 +29,6 @@ const GENDER_OPTIONS: { value: Gender; label: string }[] = [
 interface FormValues {
   firstName: string;
   lastName: string;
-  email: string;
-  password: string;
   dateOfBirth: string;
   gender: Gender | null;
   healthIssue: string;
@@ -41,7 +39,7 @@ export default function AddPatientScreen() {
   const router = useRouter();
 
   const [values, setValues] = useState<FormValues>({
-    firstName: '', lastName: '', email: '', password: '',
+    firstName: '', lastName: '',
     dateOfBirth: '', gender: null, healthIssue: '', phone: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>> & { form?: string }>({});
@@ -55,8 +53,6 @@ export default function AddPatientScreen() {
     const next: typeof errors = {};
     if (!values.firstName.trim()) next.firstName = 'First name is required';
     if (!values.phone.trim()) next.phone = 'Phone number is required';
-    if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) next.email = 'Enter a valid email';
-    if (values.password && values.password.length < 8) next.password = 'Password must be at least 8 characters';
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -70,8 +66,6 @@ export default function AddPatientScreen() {
         firstName: values.firstName.trim(),
         phone: values.phone.trim(),
         lastName: values.lastName.trim() || undefined,
-        email: values.email.trim() ? values.email.trim().toLowerCase() : undefined,
-        password: values.password || undefined,
         dateOfBirth: values.dateOfBirth.trim() || undefined,
         gender: values.gender ?? undefined,
         healthIssue: values.healthIssue.trim() || undefined,
@@ -86,16 +80,7 @@ export default function AddPatientScreen() {
         }
       }
 
-      if (created.generatedCredentials) {
-        const { identifier, password } = created.generatedCredentials;
-        Alert.alert(
-          'Patient Created',
-          `Save these login details now — they won't be shown again.\n\nUsername: ${identifier}${password ? `\nPassword: ${password}` : ''}`,
-          [{ text: 'OK', onPress: goToPatient }],
-        );
-      } else {
-        goToPatient();
-      }
+      Alert.alert('Patient created', undefined, [{ text: 'OK', onPress: goToPatient }]);
     } catch (err) {
       setErrors({ form: (err as Error).message ?? 'Could not create patient.' });
     } finally {
@@ -147,26 +132,6 @@ export default function AddPatientScreen() {
               onChangeText={set('phone')}
               error={errors.phone}
               keyboardType="phone-pad"
-            />
-
-            <Input
-              label="Email (optional)"
-              value={values.email}
-              onChangeText={set('email')}
-              error={errors.email}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="Leave blank to auto-generate a username"
-            />
-
-            <Input
-              label="Initial password (optional)"
-              value={values.password}
-              onChangeText={set('password')}
-              error={errors.password}
-              secureTextEntry
-              placeholder="Leave blank to auto-generate one"
             />
 
             <DateField

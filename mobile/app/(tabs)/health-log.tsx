@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/auth';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
@@ -261,8 +262,10 @@ function PatientHealthLog({ patientId }: { patientId: number }) {
   const [refreshing, setRefreshing]   = useState(false);
   const [showForm, setShowForm]       = useState(false);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    if (isRefresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
     try {
       const [logData, trendData] = await Promise.all([
         getHealthLogs(patientId, { limit: 50 }),
@@ -276,10 +279,11 @@ function PatientHealthLog({ patientId }: { patientId: number }) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      hasLoadedRef.current = true;
     }
   }, [patientId]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleCreated = useCallback((log: HealthLog) => {
     setLogs((prev) => [log, ...prev]);
@@ -457,8 +461,10 @@ function PatientHealthLogWithForm({
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    if (isRefresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
     try {
       const [logData, trendData] = await Promise.all([
         getHealthLogs(patientId, { limit: 50 }),
@@ -472,10 +478,11 @@ function PatientHealthLogWithForm({
     } finally {
       setLoading(false);
       setRefreshing(false);
+      hasLoadedRef.current = true;
     }
   }, [patientId, onFormToggle]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleCreated = useCallback((log: HealthLog) => {
     setLogs((prev) => [log, ...prev]);

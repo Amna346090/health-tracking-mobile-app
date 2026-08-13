@@ -1,11 +1,14 @@
 /**
- * Notifications inbox — admin-only for now (patients only get push notifications,
- * no in-app list yet). Mirrors web/src/pages/NotificationsPage.tsx.
+ * Notifications inbox — shared by admin and patients. Tapping a notification routes
+ * to the relevant screen based on its type (admin's touch-base alerts still open the
+ * staff patient-dashboard; a patient's own message/appointment/test-request alerts
+ * open their own thread/list instead). Mirrors web/src/pages/NotificationsPage.tsx.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '../theme';
 import { EmptyState } from '../components/EmptyState';
@@ -17,6 +20,14 @@ import {
   deleteNotification,
   type Notification,
 } from '../api/notifications';
+import { onPushEvent } from '../lib/pushEvents';
+
+const TYPE_ROUTE: Record<string, (patientId: number) => string> = {
+  NEW_MESSAGE: (id) => `/messages/${id}`,
+  APPOINTMENT_REMINDER: (id) => `/appointments/${id}`,
+  TEST_REQUEST_REMINDER: (id) => `/test-requests/${id}`,
+  MEDICATION_REMINDER: () => `/(tabs)`,
+};
 
 function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString('en-US', {
@@ -33,18 +44,24 @@ export default function NotificationsScreen() {
 
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       setNotifications(await getNotifications());
     } catch {
       // keep state
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Live refresh: a new notification arrives while this list is open.
+  useEffect(() => onPushEvent('notification', load), [load]);
 
   async function markOneRead(n: Notification) {
     if (n.readAt) return;
@@ -58,7 +75,10 @@ export default function NotificationsScreen() {
 
   async function handlePress(n: Notification) {
     await markOneRead(n);
-    if (n.patientId) router.push(`/patient-dashboard/${n.patientId}`);
+    if (!n.patientId) return;
+    const routeFor = TYPE_ROUTE[n.type];
+    const path = routeFor ? routeFor(n.patientId) : `/patient-dashboard/${n.patientId}`;
+    router.push(path as Parameters<typeof router.push>[0]);
   }
 
   async function handleMarkAllRead() {
