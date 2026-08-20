@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "backend",
-    "mobile"
+    "mobile",
+    "pwa"
   ],
   "scripts": {
     "backend": "yarn workspace backend dev",
