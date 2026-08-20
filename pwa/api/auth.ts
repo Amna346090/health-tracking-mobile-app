@@ -1,0 +1,96 @@
+// Auth endpoints — use plain fetch so the 401-retry loop never fires.
+// register/logout require the caller's own bearer token (staff creating a
+// patient, or a logged-in user logging out); login/refresh need none.
+import { api, getAccessToken } from './client';
+
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
+
+export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+
+export interface PatientProfile {
+  id: number;
+  userId: number;
+  dateOfBirth: string | null;
+  gender: Gender | null;
+  healthIssue: string | null;
+  avatarUrl: string | null;
+  phone: string | null;
+  address: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthUser {
+  id: number;
+  email: string | null;
+  username: string | null;
+  role: 'PATIENT' | 'STAFF' | 'ADMIN';
+  firstName: string;
+  lastName: string;
+  notifPush:  boolean;
+  notifEmail: boolean;
+  createdAt: string;
+  updatedAt: string;
+  patientProfile: PatientProfile | null;
+}
+
+interface ApiOk<T> {
+  status: 'ok';
+  data: T;
+}
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const token = getAccessToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? `HTTP ${res.status}`);
+  return (json as ApiOk<T>).data;
+}
+
+export interface LoginResult {
+  accessToken: string;
+  refreshToken: string;
+  user: AuthUser;
+}
+
+export interface RegisterInput {
+  firstName: string;
+  phone: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  dateOfBirth?: string;
+  gender?: Gender;
+  healthIssue?: string;
+  role?: 'PATIENT' | 'STAFF' | 'ADMIN';
+}
+
+export interface GeneratedCredentials {
+  identifier: string;
+  password?: string;
+}
+
+export type RegisterResult = AuthUser & { generatedCredentials?: GeneratedCredentials };
+
+export const loginApi = (identifier: string, password: string) =>
+  post<LoginResult>('/auth/login', { identifier, password });
+
+export const registerApi = (data: RegisterInput) =>
+  post<RegisterResult>('/auth/register', data);
+
+export const refreshApi = (refreshToken: string) =>
+  post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken });
+
+export const logoutApi = (refreshToken: string) =>
+  post<unknown>('/auth/logout', { refreshToken });
+
+// Uses the shared client (with its normal 401-retry) since this runs throughout
+// the session, not just at login — an expired token here should just refresh and retry.
+export const getMeApi = () => api.get<AuthUser>('/auth/me');
