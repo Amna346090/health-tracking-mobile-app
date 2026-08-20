@@ -6,7 +6,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Alert } from '../lib/alert';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, radius, spacing, typography } from '../theme';
 import { uploadPhoto, type Photo } from '../api/photos';
