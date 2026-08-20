@@ -19,6 +19,14 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="SFLBiotrack" />
         <ScrollViewStyleReset />
+        <style
+          dangerouslySetInnerHTML={{
+            // The browser's default focus ring bleeds outside rounded input corners
+            // and overlaps neighboring fields — every input already shows focus via
+            // its own border color change, so the native ring is just redundant.
+            __html: `input, textarea { outline: none; }`,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
