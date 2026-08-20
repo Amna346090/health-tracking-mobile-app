@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../context/auth';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { useNotifications } from '../hooks/useNotifications';
+import { useRealtime } from '../lib/realtime';
 import { colors } from '../theme';
 
 function NavigationGuard() {
@@ -14,6 +15,7 @@ function NavigationGuard() {
   const router = useRouter();
 
   useNotifications(!!user);
+  useRealtime(!!user);
 
   useEffect(() => {
     if (isLoading) return;

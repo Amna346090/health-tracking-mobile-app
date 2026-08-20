@@ -2,6 +2,7 @@ import { Role } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 import { sendPushNotification } from '../lib/expoPush';
+import { broadcastToUser } from '../lib/realtime';
 
 const SENDER_SELECT = {
   id: true,
@@ -62,6 +63,9 @@ export async function createMessage(data: CreateMessageInput) {
         },
       }).catch((e) => console.error(`[message] failed to create notification for user ${staff.id}:`, e));
 
+      broadcastToUser(staff.id, `message:${data.patientId}`);
+      broadcastToUser(staff.id, 'notification');
+
       if (staff.notifPush && staff.pushToken) {
         sendPushNotification(staff.pushToken, 'New patient message', preview, {
           messageId: message.id,
@@ -81,6 +85,9 @@ export async function createMessage(data: CreateMessageInput) {
         patientId: data.patientId,
       },
     }).catch((e) => console.error(`[message] failed to create notification for message ${message.id}:`, e));
+
+    broadcastToUser(patient.user.id, `message:${data.patientId}`);
+    broadcastToUser(patient.user.id, 'notification');
 
     if (patient.user.notifPush && patient.user.pushToken) {
       sendPushNotification(patient.user.pushToken, 'New message', preview, {
