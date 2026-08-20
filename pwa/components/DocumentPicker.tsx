@@ -7,12 +7,12 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Alert } from '../lib/alert';
 import * as ExpoDocumentPicker from 'expo-document-picker';
 import { Feather } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '../theme';

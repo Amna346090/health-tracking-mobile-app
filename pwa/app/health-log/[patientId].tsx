@@ -33,9 +33,9 @@ import { api } from '../../api/client';
 import { FeelingPicker } from '../../components/FeelingPicker';
 import { PhotoPicker } from '../../components/PhotoPicker';
 import {
-  Alert,
   TextInput,
 } from 'react-native';
+import { Alert } from '../../lib/alert';
 import type { FeelingStatus } from '../../api/healthLog';
 
 const SCREEN_W = Dimensions.get('window').width;
