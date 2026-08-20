@@ -8,14 +8,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/auth';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { colors, spacing, typography } from '../../theme';
 
 export default function LoginScreen() {
-  const { t } = useTranslation();
   const { login } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
@@ -25,8 +23,8 @@ export default function LoginScreen() {
 
   function validate(): boolean {
     const next: typeof errors = {};
-    if (!identifier.trim()) next.identifier = t('auth.emailRequired');
-    if (!password) next.password = t('auth.passwordRequired');
+    if (!identifier.trim()) next.identifier = 'Email or username is required';
+    if (!password) next.password = 'Password is required';
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -39,7 +37,7 @@ export default function LoginScreen() {
       await login(identifier.trim().toLowerCase(), password);
       // NavigationGuard redirects to (tabs) automatically
     } catch (err) {
-      setErrors({ form: (err as Error).message ?? t('auth.loginFailed') });
+      setErrors({ form: (err as Error).message ?? 'Login failed. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -60,7 +58,7 @@ export default function LoginScreen() {
           <View style={styles.header}>
             <Text style={styles.logo}>💊</Text>
             <Text style={styles.title}>SFLBiotrack</Text>
-            <Text style={styles.subtitle}>{t('auth.appTagline')}</Text>
+            <Text style={styles.subtitle}>Sign in to continue tracking your health</Text>
           </View>
 
           {/* Form */}
@@ -72,19 +70,19 @@ export default function LoginScreen() {
             )}
 
             <Input
-              label={t('auth.emailOrUsername')}
+              label="Email or Username"
               value={identifier}
               onChangeText={setIdentifier}
               error={errors.identifier}
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="username"
-              placeholder={t('auth.emailOrUsernamePlaceholder')}
+              placeholder="you@example.com or username"
               returnKeyType="next"
             />
 
             <Input
-              label={t('auth.password')}
+              label="Password"
               value={password}
               onChangeText={setPassword}
               error={errors.password}
@@ -95,7 +93,7 @@ export default function LoginScreen() {
               onSubmitEditing={handleLogin}
             />
 
-            <Button label={t('auth.signIn')} onPress={handleLogin} loading={loading} />
+            <Button label="Sign in" onPress={handleLogin} loading={loading} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

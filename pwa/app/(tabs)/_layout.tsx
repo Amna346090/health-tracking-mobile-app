@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 import { colors, spacing, shadows } from '../../theme';
 import { useAuth } from '../../context/auth';
 
@@ -13,7 +12,6 @@ function TabIcon({ name, color, size }: { name: IoniconName; color: string; size
 }
 
 export default function TabLayout() {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const isStaffOrAdmin = user?.role === 'STAFF' || user?.role === 'ADMIN';
   const insets = useSafeAreaInsets();
@@ -44,14 +42,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: t('nav.dashboard'),
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => <TabIcon name="home-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="medications"
         options={{
-          title: t('nav.peptides'),
+          title: 'Peptides',
           tabBarIcon: ({ color, size }) => <TabIcon name="medical-outline" color={color} size={size} />,
         }}
       />
@@ -60,7 +58,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="health-log"
         options={{
-          title: t('nav.healthLog'),
+          title: 'Health Log',
           href: isStaffOrAdmin ? null : undefined,
           tabBarIcon: ({ color, size }) => <TabIcon name="pulse-outline" color={color} size={size} />,
         }}
@@ -69,7 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="touch-base-queue"
         options={{
-          title: t('nav.touchBase'),
+          title: 'Touch-Base',
           href: isStaffOrAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => <TabIcon name="heart-outline" color={color} size={size} />,
         }}
@@ -78,7 +76,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="patients"
         options={{
-          title: t('nav.patients'),
+          title: 'Patients',
           href: isStaffOrAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => <TabIcon name="people-outline" color={color} size={size} />,
         }}
@@ -86,7 +84,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: t('nav.profile'),
+          title: 'Profile',
           tabBarIcon: ({ color, size }) => <TabIcon name="person-outline" color={color} size={size} />,
         }}
       />
