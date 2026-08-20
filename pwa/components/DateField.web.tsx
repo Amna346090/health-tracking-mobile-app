@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 interface DateFieldProps {
@@ -50,6 +49,7 @@ export function DateField({
           'aria-label': label,
           style: {
             flex: 1,
+            minWidth: 0,
             border: 'none',
             outline: 'none',
             background: 'transparent',
@@ -60,7 +60,6 @@ export function DateField({
             cursor: 'pointer',
           },
         })}
-        <Feather name="calendar" size={18} color={colors.text.secondary} />
       </View>
       {!!error && <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>}
       {!!hint && !error && <Text style={styles.hintText}>{hint}</Text>}

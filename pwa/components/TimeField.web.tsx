@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 interface TimeFieldProps {
@@ -28,6 +27,7 @@ export function TimeField({ label, value, onChange, error, hint }: TimeFieldProp
           'aria-label': label,
           style: {
             flex: 1,
+            minWidth: 0,
             border: 'none',
             outline: 'none',
             background: 'transparent',
@@ -38,7 +38,6 @@ export function TimeField({ label, value, onChange, error, hint }: TimeFieldProp
             cursor: 'pointer',
           },
         })}
-        <Feather name="clock" size={18} color={colors.text.secondary} />
       </View>
       {!!error && <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>}
       {!!hint && !error && <Text style={styles.hintText}>{hint}</Text>}
