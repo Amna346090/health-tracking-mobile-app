@@ -14,11 +14,13 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { onPushEvent } from '../../lib/pushEvents';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/auth';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { TodayMedicationCard } from '../../components/MedicationCard';
 import { HealthLogCard } from '../../components/HealthLogCard';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 import { colors, spacing, typography } from '../../theme';
 import { getTodaySchedule, logDose, type TodayScheduleItem } from '../../api/assignments';
 import { getHealthLogs, type HealthLog } from '../../api/healthLog';
@@ -28,11 +30,11 @@ import { getMessages, type Message } from '../../api/messages';
 import { getTestRequests, type TestRequest } from '../../api/testRequests';
 import { getUnreadCount } from '../../api/notifications';
 
-function greeting(): string {
+function greetingKey(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'dashboard.goodMorning';
+  if (hour < 17) return 'dashboard.goodAfternoon';
+  return 'dashboard.goodEvening';
 }
 
 const TREND_ARROW: Record<string, string> = { UP: '↑', DOWN: '↓', STABLE: '→' };
@@ -43,6 +45,7 @@ const TREND_COLOR: Record<string, string> = {
 };
 
 export default function DashboardScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const router   = useRouter();
   const isPatient = user?.role === 'PATIENT';
@@ -159,12 +162,13 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.greetingLabel}>{greeting()},</Text>
+              <Text style={styles.greetingLabel}>{t(greetingKey())}</Text>
               <Text style={styles.greetingName}>
                 {user?.firstName} {user?.lastName}
               </Text>
             </View>
             <View style={styles.headerActions}>
+              <LanguageSwitcher />
               {showsNotificationsBell && (
                 <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/notifications')}>
                   <Feather name="bell" size={19} color={colors.text.primary} />
@@ -207,8 +211,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="users" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Patients</Text>
-                  <Text style={styles.navCardSubtext}>View and manage all patients</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.patients')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.patientsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -217,8 +221,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="package" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Peptides</Text>
-                  <Text style={styles.navCardSubtext}>Manage peptide types and doses</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.peptides')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.peptidesSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -227,8 +231,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="heart" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Touch-Base</Text>
-                  <Text style={styles.navCardSubtext}>Patients due for a check-in</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.touchBase')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.touchBaseSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -237,8 +241,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="bell" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Notifications</Text>
-                  <Text style={styles.navCardSubtext}>Alerts and updates for your account</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.notifications')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.notificationsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -247,8 +251,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="calendar" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Appointments</Text>
-                  <Text style={styles.navCardSubtext}>Upcoming visits with patients</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.appointments')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.appointmentsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -257,8 +261,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="clipboard" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Test/scan requests</Text>
-                  <Text style={styles.navCardSubtext}>Lab and imaging orders to track</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.testRequests')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.testRequestsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />

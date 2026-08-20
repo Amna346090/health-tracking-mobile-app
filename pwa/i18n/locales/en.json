@@ -1,0 +1,54 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "remove": "Remove",
+    "back": "Back",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "done": "Done",
+    "optional": "optional"
+  },
+  "auth": {
+    "appTagline": "Sign in to continue tracking your health",
+    "emailOrUsername": "Email or Username",
+    "password": "Password",
+    "signIn": "Sign in",
+    "emailOrUsernamePlaceholder": "you@example.com or username",
+    "emailRequired": "Email or username is required",
+    "passwordRequired": "Password is required",
+    "loginFailed": "Login failed. Please try again."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "peptides": "Peptides",
+    "touchBase": "Touch-Base",
+    "patients": "Patients",
+    "profile": "Profile",
+    "healthLog": "Health Log"
+  },
+  "dashboard": {
+    "goodMorning": "Good morning,",
+    "goodAfternoon": "Good afternoon,",
+    "goodEvening": "Good evening,",
+    "patients": "Patients",
+    "patientsSubtitle": "View and manage all patients",
+    "peptides": "Peptides",
+    "peptidesSubtitle": "Manage peptide types and doses",
+    "touchBase": "Touch-Base",
+    "touchBaseSubtitle": "Patients due for a check-in",
+    "notifications": "Notifications",
+    "notificationsSubtitle": "Alerts and updates for your account",
+    "appointments": "Appointments",
+    "appointmentsSubtitle": "Upcoming visits with patients",
+    "testRequests": "Test/scan requests",
+    "testRequestsSubtitle": "Lab and imaging orders to track"
+  },
+  "language": {
+    "label": "Language",
+    "english": "English",
+    "spanish": "Español"
+  }
+}
