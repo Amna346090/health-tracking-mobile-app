@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "SFLBiotrack",
+    "slug": "sflbiotrack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "sflbiotrack",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "web": {
+      "favicon": "./assets/icon.png",
+      "bundler": "metro",
+      "output": "static"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sflbiotrack.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4f46e5"
+      },
+      "package": "com.sflbiotrack.app"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "e90270e0-b00e-488e-8b3e-4a0573ba70bb"
+      }
+    }
+  }
+}
