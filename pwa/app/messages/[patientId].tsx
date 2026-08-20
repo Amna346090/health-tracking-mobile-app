@@ -73,8 +73,6 @@ export default function MessagesScreen() {
     }
   }, [pid]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-
   // Scrolls to the newest message. Fires several times over half a second —
   // a full list refetch can take a moment to lay out, so one attempt isn't
   // enough to guarantee the list has actually finished growing yet.
@@ -83,6 +81,10 @@ export default function MessagesScreen() {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), delay);
     }
   }, []);
+
+  // Opening the screen (manually or via a notification tap) should always land on the
+  // newest message, not wherever the list's initial layout happened to settle.
+  useFocusEffect(useCallback(() => { load().then(scrollToBottom); }, [load, scrollToBottom]));
 
   // Live refresh: a reply arrives from the other party while this chat is open.
   useEffect(() => onPushEvent(`message:${pid}`, () => {
