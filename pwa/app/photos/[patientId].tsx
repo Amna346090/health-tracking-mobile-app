@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../../theme';
 import { PhotoGrid } from '../../components/PhotoGrid';
 import { PhotoPicker } from '../../components/PhotoPicker';
@@ -24,6 +25,7 @@ import { getPhotos, type Photo } from '../../api/photos';
 const PAGE = 30;
 
 export default function PhotoGalleryScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -65,7 +67,7 @@ export default function PhotoGalleryScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.navBar}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.center}>
@@ -81,7 +83,7 @@ export default function PhotoGalleryScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Progress Photos</Text>
+        <Text style={styles.title}>{t('photoGallery.title')}</Text>
         {canUpload ? (
           <TouchableOpacity style={styles.addBtn} onPress={() => setShowPicker((v) => !v)}>
             <Feather name={showPicker ? 'x' : 'plus'} size={20} color="#fff" />

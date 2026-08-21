@@ -17,14 +17,15 @@ import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/auth';
 import { colors, radius, spacing, typography } from '../../theme';
 import { getPhotoById, updatePhoto, deletePhoto, type Photo } from '../../api/photos';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, {
     weekday: 'long',
     year:    'numeric',
     month:   'long',
@@ -33,6 +34,7 @@ function formatDate(iso: string): string {
 }
 
 export default function PhotoDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -51,7 +53,7 @@ export default function PhotoDetailScreen() {
   useEffect(() => {
     getPhotoById(photoId)
       .then(setPhoto)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .catch((e) => setError(e instanceof Error ? e.message : t('photoDetail.loadFailed')))
       .finally(() => setLoading(false));
   }, [photoId]);
 
@@ -61,10 +63,10 @@ export default function PhotoDetailScreen() {
     (user?.role === 'PATIENT' && photo?.uploadedBy.id === user.id);
 
   function confirmDelete() {
-    Alert.alert('Delete photo', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('photoDetail.deletePhotoTitle'), t('notes.deleteConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           setDeleting(true);
@@ -72,7 +74,7 @@ export default function PhotoDetailScreen() {
             await deletePhoto(photoId);
             router.back();
           } catch (e) {
-            Alert.alert('Delete failed', e instanceof Error ? e.message : 'Please try again.');
+            Alert.alert(t('photoDetail.deleteFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
           } finally {
             setDeleting(false);
           }
@@ -91,7 +93,7 @@ export default function PhotoDetailScreen() {
   async function pickReplacement() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permission required', 'Allow access to your photo library in Settings.');
+      Alert.alert(t('upload.permissionRequired'), t('upload.allowPhotoLibrary'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -117,7 +119,7 @@ export default function PhotoDetailScreen() {
       setEditing(false);
       setNewAsset(null);
     } catch (e) {
-      Alert.alert('Could not save changes', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('notes.saveChangesFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -134,9 +136,9 @@ export default function PhotoDetailScreen() {
   if (error || !photo) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'Photo not found'}</Text>
+        <Text style={styles.errorText}>{error ?? t('photoDetail.notFound')}</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.errorText, { color: colors.primary, marginTop: spacing.md }]}>Go back</Text>
+          <Text style={[styles.errorText, { color: colors.primary, marginTop: spacing.md }]}>{t('photoDetail.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -152,12 +154,12 @@ export default function PhotoDetailScreen() {
         {canManage && !editing && (
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
             <TouchableOpacity onPress={startEditing} style={styles.actionBtn}>
-              <Text style={styles.editBtnText}>Edit</Text>
+              <Text style={styles.editBtnText}>{t('common.edit')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={confirmDelete} disabled={deleting} style={styles.actionBtn}>
               {deleting
                 ? <ActivityIndicator color={colors.danger} size="small" />
-                : <Text style={styles.deleteBtnText}>Delete</Text>
+                : <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -174,23 +176,23 @@ export default function PhotoDetailScreen() {
       {editing ? (
         <SafeAreaView edges={['bottom']} style={styles.editPanel}>
           <TouchableOpacity style={styles.replaceBtn} onPress={pickReplacement} disabled={saving}>
-            <Text style={styles.replaceBtnText}>{newAsset ? 'Choose a different photo' : 'Replace photo'}</Text>
+            <Text style={styles.replaceBtnText}>{newAsset ? t('photoDetail.chooseDifferentPhoto') : t('photoDetail.replacePhoto')}</Text>
           </TouchableOpacity>
           <TextInput
             style={styles.captionInput}
             value={editCaption}
             onChangeText={setEditCaption}
-            placeholder="Add a caption (optional)"
+            placeholder={t('upload.captionPlaceholder')}
             placeholderTextColor="rgba(255,255,255,0.5)"
           />
           <View style={styles.editActions}>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)} disabled={saving}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={handleSaveEdit} disabled={saving}>
               {saving
                 ? <ActivityIndicator color={colors.text.inverse} size="small" />
-                : <Text style={styles.saveBtnText}>Save changes</Text>
+                : <Text style={styles.saveBtnText}>{t('appointments.saveChanges')}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -198,13 +200,13 @@ export default function PhotoDetailScreen() {
       ) : (
         /* Bottom info overlay */
         <SafeAreaView edges={['bottom']} style={styles.overlay}>
-          <Text style={styles.date}>{formatDate(photo.uploadedAt)}</Text>
+          <Text style={styles.date}>{formatDate(photo.uploadedAt, t('language.locale'))}</Text>
           {photo.caption && (
             <Text style={styles.caption}>{photo.caption}</Text>
           )}
           {photo.uploadedBy.role !== 'PATIENT' && (
             <Text style={styles.staffTag}>
-              Added by {photo.uploadedBy.firstName} {photo.uploadedBy.lastName} (staff)
+              {t('photoDetail.addedByStaff', { name: `${photo.uploadedBy.firstName} ${photo.uploadedBy.lastName}` })}
             </Text>
           )}
         </SafeAreaView>

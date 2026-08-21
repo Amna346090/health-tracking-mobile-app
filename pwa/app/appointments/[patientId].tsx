@@ -17,6 +17,7 @@ import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
@@ -31,11 +32,11 @@ import {
   type Appointment,
 } from '../../api/appointments';
 
-const STATUS_LABEL: Record<Appointment['status'], string> = {
-  SCHEDULED: 'Scheduled',
-  RESCHEDULED: 'Rescheduled',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
+const STATUS_KEY: Record<Appointment['status'], string> = {
+  SCHEDULED: 'appointments.status.scheduled',
+  RESCHEDULED: 'appointments.status.rescheduled',
+  COMPLETED: 'appointments.status.completed',
+  CANCELLED: 'appointments.status.cancelled',
 };
 
 const STATUS_COLOR: Record<Appointment['status'], string> = {
@@ -49,11 +50,11 @@ function todayISO() {
   return new Date().toISOString().split('T')[0];
 }
 
-const TOUCH_BASE_PRESETS: { label: string; weeks?: number; months?: number }[] = [
-  { label: '1 week', weeks: 1 },
-  { label: '2 weeks', weeks: 2 },
-  { label: '1 month', months: 1 },
-  { label: '2 months', months: 2 },
+const TOUCH_BASE_PRESETS: { labelKey: string; weeks?: number; months?: number }[] = [
+  { labelKey: 'appointments.presets.oneWeek', weeks: 1 },
+  { labelKey: 'appointments.presets.twoWeeks', weeks: 2 },
+  { labelKey: 'appointments.presets.oneMonth', months: 1 },
+  { labelKey: 'appointments.presets.twoMonths', months: 2 },
 ];
 
 function addFromNow(preset: { weeks?: number; months?: number }): Date {
@@ -63,13 +64,14 @@ function addFromNow(preset: { weeks?: number; months?: number }): Date {
   return d;
 }
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
+function formatWhen(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, {
     weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   });
 }
 
 export default function AppointmentsScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -159,7 +161,7 @@ export default function AppointmentsScreen() {
       setShowForm(false);
       setEditingId(null);
     } catch (e) {
-      Alert.alert('Could not save appointment', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('appointments.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -170,22 +172,22 @@ export default function AppointmentsScreen() {
       const updated = await updateAppointment(pid, appointment.id, { status: 'COMPLETED' });
       setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     } catch (e) {
-      Alert.alert('Could not update', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('appointments.updateFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     }
   }
 
   function handleCancel(appointment: Appointment) {
-    Alert.alert('Cancel appointment?', `${formatWhen(appointment.scheduledFor)}`, [
-      { text: 'Never mind', style: 'cancel' },
+    Alert.alert(t('appointments.cancelConfirmTitle'), `${formatWhen(appointment.scheduledFor, t('language.locale'))}`, [
+      { text: t('appointments.neverMind'), style: 'cancel' },
       {
-        text: 'Cancel appointment',
+        text: t('appointments.cancelAppointmentAction'),
         style: 'destructive',
         onPress: async () => {
           try {
             const updated = await updateAppointment(pid, appointment.id, { status: 'CANCELLED' });
             setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
           } catch (e) {
-            Alert.alert('Could not cancel', e instanceof Error ? e.message : 'Please try again.');
+            Alert.alert(t('appointments.cancelFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
           }
         },
       },
@@ -202,7 +204,7 @@ export default function AppointmentsScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.addBtnText, showForm && styles.addBtnTextActive]}>
-              {showForm ? '✕' : isOwnPatient ? '+ Request Appointment' : '+ Schedule Appointment'}
+              {showForm ? '✕' : isOwnPatient ? t('appointments.requestAppointment') : t('appointments.scheduleAppointment')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -211,15 +213,15 @@ export default function AppointmentsScreen() {
       {showForm && (
         <Card style={styles.formCard}>
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Touch base in…</Text>
+            <Text style={styles.fieldLabel}>{t('appointments.touchBaseIn')}</Text>
             <View style={styles.presetRow}>
               {TOUCH_BASE_PRESETS.map((preset) => (
                 <TouchableOpacity
-                  key={preset.label}
+                  key={preset.labelKey}
                   style={styles.presetChip}
                   onPress={() => applyPreset(preset)}
                 >
-                  <Text style={styles.presetChipText}>{preset.label}</Text>
+                  <Text style={styles.presetChipText}>{t(preset.labelKey)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -227,25 +229,25 @@ export default function AppointmentsScreen() {
 
           <View style={styles.row}>
             <View style={styles.half}>
-              <DateField label="Date" value={date} onChange={setDate} minimumDate={new Date()} />
+              <DateField label={t('appointments.date')} value={date} onChange={setDate} minimumDate={new Date()} />
             </View>
             <View style={styles.half}>
-              <TimeField label="Time" value={time} onChange={setTime} />
+              <TimeField label={t('appointments.time')} value={time} onChange={setTime} />
             </View>
           </View>
           <View style={styles.row}>
             <View style={styles.half}>
-              <Text style={styles.fieldLabel}>Reason (optional)</Text>
+              <Text style={styles.fieldLabel}>{t('appointments.reasonOptional')}</Text>
               <TextInput
                 style={styles.input}
                 value={reason}
                 onChangeText={setReason}
-                placeholder="e.g. Follow-up checkup"
+                placeholder={t('appointments.reasonPlaceholder')}
                 placeholderTextColor={colors.text.muted}
               />
             </View>
             <View style={styles.half}>
-              <Text style={styles.fieldLabel}>Duration (min)</Text>
+              <Text style={styles.fieldLabel}>{t('appointments.durationMin')}</Text>
               <TextInput
                 style={styles.input}
                 value={durationMinutes}
@@ -258,18 +260,18 @@ export default function AppointmentsScreen() {
           </View>
           {canManage && !isOwnPatient && (
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Notes (optional)</Text>
+              <Text style={styles.fieldLabel}>{t('appointments.notesOptional')}</Text>
               <TextInput
                 style={styles.input}
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="Internal notes"
+                placeholder={t('appointments.notesPlaceholder')}
                 placeholderTextColor={colors.text.muted}
               />
             </View>
           )}
           <Button
-            label={saving ? 'Saving…' : editingId !== null ? 'Save changes' : isOwnPatient ? 'Request appointment' : 'Schedule appointment'}
+            label={saving ? t('appointments.saving') : editingId !== null ? t('appointments.saveChanges') : isOwnPatient ? t('appointments.requestAppointmentBtn') : t('appointments.scheduleAppointmentBtn')}
             onPress={handleSave}
             loading={saving}
           />
@@ -290,9 +292,9 @@ export default function AppointmentsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Appointments</Text>
+        <Text style={styles.title}>{t('dashboard.appointments')}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -305,8 +307,8 @@ export default function AppointmentsScreen() {
           !showForm ? (
             <EmptyState
               icon="🗓️"
-              title="No appointments yet"
-              subtitle={canManage ? 'Tap the button above to book one.' : 'This patient has no appointments yet.'}
+              title={t('appointments.noAppointmentsYetTitle')}
+              subtitle={canManage ? t('appointments.tapButtonAbove') : t('appointments.patientHasNone')}
             />
           ) : null
         }
@@ -314,27 +316,27 @@ export default function AppointmentsScreen() {
           <Card style={styles.aptCard}>
             <View style={styles.aptRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.aptWhen}>{formatWhen(item.scheduledFor)}</Text>
-                <Text style={styles.aptReason}>{item.reason || 'No reason given'}</Text>
+                <Text style={styles.aptWhen}>{formatWhen(item.scheduledFor, t('language.locale'))}</Text>
+                <Text style={styles.aptReason}>{item.reason || t('appointments.noReasonGiven')}</Text>
               </View>
               <View style={[styles.badge, { backgroundColor: `${STATUS_COLOR[item.status]}1a` }]}>
                 <Text style={[styles.badgeText, { color: STATUS_COLOR[item.status] }]}>
-                  {STATUS_LABEL[item.status]}
+                  {t(STATUS_KEY[item.status])}
                 </Text>
               </View>
             </View>
             {canManage && (item.status === 'SCHEDULED' || item.status === 'RESCHEDULED') && (
               <View style={styles.aptActions}>
                 <TouchableOpacity onPress={() => openRescheduleForm(item)}>
-                  <Text style={styles.actionLink}>Reschedule</Text>
+                  <Text style={styles.actionLink}>{t('appointments.reschedule')}</Text>
                 </TouchableOpacity>
                 {!isOwnPatient && (
                   <TouchableOpacity onPress={() => handleMarkCompleted(item)}>
-                    <Text style={styles.actionLink}>Mark completed</Text>
+                    <Text style={styles.actionLink}>{t('appointments.markCompleted')}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => handleCancel(item)}>
-                  <Text style={[styles.actionLink, { color: colors.danger }]}>Cancel</Text>
+                  <Text style={[styles.actionLink, { color: colors.danger }]}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             )}

@@ -1,24 +1,26 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, spacing, typography, radius, shadows } from '../theme';
 import { DoseStatusBadge } from './DoseStatusBadge';
 import type { TodayScheduleItem, MedicationAssignment, DoseStatus } from '../api/assignments';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const FORM_LABEL: Record<string, string> = {
-  TABLET: 'tablet',
-  CAPSULE: 'capsule',
-  LIQUID: 'dose',
-  INJECTION: 'injection',
-  TOPICAL: 'application',
-  OTHER: 'unit',
+const FORM_KEY: Record<string, string> = {
+  TABLET: 'medications.form.tablet',
+  CAPSULE: 'medications.form.capsule',
+  LIQUID: 'medications.form.dose',
+  INJECTION: 'medications.form.injection',
+  TOPICAL: 'medications.form.application',
+  OTHER: 'medications.form.unit',
 };
 
-const FOOD_LABEL: Record<string, string> = {
-  WITH_FOOD: 'With food',
-  WITHOUT_FOOD: 'Without food',
-  EITHER: 'With or without food',
+const FOOD_KEY: Record<string, string> = {
+  WITH_FOOD: 'medications.food.withFood',
+  WITHOUT_FOOD: 'medications.food.withoutFood',
+  EITHER: 'medications.food.either',
 };
 
 // Times are stored as literal UTC "HH:MM" strings (the backend matches them against its own
@@ -40,13 +42,14 @@ function formatDoseDetail(
   quantityPerDose: number | null,
   form: string | null,
   foodInstruction: string | null,
+  t: TFunction,
 ): string | null {
   const parts: string[] = [];
   if (quantityPerDose) {
-    const unit = form ? FORM_LABEL[form] ?? 'unit' : 'unit';
-    parts.push(`${quantityPerDose} ${unit}${quantityPerDose > 1 ? 's' : ''}`);
+    const unitKey = form ? FORM_KEY[form] ?? FORM_KEY.OTHER : FORM_KEY.OTHER;
+    parts.push(t(unitKey, { count: quantityPerDose }));
   }
-  if (foodInstruction) parts.push(FOOD_LABEL[foodInstruction] ?? foodInstruction);
+  if (foodInstruction) parts.push(FOOD_KEY[foodInstruction] ? t(FOOD_KEY[foodInstruction]) : foodInstruction);
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
@@ -59,12 +62,14 @@ interface ScheduleCardProps {
 }
 
 export function TodayMedicationCard({ item, onMarkTaken, disabled }: ScheduleCardProps) {
+  const { t } = useTranslation();
   const alreadyLogged = item.todayLog !== null;
   const status = computeTodayStatus(item);
   const doseDetail = formatDoseDetail(
     item.medication.quantityPerDose,
     item.medication.form,
     item.medication.foodInstruction,
+    t,
   );
 
   return (
@@ -88,7 +93,7 @@ export function TodayMedicationCard({ item, onMarkTaken, disabled }: ScheduleCar
           disabled={disabled}
           activeOpacity={0.7}
         >
-          <Text style={styles.markBtnText}>Mark as Taken</Text>
+          <Text style={styles.markBtnText}>{t('medications.markAsTaken')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -103,10 +108,12 @@ interface AssignmentCardProps {
 }
 
 export function AssignmentCard({ item, onPress }: AssignmentCardProps) {
+  const { t } = useTranslation();
   const doseDetail = formatDoseDetail(
     item.medication.quantityPerDose,
     item.medication.form,
     item.medication.foodInstruction,
+    t,
   );
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item)} activeOpacity={0.7}>
@@ -115,7 +122,7 @@ export function AssignmentCard({ item, onPress }: AssignmentCardProps) {
       <Text style={styles.times}>
         {item.frequency
           ? [item.frequency, item.timesOfDay.join(', ')].filter(Boolean).join(' · ')
-          : 'Schedule not set yet'}
+          : t('medications.scheduleNotSet')}
       </Text>
       {doseDetail && <Text style={styles.times}>{doseDetail}</Text>}
       {item.medication.instructions && (
@@ -144,7 +151,8 @@ interface CatalogCardProps {
 }
 
 export function CatalogMedicationCard({ item, onPress }: CatalogCardProps) {
-  const doseDetail = formatDoseDetail(item.quantityPerDose, item.form, item.foodInstruction);
+  const { t } = useTranslation();
+  const doseDetail = formatDoseDetail(item.quantityPerDose, item.form, item.foodInstruction, t);
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item.id)} activeOpacity={0.7}>
       <View style={styles.row}>
@@ -158,7 +166,7 @@ export function CatalogMedicationCard({ item, onPress }: CatalogCardProps) {
         </View>
         <View style={styles.countBadge}>
           <Text style={styles.countText}>{item._count.assignments}</Text>
-          <Text style={styles.countLabel}>active</Text>
+          <Text style={styles.countLabel}>{t('medications.active')}</Text>
         </View>
       </View>
     </TouchableOpacity>

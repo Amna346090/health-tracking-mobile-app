@@ -12,6 +12,7 @@ import {
 import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/auth';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -53,8 +54,8 @@ const rowStyles = StyleSheet.create({
   },
 });
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 }
@@ -71,9 +72,9 @@ function ageFromDob(iso: string | null): number | null {
   return age;
 }
 
-function formatGender(gender: string | null): string {
+function formatGender(gender: string | null, preferNotToSayLabel: string): string {
   if (!gender) return '—';
-  if (gender === 'PREFER_NOT_TO_SAY') return 'Prefer not to say';
+  if (gender === 'PREFER_NOT_TO_SAY') return preferNotToSayLabel;
   return gender.charAt(0) + gender.slice(1).toLowerCase();
 }
 
@@ -86,6 +87,7 @@ function roleBadgeColor(role: string) {
 // ─── Progress photo mini-section ──────────────────────────────────────────────
 
 function ProgressPhotosSection({ patientId }: { patientId: number }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [photos,   setPhotos]  = useState<Photo[]>([]);
   const [loading,  setLoading] = useState(true);
@@ -100,20 +102,20 @@ function ProgressPhotosSection({ patientId }: { patientId: number }) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>PROGRESS PHOTOS</Text>
+        <Text style={styles.sectionTitle}>{t('profile.progressPhotos')}</Text>
         {photos.length > 0 && (
           <TouchableOpacity onPress={() => router.push(`/photos/${patientId}`)}>
-            <Text style={styles.viewAllText}>View all →</Text>
+            <Text style={styles.viewAllText}>{t('profile.viewAll')}</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {loading ? (
-        <Text style={styles.loadingText}>Loading…</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       ) : photos.length === 0 ? (
         <Card variant="outlined">
           <Text style={styles.emptyText}>
-            No photos yet. Attach a photo when logging a health entry.
+            {t('profile.noPhotosYet')}
           </Text>
         </Card>
       ) : (
@@ -129,7 +131,7 @@ function ProgressPhotosSection({ patientId }: { patientId: number }) {
               onPress={() => router.push(`/photos/${patientId}`)}
               activeOpacity={0.8}
             >
-              <Text style={styles.seeMoreText}>See all photos</Text>
+              <Text style={styles.seeMoreText}>{t('profile.seeAllPhotos')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -141,6 +143,7 @@ function ProgressPhotosSection({ patientId }: { patientId: number }) {
 // ─── Notification settings ────────────────────────────────────────────────────
 
 function NotificationSettings({ initial, userEmail }: { initial: { push: boolean; email: boolean }; userEmail: string | null }) {
+  const { t } = useTranslation();
   const [push,  setPush]  = useState(initial.push);
   const [email, setEmail] = useState(initial.email);
 
@@ -155,19 +158,19 @@ function NotificationSettings({ initial, userEmail }: { initial: { push: boolean
       // Revert on error
       if (field === 'push')  setPush(!value);
       else                   setEmail(!value);
-      Alert.alert('Error', 'Could not update notification settings.');
+      Alert.alert(t('common.error'), t('profile.updateNotifError'));
     }
   }
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
+      <Text style={styles.sectionTitle}>{t('profile.notifications')}</Text>
       <Card variant="outlined" padding={0}>
         <View style={styles.cardInner}>
           <View style={notifStyles.row}>
             <View style={notifStyles.labelCol}>
-              <Text style={notifStyles.label}>Push notifications</Text>
-              <Text style={notifStyles.sub}>Peptide reminders on this device</Text>
+              <Text style={notifStyles.label}>{t('profile.pushNotifications')}</Text>
+              <Text style={notifStyles.sub}>{t('profile.pushNotificationsSub')}</Text>
             </View>
             <Switch
               value={push}
@@ -178,9 +181,9 @@ function NotificationSettings({ initial, userEmail }: { initial: { push: boolean
           </View>
           <View style={[notifStyles.row, notifStyles.rowBorder]}>
             <View style={notifStyles.labelCol}>
-              <Text style={notifStyles.label}>Email notifications</Text>
+              <Text style={notifStyles.label}>{t('profile.emailNotifications')}</Text>
               <Text style={notifStyles.sub}>
-                {userEmail ? `Reminders sent to ${userEmail}` : 'Add an email to receive reminders'}
+                {userEmail ? t('profile.emailNotificationsSubWithEmail', { email: userEmail }) : t('profile.emailNotificationsSubNoEmail')}
               </Text>
             </View>
             <Switch
@@ -215,6 +218,7 @@ const notifStyles = StyleSheet.create({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { user, logout, refreshUser } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -226,10 +230,10 @@ export default function ProfileScreen() {
   }
 
   function confirmLogout() {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.signOutTitle'), t('profile.signOutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign out',
+        text: t('profile.signOutTitle'),
         style: 'destructive',
         onPress: async () => {
           setLoggingOut(true);
@@ -267,18 +271,18 @@ export default function ProfileScreen() {
 
         {/* Account info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ACCOUNT</Text>
+          <Text style={styles.sectionTitle}>{t('profile.account')}</Text>
           <Card variant="outlined" padding={0}>
             <View style={styles.cardInner}>
-              <ProfileRow label="First name"   value={user.firstName} />
-              <ProfileRow label="Last name"    value={user.lastName} />
-              <ProfileRow label="Email"        value={user.email ?? '—'} />
-              <ProfileRow label="Username"     value={user.username ?? '—'} />
-              <ProfileRow label="Member since" value={formatDate(user.createdAt)} />
+              <ProfileRow label={t('profile.firstName')}   value={user.firstName} />
+              <ProfileRow label={t('profile.lastName')}    value={user.lastName} />
+              <ProfileRow label={t('profile.email')}        value={user.email ?? '—'} />
+              <ProfileRow label={t('profile.username')}     value={user.username ?? '—'} />
+              <ProfileRow label={t('profile.memberSince')} value={formatDate(user.createdAt, t('language.locale'))} />
             </View>
           </Card>
           <Button
-            label="Change Password"
+            label={t('profile.changePassword')}
             onPress={() => router.push('/change-password')}
             variant="ghost"
           />
@@ -287,15 +291,15 @@ export default function ProfileScreen() {
         {/* Patient profile */}
         {user.patientProfile && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>PATIENT PROFILE</Text>
+            <Text style={styles.sectionTitle}>{t('profile.patientProfile')}</Text>
             <Card variant="outlined" padding={0}>
               <View style={styles.cardInner}>
-                <ProfileRow label="Date of birth" value={user.patientProfile.dateOfBirth ? formatDate(user.patientProfile.dateOfBirth) : '—'} />
-                <ProfileRow label="Age"           value={ageFromDob(user.patientProfile.dateOfBirth) !== null ? `${ageFromDob(user.patientProfile.dateOfBirth)}` : '—'} />
-                <ProfileRow label="Gender"        value={formatGender(user.patientProfile.gender)} />
-                <ProfileRow label="Health issue"  value={user.patientProfile.healthIssue ?? '—'} />
-                <ProfileRow label="Phone"          value={user.patientProfile.phone   ?? '—'} />
-                <ProfileRow label="Address"        value={user.patientProfile.address ?? '—'} />
+                <ProfileRow label={t('profile.dateOfBirth')} value={user.patientProfile.dateOfBirth ? formatDate(user.patientProfile.dateOfBirth, t('language.locale')) : '—'} />
+                <ProfileRow label={t('profile.age')}           value={ageFromDob(user.patientProfile.dateOfBirth) !== null ? `${ageFromDob(user.patientProfile.dateOfBirth)}` : '—'} />
+                <ProfileRow label={t('profile.gender')}        value={formatGender(user.patientProfile.gender, t('profile.preferNotToSay'))} />
+                <ProfileRow label={t('profile.healthIssue')}  value={user.patientProfile.healthIssue ?? '—'} />
+                <ProfileRow label={t('profile.phone')}          value={user.patientProfile.phone   ?? '—'} />
+                <ProfileRow label={t('profile.address')}        value={user.patientProfile.address ?? '—'} />
               </View>
             </Card>
           </View>
@@ -315,9 +319,9 @@ export default function ProfileScreen() {
         {/* Admin tools */}
         {STAFF_FEATURES_ENABLED && user.role === 'ADMIN' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ADMIN</Text>
+            <Text style={styles.sectionTitle}>{t('profile.admin')}</Text>
             <Button
-              label="Manage Users"
+              label={t('profile.manageUsers')}
               onPress={() => router.push('/manage-users')}
               variant="secondary"
             />
@@ -327,7 +331,7 @@ export default function ProfileScreen() {
         {/* Sign out */}
         <View style={styles.section}>
           <Button
-            label="Sign out"
+            label={t('profile.signOutTitle')}
             onPress={confirmLogout}
             variant="danger"
             loading={loggingOut}

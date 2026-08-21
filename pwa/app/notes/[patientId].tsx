@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
@@ -24,13 +25,14 @@ import { Button } from '../../components/Button';
 import { useAuth } from '../../context/auth';
 import { getNotes, createNote, updateNote, deleteNote, type Note } from '../../api/notes';
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
+function formatWhen(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   });
 }
 
 export default function NotesScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -72,7 +74,7 @@ export default function NotesScreen() {
       setNotes((prev) => [note, ...prev]);
       setNewBody('');
     } catch (e) {
-      Alert.alert('Could not add note', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('notes.addFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setAdding(false);
     }
@@ -91,17 +93,17 @@ export default function NotesScreen() {
       setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
       setEditingItem(null);
     } catch (e) {
-      Alert.alert('Could not save changes', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('notes.saveChangesFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
   }
 
   function handleDelete(item: Note) {
-    Alert.alert('Delete note?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('notes.deleteConfirmTitle'), t('notes.deleteConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           setDeletingId(item.id);
@@ -109,7 +111,7 @@ export default function NotesScreen() {
             await deleteNote(pid, item.id);
             setNotes((prev) => prev.filter((n) => n.id !== item.id));
           } catch (e) {
-            Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.');
+            Alert.alert(t('notes.deleteFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
           } finally {
             setDeletingId(null);
           }
@@ -128,21 +130,21 @@ export default function NotesScreen() {
 
   const EditForm = editingItem && (
     <Card style={styles.editCard}>
-      <Text style={styles.editTitle}>Edit note</Text>
+      <Text style={styles.editTitle}>{t('notes.editNote')}</Text>
       <TextInput
         style={styles.bodyInput}
         value={editBody}
         onChangeText={setEditBody}
-        placeholder="Note"
+        placeholder={t('notes.notePlaceholder')}
         placeholderTextColor={colors.text.muted}
         multiline
       />
       <View style={styles.editActions}>
         <TouchableOpacity onPress={() => setEditingItem(null)} style={styles.cancelBtn} disabled={saving}>
-          <Text style={styles.cancelBtnText}>Cancel</Text>
+          <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Button label={saving ? 'Saving…' : 'Save changes'} onPress={handleSaveEdit} loading={saving} />
+          <Button label={saving ? t('appointments.saving') : t('appointments.saveChanges')} onPress={handleSaveEdit} loading={saving} />
         </View>
       </View>
     </Card>
@@ -152,9 +154,9 @@ export default function NotesScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Notes</Text>
+        <Text style={styles.title}>{t('healthLog.notes')}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -170,18 +172,18 @@ export default function NotesScreen() {
                   style={styles.bodyInput}
                   value={newBody}
                   onChangeText={setNewBody}
-                  placeholder="e.g. Paid for this month, prefers evening calls…"
+                  placeholder={t('notes.addPlaceholder')}
                   placeholderTextColor={colors.text.muted}
                   multiline
                 />
-                <Button label={adding ? 'Adding…' : 'Add note'} onPress={handleAdd} loading={adding} disabled={!newBody.trim()} />
+                <Button label={adding ? t('notes.adding') : t('notes.addNote')} onPress={handleAdd} loading={adding} disabled={!newBody.trim()} />
               </Card>
               {EditForm}
             </View>
           ) : null
         }
         ListEmptyComponent={
-          <EmptyState icon="📝" title="No notes yet" subtitle={canEdit ? 'Internal notes are only visible to staff and admin.' : 'Your care team hasn’t added any notes yet.'} />
+          <EmptyState icon="📝" title={t('notes.noneYetTitle')} subtitle={canEdit ? t('notes.staffOnlySubtitle') : t('notes.patientSubtitle')} />
         }
         renderItem={({ item }) => (
           <Card style={styles.noteCard}>
@@ -190,19 +192,19 @@ export default function NotesScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.noteBody}>{item.body}</Text>
                 <Text style={styles.noteMeta}>
-                  {item.author.firstName} {item.author.lastName} · {formatWhen(item.createdAt)}
-                  {item.updatedAt !== item.createdAt ? ' (edited)' : ''}
+                  {item.author.firstName} {item.author.lastName} · {formatWhen(item.createdAt, t('language.locale'))}
+                  {item.updatedAt !== item.createdAt ? t('notes.editedSuffix') : ''}
                 </Text>
               </View>
             </View>
             {canEdit && (
               <View style={styles.noteActions}>
                 <TouchableOpacity onPress={() => openEdit(item)}>
-                  <Text style={styles.actionLink}>Edit</Text>
+                  <Text style={styles.actionLink}>{t('common.edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id}>
                   <Text style={[styles.actionLink, { color: colors.danger }]}>
-                    {deletingId === item.id ? 'Deleting…' : 'Delete'}
+                    {deletingId === item.id ? t('notifications.deleting') : t('common.delete')}
                   </Text>
                 </TouchableOpacity>
               </View>

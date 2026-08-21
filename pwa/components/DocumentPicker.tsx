@@ -15,6 +15,7 @@ import {
 import { Alert } from '../lib/alert';
 import * as ExpoDocumentPicker from 'expo-document-picker';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../theme';
 import { uploadDocument, type Document } from '../api/documents';
 
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function DocumentPicker({ patientId, onUploaded }: Props) {
+  const { t } = useTranslation();
   const [asset, setAsset] = useState<ExpoDocumentPicker.DocumentPickerAsset | null>(null);
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -52,7 +54,7 @@ export function DocumentPicker({ patientId, onUploaded }: Props) {
       setProgress(0);
       onUploaded(document);
     } catch (e) {
-      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('upload.uploadFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setUploading(false);
     }
@@ -62,7 +64,7 @@ export function DocumentPicker({ patientId, onUploaded }: Props) {
     return (
       <TouchableOpacity style={styles.pickBtn} onPress={pickDocument} activeOpacity={0.8}>
         <Feather name="upload" size={16} color={colors.text.secondary} />
-        <Text style={styles.pickBtnText}>Upload Document</Text>
+        <Text style={styles.pickBtnText}>{t('upload.uploadDocument')}</Text>
       </TouchableOpacity>
     );
   }
@@ -82,7 +84,7 @@ export function DocumentPicker({ patientId, onUploaded }: Props) {
 
       <View style={styles.previewActions}>
         <TouchableOpacity style={styles.removeBtn} onPress={() => setAsset(null)} disabled={uploading}>
-          <Text style={styles.removeBtnText}>Remove</Text>
+          <Text style={styles.removeBtnText}>{t('common.remove')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -93,7 +95,7 @@ export function DocumentPicker({ patientId, onUploaded }: Props) {
         >
           {uploading
             ? <ActivityIndicator color={colors.text.inverse} size="small" />
-            : <Text style={styles.uploadBtnText}>Upload</Text>
+            : <Text style={styles.uploadBtnText}>{t('upload.upload')}</Text>
           }
         </TouchableOpacity>
       </View>

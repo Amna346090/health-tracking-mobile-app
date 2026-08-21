@@ -16,6 +16,7 @@ import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/auth';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
@@ -62,6 +63,7 @@ interface NewEntryFormProps {
 }
 
 function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
+  const { t } = useTranslation();
   const [form, setForm]           = useState<FormState>(emptyForm);
   const [saving, setSaving]       = useState(false);
   const [savedLog, setSavedLog]   = useState<HealthLog | null>(null);
@@ -71,7 +73,7 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
 
   const handleSave = async () => {
     if (!form.date.trim()) {
-      Alert.alert('Date required', 'Please enter a date (YYYY-MM-DD).');
+      Alert.alert(t('healthLog.dateRequired'), t('healthLog.enterDate'));
       return;
     }
     setSaving(true);
@@ -87,7 +89,7 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
       // Move to the optional photo-attachment step
       setSavedLog(log);
     } catch (e) {
-      Alert.alert('Could not save entry', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('healthLog.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -97,7 +99,7 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
   if (savedLog) {
     return (
       <View style={formStyles.card}>
-        <Text style={formStyles.photoStepTitle}>Entry saved! Attach a progress photo?</Text>
+        <Text style={formStyles.photoStepTitle}>{t('healthLog.entrySavedTitle')}</Text>
         <PhotoPicker
           patientId={patientId}
           healthLogId={savedLog.id}
@@ -107,7 +109,7 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
           style={formStyles.skipBtn}
           onPress={() => onCreated(savedLog)}
         >
-          <Text style={formStyles.skipBtnText}>Skip →</Text>
+          <Text style={formStyles.skipBtnText}>{t('healthLog.skip')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -117,18 +119,18 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
     <View style={formStyles.card}>
       {staffMode && (
         <View style={formStyles.staffBanner}>
-          <Text style={formStyles.staffBannerText}>Adding entry on patient's behalf</Text>
+          <Text style={formStyles.staffBannerText}>{t('healthLog.staffBanner')}</Text>
         </View>
       )}
 
       {/* Date */}
       <View style={formStyles.field}>
-        <Text style={formStyles.label}>Date *</Text>
+        <Text style={formStyles.label}>{t('healthLog.date')}</Text>
         <TextInput
           style={formStyles.input}
           value={form.date}
           onChangeText={set('date')}
-          placeholder="YYYY-MM-DD"
+          placeholder={t('healthLog.datePlaceholder')}
           placeholderTextColor={colors.text.muted}
         />
       </View>
@@ -136,23 +138,23 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
       {/* Weight + Height side by side */}
       <View style={formStyles.row}>
         <View style={formStyles.halfField}>
-          <Text style={formStyles.label}>Weight (kg)</Text>
+          <Text style={formStyles.label}>{t('healthLog.weightKg')}</Text>
           <TextInput
             style={formStyles.input}
             value={form.weight}
             onChangeText={set('weight')}
-            placeholder="e.g. 70.5"
+            placeholder={t('healthLog.weightPlaceholder')}
             placeholderTextColor={colors.text.muted}
             keyboardType="decimal-pad"
           />
         </View>
         <View style={formStyles.halfField}>
-          <Text style={formStyles.label}>Height (cm)</Text>
+          <Text style={formStyles.label}>{t('healthLog.heightCm')}</Text>
           <TextInput
             style={formStyles.input}
             value={form.height}
             onChangeText={set('height')}
-            placeholder="e.g. 175"
+            placeholder={t('healthLog.heightPlaceholder')}
             placeholderTextColor={colors.text.muted}
             keyboardType="decimal-pad"
           />
@@ -161,7 +163,7 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
 
       {/* Feeling */}
       <View style={formStyles.field}>
-        <Text style={formStyles.label}>How are you feeling?</Text>
+        <Text style={formStyles.label}>{t('healthLog.howFeeling')}</Text>
         <FeelingPicker
           value={form.feeling}
           onChange={(v) => set('feeling')(v)}
@@ -170,12 +172,12 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
 
       {/* Notes */}
       <View style={formStyles.field}>
-        <Text style={formStyles.label}>Notes</Text>
+        <Text style={formStyles.label}>{t('healthLog.notes')}</Text>
         <TextInput
           style={[formStyles.input, formStyles.textArea]}
           value={form.notes}
           onChangeText={set('notes')}
-          placeholder="Any symptoms, observations, or comments..."
+          placeholder={t('healthLog.notesPlaceholder')}
           placeholderTextColor={colors.text.muted}
           multiline
           textAlignVertical="top"
@@ -191,7 +193,7 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
         {saving ? (
           <ActivityIndicator color={colors.text.inverse} />
         ) : (
-          <Text style={formStyles.saveBtnText}>Save Entry</Text>
+          <Text style={formStyles.saveBtnText}>{t('healthLog.saveEntry')}</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -256,6 +258,7 @@ const formStyles = StyleSheet.create({
 // ─── Patient view ─────────────────────────────────────────────────────────────
 
 function PatientHealthLog({ patientId }: { patientId: number }) {
+  const { t } = useTranslation();
   const [logs, setLogs]               = useState<HealthLog[]>([]);
   const [trend, setTrend]             = useState<WeightDataPoint[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -304,7 +307,7 @@ function PatientHealthLog({ patientId }: { patientId: number }) {
         <WeightChart data={trend} width={SCREEN_W - spacing.lg * 2} />
       )}
       {logs.length > 0 && (
-        <Text style={listStyles.sectionTitle}>History</Text>
+        <Text style={listStyles.sectionTitle}>{t('healthLog.history')}</Text>
       )}
     </View>
   );
@@ -331,8 +334,8 @@ function PatientHealthLog({ patientId }: { patientId: number }) {
         !showForm ? (
           <EmptyState
             icon="📈"
-            title="No logs yet"
-            subtitle="Tap 'New Entry' to record your first health entry."
+            title={t('healthLog.noLogsYetTitle')}
+            subtitle={t('healthLog.noLogsYetSubtitle')}
           />
         ) : null
       }
@@ -349,6 +352,7 @@ interface PatientRow {
 }
 
 function StaffHealthLog() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [patients, setPatients] = useState<PatientRow[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -394,7 +398,7 @@ function StaffHealthLog() {
         </TouchableOpacity>
       )}
       ListEmptyComponent={
-        <EmptyState icon="👥" title="No patients found" subtitle="Patient accounts will appear here." />
+        <EmptyState icon="👥" title={t('healthLog.noPatientsFoundTitle')} subtitle={t('healthLog.noPatientsFoundSubtitle')} />
       }
     />
   );
@@ -403,6 +407,7 @@ function StaffHealthLog() {
 // ─── Tab screen ───────────────────────────────────────────────────────────────
 
 export default function HealthLogScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isStaff  = user?.role === 'STAFF' || user?.role === 'ADMIN';
   const patientId = user?.patientProfile?.id ?? null;
@@ -417,9 +422,9 @@ export default function HealthLogScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Health Log</Text>
+            <Text style={styles.title}>{t('nav.healthLog')}</Text>
             <Text style={styles.subtitle}>
-              {isStaff ? 'View and manage patient health records' : 'Track weight, mood, and how you\'re feeling'}
+              {isStaff ? t('healthLog.staffSubtitle') : t('healthLog.patientSubtitle')}
             </Text>
           </View>
           {!isStaff && patientId && (
@@ -429,7 +434,7 @@ export default function HealthLogScreen() {
               activeOpacity={0.8}
             >
               <Text style={[styles.newBtnText, showForm && styles.newBtnTextActive]}>
-                {showForm ? '✕ Cancel' : '+ New Entry'}
+                {showForm ? t('healthLog.cancelNewEntry') : t('healthLog.newEntry')}
               </Text>
             </TouchableOpacity>
           )}
@@ -456,6 +461,7 @@ function PatientHealthLogWithForm({
   externalShowForm: boolean;
   onFormToggle: (v: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const [logs, setLogs]             = useState<HealthLog[]>([]);
   const [trend, setTrend]           = useState<WeightDataPoint[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -510,7 +516,7 @@ function PatientHealthLogWithForm({
         <WeightChart data={trend} width={SCREEN_W - spacing.lg * 2} />
       )}
       {logs.length > 0 && (
-        <Text style={listStyles.sectionTitle}>History</Text>
+        <Text style={listStyles.sectionTitle}>{t('healthLog.history')}</Text>
       )}
     </View>
   );
@@ -529,8 +535,8 @@ function PatientHealthLogWithForm({
         !externalShowForm ? (
           <EmptyState
             icon="📈"
-            title="No logs yet"
-            subtitle="Tap 'New Entry' above to record your first health entry."
+            title={t('healthLog.noLogsYetTitle')}
+            subtitle={t('healthLog.noLogsYetSubtitleAbove')}
           />
         ) : null
       }

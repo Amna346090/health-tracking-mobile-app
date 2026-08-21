@@ -12,6 +12,7 @@ import {
 import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography } from '../../theme';
 import { Button } from '../../components/Button';
 import { DateField } from '../../components/DateField';
@@ -22,13 +23,6 @@ import { getAllProviders } from '../../api/providers';
 import type { Provider } from '../../api/providers';
 import type { Gender } from '../../api/auth';
 import { STAFF_FEATURES_ENABLED } from '../../config';
-
-const GENDER_OPTIONS: { value: Gender; label: string }[] = [
-  { value: 'MALE', label: 'Male' },
-  { value: 'FEMALE', label: 'Female' },
-  { value: 'OTHER', label: 'Other' },
-  { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' },
-];
 
 interface FormValues {
   firstName: string;
@@ -42,6 +36,13 @@ interface FormValues {
 }
 
 export default function EditPatientScreen() {
+  const { t } = useTranslation();
+  const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+    { value: 'MALE', label: t('patientForm.male') },
+    { value: 'FEMALE', label: t('patientForm.female') },
+    { value: 'OTHER', label: t('patientForm.other') },
+    { value: 'PREFER_NOT_TO_SAY', label: t('profile.preferNotToSay') },
+  ];
   const router = useRouter();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const pid = Number(patientId);
@@ -66,7 +67,7 @@ export default function EditPatientScreen() {
           providerId: p.providerId,
         });
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load patient'))
+      .catch((e) => setError(e instanceof Error ? e.message : t('patientForm.failedToLoad')))
       .finally(() => setLoading(false));
     if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
   }, [pid]);
@@ -91,7 +92,7 @@ export default function EditPatientScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('Failed to save', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('patientForm.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -110,11 +111,11 @@ export default function EditPatientScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.navBar}>
           <Pressable onPress={() => router.back()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
           </Pressable>
         </View>
         <View style={styles.center}>
-          <Text style={styles.formErrorText}>{error ?? 'Patient not found'}</Text>
+          <Text style={styles.formErrorText}>{error ?? t('patientForm.patientNotFound')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -126,41 +127,41 @@ export default function EditPatientScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.navBar}>
             <Pressable onPress={() => router.back()}>
-              <Text style={styles.backText}>← Cancel</Text>
+              <Text style={styles.backText}>{t('patientForm.cancelWithArrow')}</Text>
             </Pressable>
-            <Text style={styles.navTitle}>Edit Patient</Text>
+            <Text style={styles.navTitle}>{t('patientForm.editTitle')}</Text>
             <View style={{ width: 60 }} />
           </View>
 
           <View style={styles.form}>
             <View style={styles.row}>
-              <Input label="First name" value={values.firstName} onChangeText={set('firstName')} containerStyle={styles.halfInput} />
-              <Input label="Last name" value={values.lastName} onChangeText={set('lastName')} containerStyle={styles.halfInput} />
+              <Input label={t('patientForm.firstName')} value={values.firstName} onChangeText={set('firstName')} containerStyle={styles.halfInput} />
+              <Input label={t('patientForm.lastName')} value={values.lastName} onChangeText={set('lastName')} containerStyle={styles.halfInput} />
             </View>
 
             <DateField
-              label="Date of birth"
+              label={t('patientForm.dob')}
               value={values.dateOfBirth}
               onChange={(date) => setValues((v) => (v ? { ...v, dateOfBirth: date } : v))}
               maximumDate={new Date()}
             />
 
             <ChipPicker
-              label="Gender"
+              label={t('profile.gender')}
               options={GENDER_OPTIONS}
               value={values.gender}
               onChange={(gender) => setValues((v) => (v ? { ...v, gender } : v))}
             />
 
-            <Input label="Health issue / condition" value={values.healthIssue} onChangeText={set('healthIssue')} />
-            <Input label="Phone" value={values.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
-            <Input label="Address" value={values.address} onChangeText={set('address')} />
+            <Input label={t('patientForm.healthIssue')} value={values.healthIssue} onChangeText={set('healthIssue')} />
+            <Input label={t('patientForm.phone')} value={values.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
+            <Input label={t('profile.address')} value={values.address} onChangeText={set('address')} />
 
             {STAFF_FEATURES_ENABLED && (
               <ChipPicker
-                label="Assigned provider"
+                label={t('patientForm.assignedProvider')}
                 options={[
-                  { value: '', label: 'Unassigned (all staff)' },
+                  { value: '', label: t('patientDashboard.unassigned') },
                   ...providers.map((p) => ({ value: String(p.id), label: `${p.user.firstName} ${p.user.lastName}` })),
                 ]}
                 value={values.providerId ? String(values.providerId) : ''}
@@ -168,7 +169,7 @@ export default function EditPatientScreen() {
               />
             )}
 
-            <Button label="Save changes" onPress={handleSave} loading={saving} />
+            <Button label={t('appointments.saveChanges')} onPress={handleSave} loading={saving} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

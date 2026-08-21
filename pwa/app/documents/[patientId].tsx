@@ -20,6 +20,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ExpoDocumentPicker from 'expo-document-picker';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, radius, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
@@ -28,18 +30,19 @@ import { DocumentPicker } from '../../components/DocumentPicker';
 import { useAuth } from '../../context/auth';
 import { getDocuments, updateDocument, deleteDocument, type Document } from '../../api/documents';
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatWhen(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function fileTypeLabel(fileType: string): string {
-  if (fileType === 'application/pdf') return 'PDF';
-  if (fileType.startsWith('image/')) return 'Image';
-  if (fileType === 'application/dicom') return 'DICOM';
+function fileTypeLabel(fileType: string, t: TFunction): string {
+  if (fileType === 'application/pdf') return t('documents.pdf');
+  if (fileType.startsWith('image/')) return t('documents.image');
+  if (fileType === 'application/dicom') return t('documents.dicom');
   return fileType;
 }
 
 export default function DocumentsScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -97,17 +100,17 @@ export default function DocumentsScreen() {
       setDocuments((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
       setEditingItem(null);
     } catch (e) {
-      Alert.alert('Could not save changes', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('notes.saveChangesFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
   }
 
   function handleDelete(item: Document) {
-    Alert.alert('Delete document?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('documents.deleteConfirmTitle'), t('notes.deleteConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           setDeletingId(item.id);
@@ -115,7 +118,7 @@ export default function DocumentsScreen() {
             await deleteDocument(item.id);
             setDocuments((prev) => prev.filter((d) => d.id !== item.id));
           } catch (e) {
-            Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.');
+            Alert.alert(t('notes.deleteFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
           } finally {
             setDeletingId(null);
           }
@@ -134,26 +137,26 @@ export default function DocumentsScreen() {
 
   const EditForm = editingItem && (
     <Card style={styles.editCard}>
-      <Text style={styles.editTitle}>Edit document</Text>
+      <Text style={styles.editTitle}>{t('documents.editDocument')}</Text>
       <TouchableOpacity style={styles.replaceBtn} onPress={pickReplacement} disabled={saving}>
         <Feather name="upload" size={14} color={colors.text.secondary} />
         <Text style={styles.replaceBtnText} numberOfLines={1}>
-          {replacement ? replacement.name : 'Replace file (optional)'}
+          {replacement ? replacement.name : t('documents.replaceFileOptional')}
         </Text>
       </TouchableOpacity>
       <TextInput
         style={styles.tagInput}
         value={editTag}
         onChangeText={setEditTag}
-        placeholder="Tag (e.g. Lab Report)"
+        placeholder={t('documents.tagPlaceholder')}
         placeholderTextColor={colors.text.muted}
       />
       <View style={styles.editActions}>
         <TouchableOpacity onPress={() => setEditingItem(null)} style={styles.cancelBtn} disabled={saving}>
-          <Text style={styles.cancelBtnText}>Cancel</Text>
+          <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Button label={saving ? 'Saving…' : 'Save changes'} onPress={handleSaveEdit} loading={saving} />
+          <Button label={saving ? t('appointments.saving') : t('appointments.saveChanges')} onPress={handleSaveEdit} loading={saving} />
         </View>
       </View>
     </Card>
@@ -163,9 +166,9 @@ export default function DocumentsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Documents</Text>
+        <Text style={styles.title}>{t('patientDashboard.documents')}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -187,8 +190,8 @@ export default function DocumentsScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="📄"
-            title="No documents yet"
-            subtitle={canManage ? 'Tap "Upload Document" to add a scan or report.' : 'This patient has no documents yet.'}
+            title={t('documents.noneYetTitle')}
+            subtitle={canManage ? t('documents.tapUploadSubtitle') : t('documents.patientHasNone')}
           />
         }
         renderItem={({ item }) => (
@@ -197,19 +200,19 @@ export default function DocumentsScreen() {
               <View style={styles.docRow}>
                 <Feather name="file-text" size={20} color={colors.primary} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.docTag}>{item.tag ?? 'Untagged document'}</Text>
-                  <Text style={styles.docMeta}>{fileTypeLabel(item.fileType)} · {formatWhen(item.uploadedAt)}</Text>
+                  <Text style={styles.docTag}>{item.tag ?? t('documents.untagged')}</Text>
+                  <Text style={styles.docMeta}>{fileTypeLabel(item.fileType, t)} · {formatWhen(item.uploadedAt, t('language.locale'))}</Text>
                 </View>
               </View>
             </TouchableOpacity>
             {canManage && (
               <View style={styles.docActions}>
                 <TouchableOpacity onPress={() => openEdit(item)}>
-                  <Text style={styles.actionLink}>Edit</Text>
+                  <Text style={styles.actionLink}>{t('common.edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id}>
                   <Text style={[styles.actionLink, { color: colors.danger }]}>
-                    {deletingId === item.id ? 'Deleting…' : 'Delete'}
+                    {deletingId === item.id ? t('notifications.deleting') : t('common.delete')}
                   </Text>
                 </TouchableOpacity>
               </View>

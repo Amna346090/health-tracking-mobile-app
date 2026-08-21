@@ -11,6 +11,7 @@ import {
 import { Alert } from '../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography } from '../theme';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -24,6 +25,7 @@ interface FormValues {
 }
 
 export default function ChangePasswordScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [values, setValues] = useState<FormValues>({
@@ -40,10 +42,10 @@ export default function ChangePasswordScreen() {
 
   function validate(): boolean {
     const next: typeof errors = {};
-    if (!values.currentPassword) next.currentPassword = 'Current password is required';
-    if (!values.newPassword) next.newPassword = 'New password is required';
-    else if (values.newPassword.length < 8) next.newPassword = 'Must be at least 8 characters';
-    if (values.confirmPassword !== values.newPassword) next.confirmPassword = 'Passwords do not match';
+    if (!values.currentPassword) next.currentPassword = t('changePassword.currentPasswordRequired');
+    if (!values.newPassword) next.newPassword = t('changePassword.newPasswordRequired');
+    else if (values.newPassword.length < 8) next.newPassword = t('changePassword.minChars');
+    if (values.confirmPassword !== values.newPassword) next.confirmPassword = t('changePassword.passwordsDoNotMatch');
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -54,11 +56,11 @@ export default function ChangePasswordScreen() {
     setErrors({});
     try {
       await changePassword(values.currentPassword, values.newPassword);
-      Alert.alert('Password changed', 'Your password has been updated.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('changePassword.successTitle'), t('changePassword.successBody'), [
+        { text: t('changePassword.ok'), onPress: () => router.back() },
       ]);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Could not change password.';
+      const message = err instanceof ApiError ? err.message : t('changePassword.genericFailed');
       setErrors({ form: message });
     } finally {
       setLoading(false);
@@ -71,9 +73,9 @@ export default function ChangePasswordScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.navBar}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.backText}>← Cancel</Text>
+              <Text style={styles.backText}>{t('changePassword.cancelWithArrow')}</Text>
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Change Password</Text>
+            <Text style={styles.navTitle}>{t('profile.changePassword')}</Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -85,7 +87,7 @@ export default function ChangePasswordScreen() {
             )}
 
             <Input
-              label="Current password"
+              label={t('changePassword.currentPassword')}
               value={values.currentPassword}
               onChangeText={set('currentPassword')}
               error={errors.currentPassword}
@@ -94,17 +96,17 @@ export default function ChangePasswordScreen() {
               returnKeyType="next"
             />
             <Input
-              label="New password"
+              label={t('changePassword.newPassword')}
               value={values.newPassword}
               onChangeText={set('newPassword')}
               error={errors.newPassword}
               secureTextEntry
               autoComplete="new-password"
-              placeholder="Min. 8 characters"
+              placeholder={t('changePassword.minCharsPlaceholder')}
               returnKeyType="next"
             />
             <Input
-              label="Confirm new password"
+              label={t('changePassword.confirmNewPassword')}
               value={values.confirmPassword}
               onChangeText={set('confirmPassword')}
               error={errors.confirmPassword}
@@ -114,7 +116,7 @@ export default function ChangePasswordScreen() {
               onSubmitEditing={handleSubmit}
             />
 
-            <Button label="Update password" onPress={handleSubmit} loading={loading} />
+            <Button label={t('changePassword.updatePassword')} onPress={handleSubmit} loading={loading} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
