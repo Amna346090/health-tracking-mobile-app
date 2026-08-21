@@ -65,6 +65,7 @@ interface PatientMeta {
   gender: string | null;
   healthIssue: string | null;
   avatarUrl: string | null;
+  phone: string | null;
   lastContactAt: string | null;
   providerId: number | null;
   touchBaseThresholdDays: number | null;
@@ -351,6 +352,24 @@ export default function PatientDashboardScreen() {
           </View>
         </View>
 
+        {/* Phone / call */}
+        {patient?.phone && (
+          <View style={crmStyles.contactBar}>
+            <View>
+              <Text style={crmStyles.contactLabel}>PHONE</Text>
+              <Text style={crmStyles.contactValue}>{patient.phone}</Text>
+            </View>
+            {React.createElement(
+              'a',
+              { href: `tel:${patient.phone}`, style: { textDecoration: 'none' } },
+              <View style={crmStyles.callBtn}>
+                <Feather name="phone" size={15} color={colors.text.inverse} />
+                <Text style={crmStyles.callBtnText}>Call</Text>
+              </View>,
+            )}
+          </View>
+        )}
+
         {/* Basic info */}
         {patient && (
           <View style={crmStyles.section}>
@@ -574,6 +593,33 @@ const crmStyles = StyleSheet.create({
   patientName:   { ...(typography.h4 as object), color: colors.text.primary },
   patientEmail:  { ...(typography.caption as object), color: colors.text.muted },
   credentialsLink: { ...(typography.caption as object), color: colors.primary, marginTop: 2 },
+
+  contactBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+  },
+  contactLabel: {
+    ...(typography.caption as object),
+    fontWeight: '600' as const,
+    letterSpacing: 0.3,
+    color: colors.primaryDark,
+  },
+  contactValue: { ...(typography.body1 as object), fontWeight: '600' as const, color: colors.text.primary, marginTop: 2 },
+  callBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.xs + 1,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+  },
+  callBtnText: { ...(typography.body2 as object), fontWeight: '600' as const, color: colors.text.inverse },
 
   section:     { gap: spacing.sm },
   sectionRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
