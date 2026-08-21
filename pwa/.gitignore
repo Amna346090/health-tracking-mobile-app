@@ -1,6 +1,7 @@
 node_modules/
 .expo/
 dist/
+package-lock.json
 .env
 *.jks
 *.p8

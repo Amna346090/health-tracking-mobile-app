@@ -19,32 +19,35 @@ import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { useAuth } from '../../context/auth';
 import { getMessages, markMessageRead, sendMessage, type Message } from '../../api/messages';
 import { onPushEvent } from '../../lib/pushEvents';
 
-function dayLabel(iso: string): string {
+function dayLabel(iso: string, t: TFunction): string {
   const d = new Date(iso);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
   const sameDay = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  if (sameDay(d, today)) return 'Today';
-  if (sameDay(d, yesterday)) return 'Yesterday';
-  return d.toLocaleDateString('en-US', {
+  if (sameDay(d, today)) return t('messages.today');
+  if (sameDay(d, yesterday)) return t('messages.yesterday');
+  return d.toLocaleDateString(t('language.locale'), {
     month: 'long', day: 'numeric',
     year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
   });
 }
 
-function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+function timeLabel(iso: string, locale: string): string {
+  return new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 }
 
 export default function MessagesScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -111,7 +114,7 @@ export default function MessagesScreen() {
       setDraft('');
       scrollToBottom();
     } catch (e) {
-      Alert.alert('Could not send message', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('messages.sendFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSending(false);
     }
@@ -130,9 +133,9 @@ export default function MessagesScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Messages</Text>
+          <Text style={styles.title}>{t('patientDashboard.messages')}</Text>
           <View style={{ width: 50 }} />
         </View>
 
@@ -143,16 +146,16 @@ export default function MessagesScreen() {
           contentContainerStyle={styles.list}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           ListEmptyComponent={
-            <EmptyState icon="💬" title="No messages yet" subtitle="Your care team hasn't sent any messages yet." />
+            <EmptyState icon="💬" title={t('messages.noneYetTitle')} subtitle={t('messages.noneYetSubtitle')} />
           }
           renderItem={({ item, index }) => {
             const olderNeighbor = messages[index - 1];
-            const showDivider = !olderNeighbor || dayLabel(olderNeighbor.createdAt) !== dayLabel(item.createdAt);
+            const showDivider = !olderNeighbor || dayLabel(olderNeighbor.createdAt, t) !== dayLabel(item.createdAt, t);
             const isMine = item.sender.id === user?.id;
             return (
               <View>
                 {showDivider && (
-                  <View style={styles.dayDivider}><Text style={styles.dayDividerText}>{dayLabel(item.createdAt)}</Text></View>
+                  <View style={styles.dayDivider}><Text style={styles.dayDividerText}>{dayLabel(item.createdAt, t)}</Text></View>
                 )}
                 <TouchableOpacity
                   activeOpacity={item.sender.id !== user?.id && !item.readAt ? 0.7 : 1}
@@ -162,12 +165,12 @@ export default function MessagesScreen() {
                   <View style={[styles.bubble, isMine && styles.bubbleMine]}>
                     <View style={styles.msgHeader}>
                       <Text style={[styles.msgSender, isMine && styles.msgSenderMine]}>
-                        {isMine ? 'You' : `${item.sender.firstName} ${item.sender.lastName}`}
+                        {isMine ? t('messages.you') : `${item.sender.firstName} ${item.sender.lastName}`}
                       </Text>
                       {!item.readAt && <View style={styles.unreadDot} />}
                     </View>
                     <Text style={[styles.msgBody, isMine && styles.msgBodyMine]}>{item.body}</Text>
-                    <Text style={[styles.msgTime, isMine && styles.msgTimeMine]}>{timeLabel(item.createdAt)}</Text>
+                    <Text style={[styles.msgTime, isMine && styles.msgTimeMine]}>{timeLabel(item.createdAt, t('language.locale'))}</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -181,7 +184,7 @@ export default function MessagesScreen() {
               style={styles.composeInput}
               value={draft}
               onChangeText={setDraft}
-              placeholder="Type a message…"
+              placeholder={t('messages.typeMessage')}
               placeholderTextColor={colors.text.muted}
               multiline
             />
@@ -191,7 +194,7 @@ export default function MessagesScreen() {
               disabled={!draft.trim() || sending}
               activeOpacity={0.8}
             >
-              {sending ? <ActivityIndicator color={colors.text.inverse} /> : <Text style={styles.sendBtnText}>Send</Text>}
+              {sending ? <ActivityIndicator color={colors.text.inverse} /> : <Text style={styles.sendBtnText}>{t('messages.send')}</Text>}
             </TouchableOpacity>
           </View>
         )}

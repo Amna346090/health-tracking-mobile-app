@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/auth';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
@@ -22,6 +23,7 @@ import { getAllMedications, type Medication } from '../../api/medications';
 // ─── Patient view ─────────────────────────────────────────────────────────────
 
 function PatientMedications({ patientId }: { patientId: number }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [items, setItems] = useState<MedicationAssignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,13 +39,13 @@ function PatientMedications({ patientId }: { patientId: number }) {
       const data = await getAssignments(patientId);
       setItems(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load peptides');
+      setError(e instanceof Error ? e.message : t('medications.failedToLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
       hasLoadedRef.current = true;
     }
-  }, [patientId]);
+  }, [patientId, t]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -60,7 +62,7 @@ function PatientMedications({ patientId }: { patientId: number }) {
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Try again</Text>
+          <Text style={styles.retryText}>{t('medications.tryAgain')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -83,8 +85,8 @@ function PatientMedications({ patientId }: { patientId: number }) {
       ListEmptyComponent={
         <EmptyState
           icon="💊"
-          title="No peptides assigned"
-          subtitle="Your prescriptions and dosing schedule will appear here once set up by your care team."
+          title={t('medications.noneAssignedTitle')}
+          subtitle={t('medications.noneAssignedSubtitle')}
         />
       }
     />
@@ -94,6 +96,7 @@ function PatientMedications({ patientId }: { patientId: number }) {
 // ─── Staff/admin view ──────────────────────────────────────────────────────────
 
 function StaffMedications() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [items, setItems] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,13 +113,13 @@ function StaffMedications() {
       const data = await getAllMedications(query || undefined);
       setItems(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load catalog');
+      setError(e instanceof Error ? e.message : t('medications.failedToLoadCatalog'));
     } finally {
       setLoading(false);
       setRefreshing(false);
       hasLoadedRef.current = true;
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -131,7 +134,7 @@ function StaffMedications() {
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search peptides..."
+          placeholder={t('medications.searchPlaceholder')}
           placeholderTextColor={colors.text.muted}
           value={search}
           onChangeText={setSearch}
@@ -143,7 +146,7 @@ function StaffMedications() {
           onPress={() => router.push('/medication/add')}
           activeOpacity={0.8}
         >
-          <Text style={styles.addBtnText}>+ Add</Text>
+          <Text style={styles.addBtnText}>{t('medications.add')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -155,7 +158,7 @@ function StaffMedications() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => load(search)}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t('medications.tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -179,11 +182,11 @@ function StaffMedications() {
           ListEmptyComponent={
             <EmptyState
               icon="💊"
-              title={search ? 'No results' : 'No peptides'}
+              title={search ? t('medications.noResults') : t('medications.noPeptides')}
               subtitle={
                 search
-                  ? `No peptides match "${search}"`
-                  : 'Add the first peptide to the catalog.'
+                  ? t('medications.noResultsMatch', { query: search })
+                  : t('medications.addFirstPeptide')
               }
             />
           }
@@ -196,6 +199,7 @@ function StaffMedications() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MedicationsScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isStaff = user?.role === 'STAFF' || user?.role === 'ADMIN';
 
@@ -203,9 +207,9 @@ export default function MedicationsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Peptides</Text>
+          <Text style={styles.title}>{t('dashboard.peptides')}</Text>
           <Text style={styles.subtitle}>
-            {isStaff ? 'Peptide catalog' : 'Your active prescriptions'}
+            {isStaff ? t('medications.catalogSubtitle') : t('medications.yourPrescriptionsSubtitle')}
           </Text>
         </View>
 

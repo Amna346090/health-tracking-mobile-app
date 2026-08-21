@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { api } from '../../api/client';
 import { Avatar } from '../../components/Avatar';
@@ -24,10 +25,11 @@ interface PatientRow {
 }
 
 function PatientCard({ patient, onPress }: { patient: PatientRow; onPress: () => void }) {
+  const { t, i18n } = useTranslation();
   const name = `${patient.user.firstName} ${patient.user.lastName}`;
   const initials = (patient.user.firstName[0] + (patient.user.lastName[0] ?? patient.user.firstName[1] ?? '')).toUpperCase();
   const dob = patient.dateOfBirth
-    ? new Date(patient.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? new Date(patient.dateOfBirth).toLocaleDateString(i18n.language === 'es' ? 'es-US' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
 
   return (
@@ -36,7 +38,7 @@ function PatientCard({ patient, onPress }: { patient: PatientRow; onPress: () =>
       <View style={styles.cardBody}>
         <Text style={styles.cardName}>{name}</Text>
         <Text style={styles.cardSub}>{patient.user.email ?? patient.user.username}</Text>
-        {dob && <Text style={styles.cardDob}>DOB: {dob}</Text>}
+        {dob && <Text style={styles.cardDob}>{t('patients.dob', { date: dob })}</Text>}
       </View>
       <Text style={styles.chevron}>›</Text>
     </TouchableOpacity>
@@ -44,6 +46,7 @@ function PatientCard({ patient, onPress }: { patient: PatientRow; onPress: () =>
 }
 
 export default function PatientsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [patients,  setPatients]  = useState<PatientRow[]>([]);
   const [loading,   setLoading]   = useState(true);
@@ -78,13 +81,13 @@ export default function PatientsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Patients</Text>
+          <Text style={styles.headerTitle}>{t('dashboard.patients')}</Text>
           {!loading && (
-            <Text style={styles.headerCount}>{patients.length} total</Text>
+            <Text style={styles.headerCount}>{t('patients.total', { count: patients.length })}</Text>
           )}
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/add-patient')} activeOpacity={0.8}>
-          <Text style={styles.addBtnText}>+ Add</Text>
+          <Text style={styles.addBtnText}>{t('patients.add')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -94,7 +97,7 @@ export default function PatientsScreen() {
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search by name or email…"
+          placeholder={t('patients.searchPlaceholder')}
           placeholderTextColor={colors.text.muted}
           clearButtonMode="while-editing"
           autoCapitalize="none"
@@ -116,7 +119,7 @@ export default function PatientsScreen() {
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>
-                {query ? 'No patients match your search.' : 'No patients yet.'}
+                {query ? t('patients.noMatchSearch') : t('patients.noPatientsYet')}
               </Text>
             </View>
           }

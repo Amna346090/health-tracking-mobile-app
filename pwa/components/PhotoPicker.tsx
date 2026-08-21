@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Alert } from '../lib/alert';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../theme';
 import { uploadPhoto, type Photo } from '../api/photos';
 
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
+  const { t } = useTranslation();
   const [asset,    setAsset]    = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [caption,  setCaption]  = useState('');
   const [progress, setProgress] = useState(0);
@@ -33,7 +35,7 @@ export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
   async function pickFromLibrary() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permission required', 'Allow access to your photo library in Settings.');
+      Alert.alert(t('upload.permissionRequired'), t('upload.allowPhotoLibrary'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -47,7 +49,7 @@ export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
   async function pickFromCamera() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permission required', 'Allow camera access in Settings.');
+      Alert.alert(t('upload.permissionRequired'), t('upload.allowCamera'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -58,10 +60,10 @@ export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
   }
 
   function showPicker() {
-    Alert.alert('Add Photo', undefined, [
-      { text: 'Camera',        onPress: pickFromCamera  },
-      { text: 'Photo Library', onPress: pickFromLibrary },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('upload.addPhoto'), undefined, [
+      { text: t('upload.camera'),       onPress: pickFromCamera  },
+      { text: t('upload.photoLibrary'), onPress: pickFromLibrary },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   }
 
@@ -84,7 +86,7 @@ export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
       setProgress(0);
       onUploaded(photo);
     } catch (e) {
-      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('upload.uploadFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setUploading(false);
     }
@@ -94,7 +96,7 @@ export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
     return (
       <TouchableOpacity style={styles.pickBtn} onPress={showPicker} activeOpacity={0.8}>
         <Text style={styles.pickBtnIcon}>📷</Text>
-        <Text style={styles.pickBtnText}>Attach Photo</Text>
+        <Text style={styles.pickBtnText}>{t('upload.attachPhoto')}</Text>
       </TouchableOpacity>
     );
   }
@@ -108,7 +110,7 @@ export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
         style={styles.captionInput}
         value={caption}
         onChangeText={setCaption}
-        placeholder="Add a caption (optional)"
+        placeholder={t('upload.captionPlaceholder')}
         placeholderTextColor={colors.text.muted}
       />
 
@@ -125,7 +127,7 @@ export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
           onPress={() => { setAsset(null); setCaption(''); }}
           disabled={uploading}
         >
-          <Text style={styles.removeBtnText}>Remove</Text>
+          <Text style={styles.removeBtnText}>{t('common.remove')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -136,7 +138,7 @@ export function PhotoPicker({ patientId, healthLogId, onUploaded }: Props) {
         >
           {uploading
             ? <ActivityIndicator color={colors.text.inverse} size="small" />
-            : <Text style={styles.uploadBtnText}>Upload</Text>
+            : <Text style={styles.uploadBtnText}>{t('upload.upload')}</Text>
           }
         </TouchableOpacity>
       </View>

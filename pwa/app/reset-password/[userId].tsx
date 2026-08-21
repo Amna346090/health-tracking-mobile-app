@@ -11,6 +11,7 @@ import {
 import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography } from '../../theme';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
@@ -18,6 +19,7 @@ import { resetUserPassword } from '../../api/users';
 import { ApiError } from '../../api/client';
 
 export default function ResetPasswordScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { userId, name } = useLocalSearchParams<{ userId: string; name?: string }>();
   const targetId = Number(userId);
@@ -29,9 +31,9 @@ export default function ResetPasswordScreen() {
 
   function validate(): boolean {
     const next: typeof errors = {};
-    if (!newPassword) next.newPassword = 'New password is required';
-    else if (newPassword.length < 8) next.newPassword = 'Must be at least 8 characters';
-    if (confirmPassword !== newPassword) next.confirmPassword = 'Passwords do not match';
+    if (!newPassword) next.newPassword = t('changePassword.newPasswordRequired');
+    else if (newPassword.length < 8) next.newPassword = t('changePassword.minChars');
+    if (confirmPassword !== newPassword) next.confirmPassword = t('changePassword.passwordsDoNotMatch');
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -42,11 +44,11 @@ export default function ResetPasswordScreen() {
     setErrors({});
     try {
       await resetUserPassword(targetId, newPassword);
-      Alert.alert('Password reset', `${name ?? 'The account'}'s password has been updated.`, [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('resetPassword.successTitle'), t('resetPassword.successBody', { name: name ?? t('resetPassword.theAccount') }), [
+        { text: t('changePassword.ok'), onPress: () => router.back() },
       ]);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Could not reset password.';
+      const message = err instanceof ApiError ? err.message : t('resetPassword.genericFailed');
       setErrors({ form: message });
     } finally {
       setLoading(false);
@@ -59,13 +61,13 @@ export default function ResetPasswordScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.navBar}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.backText}>← Cancel</Text>
+              <Text style={styles.backText}>{t('changePassword.cancelWithArrow')}</Text>
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Reset Password</Text>
+            <Text style={styles.navTitle}>{t('resetPassword.title')}</Text>
             <View style={{ width: 60 }} />
           </View>
 
-          {name && <Text style={styles.subtitle}>Set a new password for {name}</Text>}
+          {name && <Text style={styles.subtitle}>{t('resetPassword.setNewPasswordFor', { name })}</Text>}
 
           <View style={styles.form}>
             {errors.form && (
@@ -75,17 +77,17 @@ export default function ResetPasswordScreen() {
             )}
 
             <Input
-              label="New password"
+              label={t('changePassword.newPassword')}
               value={newPassword}
               onChangeText={setNewPassword}
               error={errors.newPassword}
               secureTextEntry
               autoComplete="new-password"
-              placeholder="Min. 8 characters"
+              placeholder={t('changePassword.minCharsPlaceholder')}
               returnKeyType="next"
             />
             <Input
-              label="Confirm new password"
+              label={t('changePassword.confirmNewPassword')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               error={errors.confirmPassword}
@@ -95,7 +97,7 @@ export default function ResetPasswordScreen() {
               onSubmitEditing={handleSubmit}
             />
 
-            <Button label="Reset password" onPress={handleSubmit} loading={loading} />
+            <Button label={t('resetPassword.title')} onPress={handleSubmit} loading={loading} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

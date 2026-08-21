@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../theme';
 import { EmptyState } from '../components/EmptyState';
 import { Card } from '../components/Card';
@@ -29,13 +30,14 @@ const TYPE_ROUTE: Record<string, (patientId: number) => string> = {
   MEDICATION_REMINDER: () => `/(tabs)`,
 };
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
+function formatWhen(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, {
     month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   });
 }
 
 export default function NotificationsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,9 +120,9 @@ export default function NotificationsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.title}>{t('dashboard.notifications')}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -132,11 +134,11 @@ export default function NotificationsScreen() {
           unreadCount > 0 ? (
             <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead} disabled={markingAll}>
               <Feather name="check-circle" size={13} color={colors.primary} />
-              <Text style={styles.markAllText}>{markingAll ? 'Marking…' : 'Mark all as read'}</Text>
+              <Text style={styles.markAllText}>{markingAll ? t('notifications.marking') : t('notifications.markAllAsRead')}</Text>
             </TouchableOpacity>
           ) : null
         }
-        ListEmptyComponent={<EmptyState icon="🔔" title="No notifications yet" subtitle="You're all caught up." />}
+        ListEmptyComponent={<EmptyState icon="🔔" title={t('notifications.noneYetTitle')} subtitle={t('notifications.noneYetSubtitle')} />}
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => handlePress(item)} activeOpacity={0.7}>
             <Card style={[styles.notifCard, !item.readAt && styles.notifCardUnread]}>
@@ -145,18 +147,18 @@ export default function NotificationsScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.notifTitle}>{item.title}</Text>
                   <Text style={styles.notifBody}>{item.body}</Text>
-                  <Text style={styles.notifMeta}>{formatWhen(item.createdAt)}</Text>
+                  <Text style={styles.notifMeta}>{formatWhen(item.createdAt, t('language.locale'))}</Text>
                 </View>
               </View>
               <View style={styles.notifActions}>
                 {!item.readAt && (
                   <TouchableOpacity onPress={() => markOneRead(item)}>
-                    <Text style={styles.actionLink}>Mark read</Text>
+                    <Text style={styles.actionLink}>{t('notifications.markRead')}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id}>
                   <Text style={[styles.actionLink, { color: colors.danger }]}>
-                    {deletingId === item.id ? 'Deleting…' : 'Delete'}
+                    {deletingId === item.id ? t('notifications.deleting') : t('common.delete')}
                   </Text>
                 </TouchableOpacity>
               </View>
