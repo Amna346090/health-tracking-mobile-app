@@ -1,19 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import { colors } from '../theme';
+import { Feather } from '@expo/vector-icons';
+import { colors, radius, shadows } from '../theme';
 
 interface Props {
   /** 0 (not pulling) to 1 (past the trigger threshold) */
   pullProgress: number;
   refreshing: boolean;
 }
-
-const SIZE = 30;
-const STROKE = 2.5;
-const RADIUS = (SIZE - STROKE) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const SPIN_ARC = 0.28; // fraction of the ring shown while spinning, comet-style
 
 export function PullToRefreshIndicator({ pullProgress, refreshing }: Props) {
   const spin = useRef(new Animated.Value(0)).current;
@@ -24,7 +18,7 @@ export function PullToRefreshIndicator({ pullProgress, refreshing }: Props) {
     const loop = Animated.loop(
       Animated.timing(spin, {
         toValue: 1,
-        duration: 800,
+        duration: 700,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
@@ -35,31 +29,16 @@ export function PullToRefreshIndicator({ pullProgress, refreshing }: Props) {
 
   if (!refreshing && pullProgress <= 0) return null;
 
-  const progress = refreshing ? SPIN_ARC : pullProgress;
-  const rotation = spin.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '270deg'] });
+  const spinRotation = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const pullRotation = `${pullProgress * 180}deg`;
 
   return (
     <View style={styles.container} pointerEvents="none">
-      <Animated.View
-        style={{
-          opacity: refreshing ? 1 : pullProgress,
-          transform: [{ rotate: refreshing ? rotation : '-90deg' }],
-        }}
-      >
-        <Svg width={SIZE} height={SIZE}>
-          <Circle
-            cx={SIZE / 2}
-            cy={SIZE / 2}
-            r={RADIUS}
-            stroke={colors.primary}
-            strokeWidth={STROKE}
-            strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
-            strokeLinecap="round"
-            fill="none"
-          />
-        </Svg>
-      </Animated.View>
+      <View style={[styles.bubble, { opacity: refreshing ? 1 : pullProgress }]}>
+        <Animated.View style={{ transform: [{ rotate: refreshing ? spinRotation : pullRotation }] }}>
+          <Feather name="refresh-cw" size={18} color={colors.primary} />
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -67,10 +46,19 @@ export function PullToRefreshIndicator({ pullProgress, refreshing }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 10,
+    top: 8,
     left: 0,
     right: 0,
     alignItems: 'center',
     zIndex: 10,
+  },
+  bubble: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.bg.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.sm,
   },
 });
