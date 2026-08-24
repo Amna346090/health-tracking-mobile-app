@@ -14,6 +14,8 @@ import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { createAssignment } from '../../api/assignments';
 import { api } from '../../api/client';
@@ -27,6 +29,18 @@ interface PatientOption {
 }
 
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'As needed', 'Weekly'];
+
+const FREQUENCY_LABEL_KEY: Record<string, string> = {
+  'Once daily': 'medicationForm.frequencyOptions.onceDaily',
+  'Twice daily': 'medicationForm.frequencyOptions.twiceDaily',
+  'Three times daily': 'medicationForm.frequencyOptions.threeTimesDaily',
+  'As needed': 'medicationForm.frequencyOptions.asNeeded',
+  'Weekly': 'medicationForm.frequencyOptions.weekly',
+};
+
+function frequencyLabel(f: string, t: TFunction): string {
+  return FREQUENCY_LABEL_KEY[f] ? t(FREQUENCY_LABEL_KEY[f]) : f;
+}
 
 // Default number of time slots shown when a frequency is picked — the doctor can still
 // add/remove slots afterward; the sent count always just equals however many are left.
@@ -44,6 +58,7 @@ function timesForCount(current: string[], count: number): string[] {
 }
 
 export default function AssignMedicationScreen() {
+  const { t } = useTranslation();
   const { medicationId, medicationName } = useLocalSearchParams<{
     medicationId: string;
     medicationName: string;
@@ -103,11 +118,11 @@ export default function AssignMedicationScreen() {
         startDate,
         endDate: endDate.trim() || null,
       });
-      Alert.alert('Assignment created', `${medicationName} has been assigned.`, [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('medicationForm.assignmentCreatedTitle'), t('medicationForm.assignmentCreatedBody', { name: medicationName }), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (e) {
-      Alert.alert('Failed to assign', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('medicationForm.assignFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -122,25 +137,25 @@ export default function AssignMedicationScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.navBar}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>← Cancel</Text>
+              <Text style={styles.backText}>{t('medicationForm.cancelWithArrow')}</Text>
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Assign Peptide</Text>
+            <Text style={styles.navTitle}>{t('medicationForm.assignTitle')}</Text>
             <View style={styles.navSpacer} />
           </View>
 
           {/* Peptide badge */}
           <View style={styles.medBadge}>
-            <Text style={styles.medBadgeLabel}>Peptide</Text>
+            <Text style={styles.medBadgeLabel}>{t('medicationForm.peptideLabel')}</Text>
             <Text style={styles.medBadgeName}>{medicationName}</Text>
           </View>
 
           {/* Patient picker */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Select Patient *</Text>
+            <Text style={styles.sectionLabel}>{t('medicationForm.selectPatientLabel')}</Text>
             {patientsLoading ? (
               <ActivityIndicator color={colors.primary} />
             ) : patients.length === 0 ? (
-              <Text style={styles.noPatients}>No patients found</Text>
+              <Text style={styles.noPatients}>{t('medicationForm.noPatientsFound')}</Text>
             ) : (
               patients.map((p) => (
                 <TouchableOpacity
@@ -170,7 +185,7 @@ export default function AssignMedicationScreen() {
 
           {/* Frequency */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Frequency *</Text>
+            <Text style={styles.sectionLabel}>{t('medicationForm.frequencyLabel')}</Text>
             <View style={styles.chipRow}>
               {FREQUENCIES.map((f) => (
                 <TouchableOpacity
@@ -180,7 +195,7 @@ export default function AssignMedicationScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.chipText, frequency === f && styles.chipTextSelected]}>
-                    {f}
+                    {frequencyLabel(f, t)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -190,18 +205,18 @@ export default function AssignMedicationScreen() {
           {/* Times of day */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>
-              Times per day — {times.length} {times.length === 1 ? 'time' : 'times'}
+              {t('medicationForm.timesPerDay', { count: times.length })}
             </Text>
             <View style={{ gap: spacing.sm }}>
-              {times.map((t, i) => (
+              {times.map((time, i) => (
                 <View key={i} style={styles.timeRow}>
                   <View style={styles.flex}>
-                    <TimeField label={`Time ${i + 1}`} value={t} onChange={(v) => updateTime(i, v)} />
+                    <TimeField label={t('medicationForm.timeSlotLabel', { n: i + 1 })} value={time} onChange={(v) => updateTime(i, v)} />
                   </View>
                   <TouchableOpacity
                     onPress={() => removeTime(i)}
                     style={styles.removeTimeBtn}
-                    accessibilityLabel="Remove this time"
+                    accessibilityLabel={t('medicationForm.removeTimeA11y')}
                   >
                     <Feather name="x" size={16} color={colors.text.secondary} />
                   </TouchableOpacity>
@@ -209,7 +224,7 @@ export default function AssignMedicationScreen() {
               ))}
               <TouchableOpacity onPress={addTime} style={styles.addTimeBtn} activeOpacity={0.7}>
                 <Feather name="plus" size={14} color={colors.primary} />
-                <Text style={styles.addTimeText}>Add time</Text>
+                <Text style={styles.addTimeText}>{t('medicationForm.addTime')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -217,10 +232,10 @@ export default function AssignMedicationScreen() {
           {/* Dates */}
           <View style={styles.row}>
             <View style={styles.flex}>
-              <DateField label="Start Date *" value={startDate} onChange={setStartDate} />
+              <DateField label={t('medicationForm.startDateLabel')} value={startDate} onChange={setStartDate} />
             </View>
             <View style={styles.flex}>
-              <DateField label="End Date" value={endDate} onChange={setEndDate} minimumDate={startDate ? new Date(`${startDate}T00:00:00`) : undefined} />
+              <DateField label={t('medicationForm.endDateLabel')} value={endDate} onChange={setEndDate} minimumDate={startDate ? new Date(`${startDate}T00:00:00`) : undefined} />
             </View>
           </View>
 
@@ -233,7 +248,7 @@ export default function AssignMedicationScreen() {
             {saving ? (
               <ActivityIndicator color={colors.text.inverse} />
             ) : (
-              <Text style={styles.saveBtnText}>Assign to Patient</Text>
+              <Text style={styles.saveBtnText}>{t('medicationDetail.assignToPatient')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>

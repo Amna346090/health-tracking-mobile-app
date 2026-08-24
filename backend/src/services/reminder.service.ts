@@ -51,6 +51,7 @@ export async function runReminderJob(): Promise<void> {
       ? `Time to take ${medication.name} (${medication.dosage})`
       : `Time to take ${medication.name}`;
     const htmlBody = `<p>${body}</p>`;
+    const params = { medicationName: medication.name, dosage: medication.dosage };
 
     const channels: ReminderChannel[] = [];
     if (user.notifPush && user.pushToken)      channels.push(ReminderChannel.PUSH);
@@ -63,6 +64,7 @@ export async function runReminderJob(): Promise<void> {
         type: 'MEDICATION_REMINDER',
         title,
         body,
+        params,
         patientId: patient.id,
       },
     }).catch((e) => console.error(`[reminder] failed to create notification for assignment ${assignment.id}:`, e));

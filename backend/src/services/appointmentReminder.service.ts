@@ -54,6 +54,7 @@ export async function runAppointmentReminderJob(): Promise<void> {
       const when = appointment.scheduledFor.toLocaleString();
       const body = `You have an appointment on ${when}${appointment.reason ? ` (${appointment.reason})` : ''}`;
       const htmlBody = `<p>${body}</p>`;
+      const params = { scheduledFor: appointment.scheduledFor.toISOString(), reason: appointment.reason };
 
       prisma.notification.create({
         data: {
@@ -61,6 +62,7 @@ export async function runAppointmentReminderJob(): Promise<void> {
           type: 'APPOINTMENT_REMINDER',
           title,
           body,
+          params,
           patientId: patient.id,
         },
       }).catch((e) => console.error(`[appointment reminder] failed to create notification for appointment ${appointment.id}:`, e));

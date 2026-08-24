@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "Save",
+    "ok": "OK",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
@@ -102,6 +103,14 @@
     "noPeptides": "No peptides",
     "noResultsMatch": "No peptides match \"{{query}}\"",
     "addFirstPeptide": "Add the first peptide to the catalog.",
+    "formLabel": {
+      "TABLET": "Tablet",
+      "CAPSULE": "Capsule",
+      "LIQUID": "Liquid",
+      "INJECTION": "Injection",
+      "TOPICAL": "Topical",
+      "OTHER": "Other"
+    },
     "form": {
       "tablet_one": "{{count}} tablet",
       "tablet_other": "{{count}} tablets",
@@ -142,6 +151,7 @@
     "staffBanner": "Adding entry on patient's behalf",
     "date": "Date *",
     "datePlaceholder": "YYYY-MM-DD",
+    "weight": "Weight",
     "weightKg": "Weight (kg)",
     "weightPlaceholder": "e.g. 70.5",
     "heightCm": "Height (cm)",
@@ -485,5 +495,138 @@
     "notesOnly": "Notes only",
     "staffEntry": "Staff entry",
     "photoUploaded": "Photo uploaded"
+  },
+  "medicationForm": {
+    "addTitle": "Add Peptide",
+    "cancelWithArrow": "← Cancel",
+    "nameLabel": "Name *",
+    "namePlaceholder": "e.g. Metformin",
+    "dosageLabel": "Dosage",
+    "dosagePlaceholder": "e.g. 500mg twice daily",
+    "formFieldLabel": "Form",
+    "quantityLabel": "Quantity per dose",
+    "quantityPlaceholder": "e.g. 2 (tablets)",
+    "foodFieldLabel": "Food instruction",
+    "instructionsLabel": "Instructions",
+    "instructionsPlaceholder": "e.g. Take with food",
+    "notesLabel": "Prescribing notes",
+    "notesPlaceholder": "Internal notes for care team",
+    "savePeptide": "Save Peptide",
+    "createFailed": "Failed to create peptide",
+    "foodOptions": {
+      "withFood": "With food",
+      "withoutFood": "Without food",
+      "either": "Either"
+    },
+    "assignTitle": "Assign Peptide",
+    "peptideLabel": "Peptide",
+    "selectPatientLabel": "Select Patient *",
+    "noPatientsFound": "No patients found",
+    "frequencyLabel": "Frequency *",
+    "frequencyOptions": {
+      "onceDaily": "Once daily",
+      "twiceDaily": "Twice daily",
+      "threeTimesDaily": "Three times daily",
+      "asNeeded": "As needed",
+      "weekly": "Weekly"
+    },
+    "timesPerDay_one": "Times per day — {{count}} time",
+    "timesPerDay_other": "Times per day — {{count}} times",
+    "timeSlotLabel": "Time {{n}}",
+    "removeTimeA11y": "Remove this time",
+    "addTime": "Add time",
+    "startDateLabel": "Start Date *",
+    "endDateLabel": "End Date",
+    "assignmentCreatedTitle": "Assignment created",
+    "assignmentCreatedBody": "{{name}} has been assigned.",
+    "assignFailed": "Failed to assign"
+  },
+  "medicationDetail": {
+    "failedToLoad": "Failed to load",
+    "deletePeptideTitle": "Delete peptide?",
+    "deleteBody": "Delete {{name}}? This cannot be undone.",
+    "couldNotDelete": "Could not delete",
+    "notFound": "Peptide not found",
+    "activePatient_one": "{{count}} active patient",
+    "activePatient_other": "{{count}} active patients",
+    "form": "Form",
+    "quantityPerDose": "Quantity per dose",
+    "foodInstruction": "Food instruction",
+    "instructions": "Instructions",
+    "prescribingNotes": "Prescribing notes",
+    "assignToPatient": "Assign to Patient",
+    "deleting": "Deleting…"
+  },
+  "metricChart": {
+    "trendTitle": "{{label}} Trend"
+  },
+  "notificationTypes": {
+    "touchBase": {
+      "title": "Touch-base reminder",
+      "bodyWithDays_one": "You need to reach back to {{name}} — last contact was {{count}} day ago.",
+      "bodyWithDays_other": "You need to reach back to {{name}} — last contact was {{count}} days ago.",
+      "bodyNever": "You need to reach back to {{name}} — last contact was never."
+    },
+    "newPatientMessage": { "title": "New patient message" },
+    "newMessage": { "title": "New message" },
+    "medication": {
+      "title": "Medication Reminder",
+      "bodyWithDosage": "Time to take {{name}} ({{dosage}})",
+      "bodyNoDosage": "Time to take {{name}}"
+    },
+    "appointment": {
+      "title": "Upcoming Appointment",
+      "bodyWithReason": "You have an appointment on {{when}} ({{reason}})",
+      "bodyNoReason": "You have an appointment on {{when}}"
+    },
+    "testScan": {
+      "title": "Test/Scan Reminder",
+      "in2Days": "\"{{name}}\" is due in 2 days. Please submit your results soon.",
+      "dueToday": "\"{{name}}\" is due today. Please submit your results.",
+      "overdue_one": "\"{{name}}\" is now {{count}} day overdue. Please submit your results as soon as possible.",
+      "overdue_other": "\"{{name}}\" is now {{count}} days overdue. Please submit your results as soon as possible."
+    }
+  },
+  "assignmentDetail": {
+    "notFound": "Assignment not found",
+    "failedToLoad": "Failed to load assignment",
+    "couldNotLogDose": "Could not log dose",
+    "downloadPrescription": "Download Prescription",
+    "markTodayDoseTaken": "Mark Today's Dose as Taken",
+    "todayDoseLogged": "Today's dose logged ✓",
+    "doseHistory": "Dose History",
+    "noDosesLoggedYet": "No doses logged yet"
+  },
+  "peptidesPatient": {
+    "title": "Peptides",
+    "editTitle": "Edit {{name}}",
+    "frequencyFieldLabel": "Frequency",
+    "startDateLabel": "Start date",
+    "endDateOptionalLabel": "End date (optional)",
+    "assignFromDashboard": "Assign one from this patient's dashboard.",
+    "orderHistory": "Order history",
+    "noOrdersLoggedYet": "No orders logged yet.",
+    "doseLabel": "Dose",
+    "dosePlaceholder": "e.g. 5mg",
+    "saveOrder": "Save order",
+    "couldNotSaveOrder": "Could not save order",
+    "couldNotDeleteOrder": "Could not delete order",
+    "addOrder": "+ Add order",
+    "addTime": "+ Add time",
+    "pdfLabel": "PDF",
+    "downloading": "Downloading…",
+    "deleteConfirmBody": "Remove {{name}} from this patient's active peptides? This also stops its dose reminders.",
+    "couldNotDownloadPrescription": "Could not download prescription"
+  },
+  "manageUsers": {
+    "title": "Manage Users",
+    "you": "(you)",
+    "resetPassword": "Reset Password",
+    "deleteUserTitle": "Delete {{name}}?",
+    "deleteUserBodyWithHealth": "This permanently removes their account and all associated health data. This cannot be undone.",
+    "deleteUserBody": "This permanently removes their account. This cannot be undone.",
+    "deleteFailed": "Delete failed",
+    "deleteFailedDefault": "Could not delete this account.",
+    "noUsersFound": "No users found."
   }
 }

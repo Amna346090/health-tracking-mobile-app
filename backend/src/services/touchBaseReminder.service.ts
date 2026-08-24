@@ -54,6 +54,7 @@ export async function runTouchBaseReminderJob(): Promise<void> {
     const sinceText = daysSince !== null ? `${daysSince} days ago` : 'never';
     const title = 'Touch-base reminder';
     const body = `You need to reach back to ${patientName} — last contact was ${sinceText}.`;
+    const params = { patientName, daysSince };
 
     for (const staff of staffUsers) {
       try {
@@ -63,6 +64,7 @@ export async function runTouchBaseReminderJob(): Promise<void> {
             type: TOUCH_BASE_DUE,
             title,
             body,
+            params,
             patientId: item.id,
           },
         });

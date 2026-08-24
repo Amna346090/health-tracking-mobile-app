@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "Guardar",
+    "ok": "OK",
     "cancel": "Cancelar",
     "delete": "Eliminar",
     "edit": "Editar",
@@ -102,6 +103,14 @@
     "noPeptides": "No hay péptidos",
     "noResultsMatch": "Ningún péptido coincide con \"{{query}}\"",
     "addFirstPeptide": "Agrega el primer péptido al catálogo.",
+    "formLabel": {
+      "TABLET": "Tableta",
+      "CAPSULE": "Cápsula",
+      "LIQUID": "Líquido",
+      "INJECTION": "Inyección",
+      "TOPICAL": "Tópico",
+      "OTHER": "Otro"
+    },
     "form": {
       "tablet_one": "{{count}} tableta",
       "tablet_other": "{{count}} tabletas",
@@ -142,6 +151,7 @@
     "staffBanner": "Agregando entrada en nombre del paciente",
     "date": "Fecha *",
     "datePlaceholder": "AAAA-MM-DD",
+    "weight": "Peso",
     "weightKg": "Peso (kg)",
     "weightPlaceholder": "ej. 70.5",
     "heightCm": "Altura (cm)",
@@ -478,5 +488,145 @@
     "tapAboveToLog": "Toca arriba para registrar {{type}}.",
     "noEntriesLogged": "Aún no se han registrado entradas.",
     "linkedToReport": " · Vinculado a un informe"
+  },
+  "history": {
+    "title": "Historial de actividad",
+    "noActivityYet": "Aún no hay actividad.",
+    "notesOnly": "Solo notas",
+    "staffEntry": "Entrada del personal",
+    "photoUploaded": "Foto subida"
+  },
+  "medicationForm": {
+    "addTitle": "Agregar péptido",
+    "cancelWithArrow": "← Cancelar",
+    "nameLabel": "Nombre *",
+    "namePlaceholder": "p. ej. Metformina",
+    "dosageLabel": "Dosis",
+    "dosagePlaceholder": "p. ej. 500 mg dos veces al día",
+    "formFieldLabel": "Forma",
+    "quantityLabel": "Cantidad por dosis",
+    "quantityPlaceholder": "p. ej. 2 (tabletas)",
+    "foodFieldLabel": "Instrucción alimentaria",
+    "instructionsLabel": "Instrucciones",
+    "instructionsPlaceholder": "p. ej. Tomar con alimentos",
+    "notesLabel": "Notas de prescripción",
+    "notesPlaceholder": "Notas internas para el equipo de atención",
+    "savePeptide": "Guardar péptido",
+    "createFailed": "Error al crear el péptido",
+    "foodOptions": {
+      "withFood": "Con alimentos",
+      "withoutFood": "Sin alimentos",
+      "either": "Cualquiera"
+    },
+    "assignTitle": "Asignar péptido",
+    "peptideLabel": "Péptido",
+    "selectPatientLabel": "Seleccionar paciente *",
+    "noPatientsFound": "No se encontraron pacientes",
+    "frequencyLabel": "Frecuencia *",
+    "frequencyOptions": {
+      "onceDaily": "Una vez al día",
+      "twiceDaily": "Dos veces al día",
+      "threeTimesDaily": "Tres veces al día",
+      "asNeeded": "Según sea necesario",
+      "weekly": "Semanal"
+    },
+    "timesPerDay_one": "Veces al día — {{count}} vez",
+    "timesPerDay_other": "Veces al día — {{count}} veces",
+    "timeSlotLabel": "Hora {{n}}",
+    "removeTimeA11y": "Eliminar esta hora",
+    "addTime": "Agregar hora",
+    "startDateLabel": "Fecha de inicio *",
+    "endDateLabel": "Fecha de fin",
+    "assignmentCreatedTitle": "Asignación creada",
+    "assignmentCreatedBody": "{{name}} ha sido asignado.",
+    "assignFailed": "Error al asignar"
+  },
+  "medicationDetail": {
+    "failedToLoad": "Error al cargar",
+    "deletePeptideTitle": "¿Eliminar péptido?",
+    "deleteBody": "¿Eliminar {{name}}? Esto no se puede deshacer.",
+    "couldNotDelete": "No se pudo eliminar",
+    "notFound": "Péptido no encontrado",
+    "activePatient_one": "{{count}} paciente activo",
+    "activePatient_other": "{{count}} pacientes activos",
+    "form": "Forma",
+    "quantityPerDose": "Cantidad por dosis",
+    "foodInstruction": "Instrucción alimentaria",
+    "instructions": "Instrucciones",
+    "prescribingNotes": "Notas de prescripción",
+    "assignToPatient": "Asignar a paciente",
+    "deleting": "Eliminando…"
+  },
+  "metricChart": {
+    "trendTitle": "Tendencia de {{label}}"
+  },
+  "notificationTypes": {
+    "touchBase": {
+      "title": "Recordatorio de seguimiento",
+      "bodyWithDays_one": "Necesitas volver a contactar a {{name}} — el último contacto fue hace {{count}} día.",
+      "bodyWithDays_other": "Necesitas volver a contactar a {{name}} — el último contacto fue hace {{count}} días.",
+      "bodyNever": "Necesitas volver a contactar a {{name}} — nunca ha habido contacto."
+    },
+    "newPatientMessage": { "title": "Nuevo mensaje de paciente" },
+    "newMessage": { "title": "Nuevo mensaje" },
+    "medication": {
+      "title": "Recordatorio de medicamento",
+      "bodyWithDosage": "Es hora de tomar {{name}} ({{dosage}})",
+      "bodyNoDosage": "Es hora de tomar {{name}}"
+    },
+    "appointment": {
+      "title": "Próxima cita",
+      "bodyWithReason": "Tienes una cita el {{when}} ({{reason}})",
+      "bodyNoReason": "Tienes una cita el {{when}}"
+    },
+    "testScan": {
+      "title": "Recordatorio de prueba/escaneo",
+      "in2Days": "\"{{name}}\" vence en 2 días. Envía tus resultados pronto.",
+      "dueToday": "\"{{name}}\" vence hoy. Envía tus resultados.",
+      "overdue_one": "\"{{name}}\" lleva {{count}} día de retraso. Envía tus resultados lo antes posible.",
+      "overdue_other": "\"{{name}}\" lleva {{count}} días de retraso. Envía tus resultados lo antes posible."
+    }
+  },
+  "assignmentDetail": {
+    "notFound": "Asignación no encontrada",
+    "failedToLoad": "Error al cargar la asignación",
+    "couldNotLogDose": "No se pudo registrar la dosis",
+    "downloadPrescription": "Descargar receta",
+    "markTodayDoseTaken": "Marcar dosis de hoy como tomada",
+    "todayDoseLogged": "Dosis de hoy registrada ✓",
+    "doseHistory": "Historial de dosis",
+    "noDosesLoggedYet": "Aún no hay dosis registradas"
+  },
+  "peptidesPatient": {
+    "title": "Péptidos",
+    "editTitle": "Editar {{name}}",
+    "frequencyFieldLabel": "Frecuencia",
+    "startDateLabel": "Fecha de inicio",
+    "endDateOptionalLabel": "Fecha de fin (opcional)",
+    "assignFromDashboard": "Asigna uno desde el panel de este paciente.",
+    "orderHistory": "Historial de pedidos",
+    "noOrdersLoggedYet": "Aún no hay pedidos registrados.",
+    "doseLabel": "Dosis",
+    "dosePlaceholder": "p. ej. 5 mg",
+    "saveOrder": "Guardar pedido",
+    "couldNotSaveOrder": "No se pudo guardar el pedido",
+    "couldNotDeleteOrder": "No se pudo eliminar el pedido",
+    "addOrder": "+ Agregar pedido",
+    "addTime": "+ Agregar hora",
+    "pdfLabel": "PDF",
+    "downloading": "Descargando…",
+    "deleteConfirmBody": "¿Eliminar {{name}} de los péptidos activos de este paciente? Esto también detiene sus recordatorios de dosis.",
+    "couldNotDownloadPrescription": "No se pudo descargar la receta"
+  },
+  "manageUsers": {
+    "title": "Administrar usuarios",
+    "you": "(tú)",
+    "resetPassword": "Restablecer contraseña",
+    "deleteUserTitle": "¿Eliminar a {{name}}?",
+    "deleteUserBodyWithHealth": "Esto elimina permanentemente su cuenta y todos los datos de salud asociados. Esto no se puede deshacer.",
+    "deleteUserBody": "Esto elimina permanentemente su cuenta. Esto no se puede deshacer.",
+    "deleteFailed": "Error al eliminar",
+    "deleteFailedDefault": "No se pudo eliminar esta cuenta.",
+    "noUsersFound": "No se encontraron usuarios."
   }
 }

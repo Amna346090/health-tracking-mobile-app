@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Path, Circle, Line, Text as SvgText, G } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography, radius, shadows } from '../theme';
 
 export interface MetricPoint {
@@ -19,6 +20,7 @@ const PAD = { left: 44, right: 12, top: 14, bottom: 28 };
 const CHART_H = 130;
 
 export function MetricChart({ data, label, width: outerWidth }: Props) {
+  const { t } = useTranslation();
   if (data.length < 2) return null;
 
   const totalW = outerWidth ?? Dimensions.get('window').width - 32;
@@ -46,7 +48,7 @@ export function MetricChart({ data, label, width: outerWidth }: Props) {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{label} Trend</Text>
+      <Text style={styles.title}>{t('metricChart.trendTitle', { label })}</Text>
       <Svg width={totalW} height={totalH}>
         {yTicks.map((v, i) => (
           <G key={i}>

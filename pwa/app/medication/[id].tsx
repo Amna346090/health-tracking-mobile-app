@@ -11,11 +11,14 @@ import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
-import { getMedicationById, deleteMedication, type Medication } from '../../api/medications';
+import { getMedicationById, deleteMedication, type Medication, type FoodInstruction } from '../../api/medications';
 import { useAuth } from '../../context/auth';
 
 export default function MedicationDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -29,7 +32,7 @@ export default function MedicationDetailScreen() {
   useEffect(() => {
     getMedicationById(medId)
       .then(setMedication)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .catch((e) => setError(e instanceof Error ? e.message : t('medicationDetail.failedToLoad')))
       .finally(() => setLoading(false));
   }, [medId]);
 
@@ -44,12 +47,14 @@ export default function MedicationDetailScreen() {
   function handleDelete() {
     if (!medication) return;
     Alert.alert(
-      'Delete peptide?',
-      `Delete ${medication.dosage ? `${medication.name} · ${medication.dosage}` : medication.name}? This cannot be undone.`,
+      t('medicationDetail.deletePeptideTitle'),
+      t('medicationDetail.deleteBody', {
+        name: medication.dosage ? `${medication.name} · ${medication.dosage}` : medication.name,
+      }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
@@ -57,7 +62,7 @@ export default function MedicationDetailScreen() {
               await deleteMedication(medication.id);
               router.back();
             } catch (e) {
-              Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.');
+              Alert.alert(t('medicationDetail.couldNotDelete'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
             } finally {
               setDeleting(false);
             }
@@ -72,11 +77,11 @@ export default function MedicationDetailScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.navBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.center}>
-          <Text style={styles.errorText}>{error ?? 'Peptide not found'}</Text>
+          <Text style={styles.errorText}>{error ?? t('medicationDetail.notFound')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -87,7 +92,7 @@ export default function MedicationDetailScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.navBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -96,25 +101,25 @@ export default function MedicationDetailScreen() {
           {medication.dosage && <Text style={styles.dosage}>{medication.dosage}</Text>}
           <View style={styles.countBadge}>
             <Text style={styles.countText}>
-              {medication._count.assignments} active patient{medication._count.assignments !== 1 ? 's' : ''}
+              {t('medicationDetail.activePatient', { count: medication._count.assignments })}
             </Text>
           </View>
         </View>
 
         {medication.form && (
-          <InfoRow label="Form" value={formatEnum(medication.form)} />
+          <InfoRow label={t('medicationDetail.form')} value={t(`medications.formLabel.${medication.form}`)} />
         )}
         {medication.quantityPerDose !== null && (
-          <InfoRow label="Quantity per dose" value={String(medication.quantityPerDose)} />
+          <InfoRow label={t('medicationDetail.quantityPerDose')} value={String(medication.quantityPerDose)} />
         )}
         {medication.foodInstruction && (
-          <InfoRow label="Food instruction" value={formatEnum(medication.foodInstruction)} />
+          <InfoRow label={t('medicationDetail.foodInstruction')} value={foodLabel(medication.foodInstruction, t)} />
         )}
         {medication.instructions && (
-          <InfoRow label="Instructions" value={medication.instructions} />
+          <InfoRow label={t('medicationDetail.instructions')} value={medication.instructions} />
         )}
         {medication.prescribingNotes && (
-          <InfoRow label="Prescribing notes" value={medication.prescribingNotes} />
+          <InfoRow label={t('medicationDetail.prescribingNotes')} value={medication.prescribingNotes} />
         )}
 
         <TouchableOpacity
@@ -126,14 +131,14 @@ export default function MedicationDetailScreen() {
           }
           activeOpacity={0.8}
         >
-          <Text style={styles.assignBtnText}>Assign to Patient</Text>
+          <Text style={styles.assignBtnText}>{t('medicationDetail.assignToPatient')}</Text>
         </TouchableOpacity>
 
         {user?.role === 'ADMIN' && (
           <View style={styles.deleteRow}>
             <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} disabled={deleting}>
               <Feather name="trash-2" size={13} color={colors.danger} />
-              <Text style={styles.deleteBtnText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
+              <Text style={styles.deleteBtnText}>{deleting ? t('medicationDetail.deleting') : t('common.delete')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -142,11 +147,14 @@ export default function MedicationDetailScreen() {
   );
 }
 
-function formatEnum(value: string): string {
-  return value
-    .split('_')
-    .map((w, i) => (i === 0 ? w.charAt(0) + w.slice(1).toLowerCase() : w.toLowerCase()))
-    .join(' ');
+const FOOD_KEY: Record<FoodInstruction, string> = {
+  WITH_FOOD: 'medications.food.withFood',
+  WITHOUT_FOOD: 'medications.food.withoutFood',
+  EITHER: 'medications.food.either',
+};
+
+function foodLabel(value: FoodInstruction, t: TFunction): string {
+  return t(FOOD_KEY[value]);
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {

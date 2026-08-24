@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, radius, spacing, typography } from '../theme';
 import { EmptyState } from '../components/EmptyState';
 import { Card } from '../components/Card';
@@ -34,6 +35,75 @@ function formatWhen(iso: string, locale: string): string {
   return new Date(iso).toLocaleString(locale, {
     month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   });
+}
+
+/**
+ * Notification title/body are baked into English by the backend at creation time (it doesn't
+ * know the viewer's language). For the known system-generated types, `params` carries the raw
+ * values so we can rebuild the sentence in the current language instead; anything without a
+ * recognized type/params (older rows, or unmapped types) just falls back to the stored text.
+ */
+function renderNotification(item: Notification, t: TFunction): { title: string; body: string } {
+  const p = item.params;
+
+  switch (item.type) {
+    case 'TOUCH_BASE_DUE': {
+      const title = t('notificationTypes.touchBase.title');
+      if (p && typeof p.patientName === 'string') {
+        const name = p.patientName;
+        const daysSince = typeof p.daysSince === 'number' ? p.daysSince : null;
+        const body = daysSince !== null
+          ? t('notificationTypes.touchBase.bodyWithDays', { name, count: daysSince })
+          : t('notificationTypes.touchBase.bodyNever', { name });
+        return { title, body };
+      }
+      return { title, body: item.body };
+    }
+    case 'MEDICATION_REMINDER': {
+      const title = t('notificationTypes.medication.title');
+      if (p && typeof p.medicationName === 'string') {
+        const name = p.medicationName;
+        const dosage = typeof p.dosage === 'string' ? p.dosage : null;
+        const body = dosage
+          ? t('notificationTypes.medication.bodyWithDosage', { name, dosage })
+          : t('notificationTypes.medication.bodyNoDosage', { name });
+        return { title, body };
+      }
+      return { title, body: item.body };
+    }
+    case 'APPOINTMENT_REMINDER': {
+      const title = t('notificationTypes.appointment.title');
+      if (p && typeof p.scheduledFor === 'string') {
+        const when = formatWhen(p.scheduledFor, t('language.locale'));
+        const reason = typeof p.reason === 'string' ? p.reason : null;
+        const body = reason
+          ? t('notificationTypes.appointment.bodyWithReason', { when, reason })
+          : t('notificationTypes.appointment.bodyNoReason', { when });
+        return { title, body };
+      }
+      return { title, body: item.body };
+    }
+    case 'TEST_REQUEST_REMINDER': {
+      const title = t('notificationTypes.testScan.title');
+      if (p && typeof p.testName === 'string' && typeof p.stage === 'string') {
+        const name = p.testName;
+        if (p.stage === 'in2Days') return { title, body: t('notificationTypes.testScan.in2Days', { name }) };
+        if (p.stage === 'dueToday') return { title, body: t('notificationTypes.testScan.dueToday', { name }) };
+        if (p.stage === 'overdue' && typeof p.daysOverdue === 'number') {
+          return { title, body: t('notificationTypes.testScan.overdue', { name, count: p.daysOverdue }) };
+        }
+      }
+      return { title, body: item.body };
+    }
+    case 'NEW_MESSAGE': {
+      const title = item.title === 'New patient message'
+        ? t('notificationTypes.newPatientMessage.title')
+        : t('notificationTypes.newMessage.title');
+      return { title, body: item.body };
+    }
+    default:
+      return { title: item.title, body: item.body };
+  }
 }
 
 export default function NotificationsScreen() {
@@ -139,14 +209,16 @@ export default function NotificationsScreen() {
           ) : null
         }
         ListEmptyComponent={<EmptyState icon="🔔" title={t('notifications.noneYetTitle')} subtitle={t('notifications.noneYetSubtitle')} />}
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const { title, body } = renderNotification(item, t);
+          return (
           <TouchableOpacity onPress={() => handlePress(item)} activeOpacity={0.7}>
             <Card style={[styles.notifCard, !item.readAt && styles.notifCardUnread]}>
               <View style={styles.notifRow}>
                 <Feather name="bell" size={18} color={colors.primary} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.notifTitle}>{item.title}</Text>
-                  <Text style={styles.notifBody}>{item.body}</Text>
+                  <Text style={styles.notifTitle}>{title}</Text>
+                  <Text style={styles.notifBody}>{body}</Text>
                   <Text style={styles.notifMeta}>{formatWhen(item.createdAt, t('language.locale'))}</Text>
                 </View>
               </View>
@@ -164,7 +236,8 @@ export default function NotificationsScreen() {
               </View>
             </Card>
           </TouchableOpacity>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );

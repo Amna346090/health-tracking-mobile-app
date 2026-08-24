@@ -6,6 +6,7 @@ export interface Notification {
   type: string;
   title: string;
   body: string;
+  params: Record<string, unknown> | null;
   patientId: number | null;
   readAt: string | null;
   createdAt: string;
