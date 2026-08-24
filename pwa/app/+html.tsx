@@ -24,7 +24,9 @@ export default function Root({ children }: PropsWithChildren) {
             // The browser's default focus ring bleeds outside rounded input corners
             // and overlaps neighboring fields — every input already shows focus via
             // its own border color change, so the native ring is just redundant.
-            __html: `input, textarea { outline: none; }`,
+            // overscroll-behavior-y: contain stops the phone browser's own native
+            // pull-down-to-reload gesture from firing alongside our custom in-app one.
+            __html: `input, textarea { outline: none; } html, body { overscroll-behavior-y: contain; }`,
           }}
         />
         <script
