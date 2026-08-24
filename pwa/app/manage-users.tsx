@@ -11,6 +11,8 @@ import { Alert } from '../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useAuth } from '../context/auth';
 import { getAllUsers, deleteUser, type ManagedUser } from '../api/users';
@@ -27,11 +29,13 @@ function UserRow({
   isSelf,
   onDelete,
   onResetPassword,
+  t,
 }: {
   user: ManagedUser;
   isSelf: boolean;
   onDelete: (user: ManagedUser) => void;
   onResetPassword: (user: ManagedUser) => void;
+  t: TFunction;
 }) {
   const badge = roleBadgeColor(user.role);
   const initials = (user.firstName[0] + (user.lastName[0] ?? user.firstName[1] ?? '')).toUpperCase();
@@ -44,7 +48,7 @@ function UserRow({
         </View>
         <View style={styles.rowBody}>
           <Text style={styles.rowName}>
-            {user.firstName} {user.lastName} {isSelf && <Text style={styles.youTag}>(you)</Text>}
+            {user.firstName} {user.lastName} {isSelf && <Text style={styles.youTag}>{t('manageUsers.you')}</Text>}
           </Text>
           <Text style={styles.rowEmail}>{user.email ?? user.username}</Text>
         </View>
@@ -59,14 +63,14 @@ function UserRow({
             onPress={() => onResetPassword(user)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.resetBtnText}>Reset Password</Text>
+            <Text style={styles.resetBtnText}>{t('manageUsers.resetPassword')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => onDelete(user)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.deleteBtnText}>Delete</Text>
+            <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -75,6 +79,7 @@ function UserRow({
 }
 
 export default function ManageUsersScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user: currentUser } = useAuth();
 
@@ -107,12 +112,12 @@ export default function ManageUsersScreen() {
 
   function confirmDelete(target: ManagedUser) {
     Alert.alert(
-      `Delete ${target.firstName} ${target.lastName}?`,
-      `This permanently removes their account${target.role === 'PATIENT' ? ' and all associated health data' : ''}. This cannot be undone.`,
+      t('manageUsers.deleteUserTitle', { name: `${target.firstName} ${target.lastName}` }),
+      target.role === 'PATIENT' ? t('manageUsers.deleteUserBodyWithHealth') : t('manageUsers.deleteUserBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setDeletingId(target.id);
@@ -120,8 +125,8 @@ export default function ManageUsersScreen() {
               await deleteUser(target.id);
               setUsers((prev) => prev.filter((u) => u.id !== target.id));
             } catch (err) {
-              const message = err instanceof ApiError ? err.message : 'Could not delete this account.';
-              Alert.alert('Delete failed', message);
+              const message = err instanceof ApiError ? err.message : t('manageUsers.deleteFailedDefault');
+              Alert.alert(t('manageUsers.deleteFailed'), message);
             } finally {
               setDeletingId(null);
             }
@@ -135,9 +140,9 @@ export default function ManageUsersScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Manage Users</Text>
+        <Text style={styles.navTitle}>{t('manageUsers.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -153,7 +158,7 @@ export default function ManageUsersScreen() {
           onRefresh={() => load(true)}
           refreshing={refreshing}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No users found.</Text>
+            <Text style={styles.emptyText}>{t('manageUsers.noUsersFound')}</Text>
           }
           renderItem={({ item }) => (
             <View style={deletingId === item.id ? styles.rowDeleting : undefined}>
@@ -162,6 +167,7 @@ export default function ManageUsersScreen() {
                 isSelf={item.id === currentUser?.id}
                 onDelete={confirmDelete}
                 onResetPassword={goToResetPassword}
+                t={t}
               />
             </View>
           )}

@@ -484,6 +484,7 @@ model Notification {
   type      String
   title     String
   body      String
+  params    Json?
   patientId Int?
   patient   PatientProfile? @relation(fields: [patientId], references: [id])
   readAt    DateTime?
