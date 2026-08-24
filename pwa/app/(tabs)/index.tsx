@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
-  RefreshControl,
 } from 'react-native';
 import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +20,8 @@ import { EmptyState } from '../../components/EmptyState';
 import { TodayMedicationCard } from '../../components/MedicationCard';
 import { HealthLogCard } from '../../components/HealthLogCard';
 import { LanguageSwitcher } from '../../components/LanguageSwitcher';
+import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { colors, spacing, typography } from '../../theme';
 import { getTodaySchedule, logDose, type TodayScheduleItem } from '../../api/assignments';
 import { getHealthLogs, type HealthLog } from '../../api/healthLog';
@@ -63,6 +64,8 @@ export default function DashboardScreen() {
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [refreshing,      setRefreshing]      = useState(false);
   const [markingId,       setMarkingId]       = useState<number | null>(null);
+
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => loadPatientData(true));
 
   const hasLoadedPatientDataRef = useRef(false);
 
@@ -146,17 +149,12 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => loadPatientData(true)}
-            tintColor={colors.primary}
-          />
-        }
+        {...scrollHandlers}
       >
         {/* ── Header ── */}
         <View style={styles.header}>
@@ -563,7 +561,7 @@ const statStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg.app },
+  safe: { flex: 1, backgroundColor: colors.bg.app, position: 'relative' },
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: spacing.lg,
