@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Dimensions,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Switch,
@@ -18,6 +17,8 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Avatar } from '../../components/Avatar';
 import { MiniPhotoGrid, cellSize } from '../../components/PhotoGrid';
+import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getPhotos, type Photo } from '../../api/photos';
 import { updateNotificationSettings } from '../../api/notifications';
@@ -229,6 +230,8 @@ export default function ProfileScreen() {
     try { await refreshUser(); } finally { setRefreshing(false); }
   }
 
+  const { pullProgress, scrollHandlers } = usePullToRefresh(handleRefresh);
+
   function confirmLogout() {
     Alert.alert(t('profile.signOutTitle'), t('profile.signOutConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -249,10 +252,11 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        {...scrollHandlers}
       >
         {/* Avatar + name */}
         <View style={styles.avatarSection}>
@@ -343,7 +347,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.bg.app },
+  safe:   { flex: 1, backgroundColor: colors.bg.app, position: 'relative' },
   scroll: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,

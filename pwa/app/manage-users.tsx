@@ -17,6 +17,8 @@ import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useAuth } from '../context/auth';
 import { getAllUsers, deleteUser, type ManagedUser } from '../api/users';
 import { ApiError } from '../api/client';
+import { PullToRefreshIndicator } from '../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function roleBadgeColor(role: string) {
   if (role === 'ADMIN') return { bg: colors.dangerBg,   text: colors.danger };
@@ -103,6 +105,8 @@ export default function ManageUsersScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
+
   function goToResetPassword(target: ManagedUser) {
     router.push({
       pathname: '/reset-password/[userId]',
@@ -138,6 +142,7 @@ export default function ManageUsersScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
@@ -155,8 +160,7 @@ export default function ManageUsersScreen() {
           data={users}
           keyExtractor={(u) => String(u.id)}
           contentContainerStyle={styles.listContent}
-          onRefresh={() => load(true)}
-          refreshing={refreshing}
+          {...scrollHandlers}
           ListEmptyComponent={
             <Text style={styles.emptyText}>{t('manageUsers.noUsersFound')}</Text>
           }
@@ -178,7 +182,7 @@ export default function ManageUsersScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg.app },
+  safe: { flex: 1, backgroundColor: colors.bg.app, position: 'relative' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   navBar: {

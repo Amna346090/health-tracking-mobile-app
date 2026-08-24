@@ -81,7 +81,7 @@ export default function PhotoGalleryScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{t('photoGallery.title')}</Text>
         {canUpload ? (

@@ -9,6 +9,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAllTestRequests, type TestRequestWithPatient, type TestRequestStatus } from '../../api/testRequests';
+import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 const STATUS_KEY: Record<TestRequestStatus, string> = {
   PENDING: 'testRequests.status.pending',
@@ -49,8 +51,11 @@ export default function TestRequestsQueueScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
@@ -81,8 +86,7 @@ export default function TestRequestsQueueScreen() {
           data={requests}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
-          refreshing={refreshing}
-          onRefresh={() => load(true)}
+          {...scrollHandlers}
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>{t('testRequests.noneYet')}</Text>
@@ -111,7 +115,7 @@ export default function TestRequestsQueueScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg.app },
+  safe: { flex: 1, backgroundColor: colors.bg.app, position: 'relative' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl },
   topBar: {
     flexDirection: 'row',

@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { api } from '../../api/client';
 import { Avatar } from '../../components/Avatar';
+import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 interface PatientRow {
   id: number;
@@ -68,6 +70,8 @@ export default function PatientsScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
+
   const filtered = useMemo(() => {
     if (!query.trim()) return patients;
     const q = query.toLowerCase();
@@ -78,6 +82,7 @@ export default function PatientsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -114,8 +119,7 @@ export default function PatientsScreen() {
           data={filtered}
           keyExtractor={(p) => String(p.id)}
           contentContainerStyle={styles.list}
-          refreshing={refreshing}
-          onRefresh={() => load(true)}
+          {...scrollHandlers}
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>
@@ -136,7 +140,7 @@ export default function PatientsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.bg.app },
+  safe:   { flex: 1, backgroundColor: colors.bg.app, position: 'relative' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl },
 
   header: {

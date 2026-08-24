@@ -442,7 +442,8 @@
     "captionPlaceholder": "Add a caption (optional)"
   },
   "photoGallery": {
-    "title": "Progress Photos"
+    "title": "Progress Photos",
+    "noPhotosYet": "No photos yet"
   },
   "photoDetail": {
     "loadFailed": "Failed to load",
