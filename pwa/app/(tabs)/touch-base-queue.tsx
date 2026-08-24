@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getTouchBaseQueue, markContacted, type TouchBaseQueueItem } from '../../api/touchBase';
+import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 function daysSince(iso: string | null, t: TFunction): string {
   if (!iso) return t('touchBase.neverContacted');
@@ -44,6 +46,8 @@ export default function TouchBaseQueueScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
+
   async function handleMarkContacted(patientId: number) {
     setContactingId(patientId);
     try {
@@ -58,6 +62,7 @@ export default function TouchBaseQueueScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('touchBase.queueTitle')}</Text>
         {!loading && (
@@ -76,8 +81,7 @@ export default function TouchBaseQueueScreen() {
           data={queue}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
-          refreshing={refreshing}
-          onRefresh={() => load(true)}
+          {...scrollHandlers}
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>{t('touchBase.noPatientsOverdue')}</Text>
@@ -121,7 +125,7 @@ export default function TouchBaseQueueScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg.app },
+  safe: { flex: 1, backgroundColor: colors.bg.app, position: 'relative' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl },
 
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },

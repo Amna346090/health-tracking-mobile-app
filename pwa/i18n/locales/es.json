@@ -442,7 +442,8 @@
     "captionPlaceholder": "Agrega una descripción (opcional)"
   },
   "photoGallery": {
-    "title": "Fotos de progreso"
+    "title": "Fotos de progreso",
+    "noPhotosYet": "Aún no hay fotos"
   },
   "photoDetail": {
     "loadFailed": "Error al cargar",

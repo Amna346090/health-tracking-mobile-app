@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/auth';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
+import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { AssignmentCard, CatalogMedicationCard } from '../../components/MedicationCard';
 import { getAssignments, type MedicationAssignment } from '../../api/assignments';
 import { getAllMedications, type Medication } from '../../api/medications';
@@ -49,6 +50,8 @@ function PatientMedications({ patientId }: { patientId: number }) {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -69,27 +72,28 @@ function PatientMedications({ patientId }: { patientId: number }) {
   }
 
   return (
-    <FlatList
-      data={items}
-      keyExtractor={(item) => String(item.id)}
-      contentContainerStyle={styles.list}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.primary} />
-      }
-      renderItem={({ item }) => (
-        <AssignmentCard
-          item={item}
-          onPress={(a) => router.push(`/assignment/${a.id}`)}
-        />
-      )}
-      ListEmptyComponent={
-        <EmptyState
-          icon="💊"
-          title={t('medications.noneAssignedTitle')}
-          subtitle={t('medications.noneAssignedSubtitle')}
-        />
-      }
-    />
+    <View style={styles.relative}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
+      <FlatList
+        data={items}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.list}
+        {...scrollHandlers}
+        renderItem={({ item }) => (
+          <AssignmentCard
+            item={item}
+            onPress={(a) => router.push(`/assignment/${a.id}`)}
+          />
+        )}
+        ListEmptyComponent={
+          <EmptyState
+            icon="💊"
+            title={t('medications.noneAssignedTitle')}
+            subtitle={t('medications.noneAssignedSubtitle')}
+          />
+        }
+      />
+    </View>
   );
 }
 
@@ -129,8 +133,11 @@ function StaffMedications() {
     return () => clearTimeout(timer);
   }, [search, load]);
 
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(search, true));
+
   return (
-    <View style={styles.flex}>
+    <View style={styles.relative}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
@@ -166,13 +173,7 @@ function StaffMedications() {
           data={items}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => load(search, true)}
-              tintColor={colors.primary}
-            />
-          }
+          {...scrollHandlers}
           renderItem={({ item }) => (
             <CatalogMedicationCard
               item={item}
@@ -227,6 +228,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.app },
   container: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   flex: { flex: 1 },
+  relative: { flex: 1, position: 'relative' },
   header: { marginBottom: spacing.md, gap: spacing.xs },
   title: { ...typography.h1, color: colors.text.primary },
   subtitle: { ...typography.body2, color: colors.text.secondary },

@@ -23,6 +23,8 @@ import { EmptyState } from '../../components/EmptyState';
 import { FeelingPicker } from '../../components/FeelingPicker';
 import { HealthLogCard } from '../../components/HealthLogCard';
 import { WeightChart } from '../../components/WeightChart';
+import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import {
   createHealthLog,
   getHealthLogs,
@@ -490,6 +492,8 @@ function PatientHealthLogWithForm({
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
+
   const handleCreated = useCallback((log: HealthLog) => {
     setLogs((prev) => [log, ...prev]);
     if (log.weight) {
@@ -522,31 +526,33 @@ function PatientHealthLogWithForm({
   );
 
   return (
-    <FlatList
-      data={logs}
-      keyExtractor={(item) => String(item.id)}
-      contentContainerStyle={listStyles.list}
-      ListHeaderComponent={Header}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.primary} />
-      }
-      renderItem={({ item }) => <HealthLogCard log={item} />}
-      ListEmptyComponent={
-        !externalShowForm ? (
-          <EmptyState
-            icon="📈"
-            title={t('healthLog.noLogsYetTitle')}
-            subtitle={t('healthLog.noLogsYetSubtitleAbove')}
-          />
-        ) : null
-      }
-    />
+    <View style={listStyles.relative}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
+      <FlatList
+        data={logs}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={listStyles.list}
+        ListHeaderComponent={Header}
+        {...scrollHandlers}
+        renderItem={({ item }) => <HealthLogCard log={item} />}
+        ListEmptyComponent={
+          !externalShowForm ? (
+            <EmptyState
+              icon="📈"
+              title={t('healthLog.noLogsYetTitle')}
+              subtitle={t('healthLog.noLogsYetSubtitleAbove')}
+            />
+          ) : null
+        }
+      />
+    </View>
   );
 }
 
 const listStyles = StyleSheet.create({
   list:         { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  relative:     { flex: 1, position: 'relative' },
   sectionTitle: { ...(typography.h4 as object), color: colors.text.primary, marginBottom: spacing.sm },
   patientRow: {
     flexDirection: 'row',

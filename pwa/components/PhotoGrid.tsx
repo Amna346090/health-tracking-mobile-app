@@ -8,8 +8,11 @@ import {
   FlatList,
   Text,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, radius, typography } from '../theme';
 import type { Photo } from '../api/photos';
+import { PullToRefreshIndicator } from './PullToRefreshIndicator';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const COLS   = 3;
 const GAP    = 2;
@@ -69,39 +72,43 @@ export function PhotoGrid({
   ListHeaderComponent,
   ListFooterComponent,
   onEndReached,
-  refreshing,
+  refreshing = false,
   onRefresh,
 }: FullGridProps) {
+  const { t } = useTranslation();
   const size = cellSize();
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => onRefresh?.());
 
   return (
-    <FlatList
-      data={photos}
-      numColumns={COLS}
-      keyExtractor={(item) => String(item.id)}
-      columnWrapperStyle={styles.row}
-      contentContainerStyle={styles.grid}
-      ListHeaderComponent={ListHeaderComponent}
-      ListFooterComponent={ListFooterComponent}
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.3}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      renderItem={({ item }) => (
-        <TouchableOpacity onPress={() => onPress(item)} activeOpacity={0.85}>
-          <Image
-            source={{ uri: item.url }}
-            style={{ width: size, height: size }}
-            resizeMode="cover"
-          />
-        </TouchableOpacity>
-      )}
-      ListEmptyComponent={
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>No photos yet</Text>
-        </View>
-      }
-    />
+    <View style={styles.relative}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
+      <FlatList
+        data={photos}
+        numColumns={COLS}
+        keyExtractor={(item) => String(item.id)}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.grid}
+        ListHeaderComponent={ListHeaderComponent}
+        ListFooterComponent={ListFooterComponent}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.3}
+        {...scrollHandlers}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => onPress(item)} activeOpacity={0.85}>
+            <Image
+              source={{ uri: item.url }}
+              style={{ width: size, height: size }}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{t('photoGallery.noPhotosYet')}</Text>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
@@ -113,6 +120,7 @@ const styles = StyleSheet.create({
   },
   row:  { gap: GAP },
   grid: { gap: GAP },
+  relative: { flex: 1, position: 'relative' },
   empty: {
     paddingVertical: spacing.xl,
     alignItems: 'center',

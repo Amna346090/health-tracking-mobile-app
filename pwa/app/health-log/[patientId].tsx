@@ -9,7 +9,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -23,6 +22,8 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { HealthLogCard } from '../../components/HealthLogCard';
 import { WeightChart } from '../../components/WeightChart';
+import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import {
   getHealthLogs,
   getWeightTrend,
@@ -95,6 +96,8 @@ export default function PatientHealthLogScreen() {
   }, [pid]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
 
   const handleSave = async () => {
     if (!date.trim()) { Alert.alert(t('healthLog.dateRequired')); return; }
@@ -218,6 +221,7 @@ export default function PatientHealthLogScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <PullToRefreshIndicator pullProgress={pullProgress} refreshing={refreshing} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Nav bar */}
         <View style={styles.navBar}>
@@ -248,9 +252,7 @@ export default function PatientHealthLogScreen() {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
           ListHeaderComponent={Header}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.primary} />
-          }
+          {...scrollHandlers}
           renderItem={({ item }) => <HealthLogCard log={item} />}
           ListEmptyComponent={
             !showForm
@@ -264,7 +266,7 @@ export default function PatientHealthLogScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.bg.app },
+  safe:   { flex: 1, backgroundColor: colors.bg.app, position: 'relative' },
   flex:   { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list:   { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
