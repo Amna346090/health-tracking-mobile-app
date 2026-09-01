@@ -163,7 +163,7 @@ export default function TestRequestsScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Test/Scan Requests</Text>
+        <Text style={styles.title}>Requests</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -189,12 +189,12 @@ export default function TestRequestsScreen() {
               {showForm && (
                 <Card style={styles.formCard}>
                   <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>Test/scan name</Text>
+                    <Text style={styles.fieldLabel}>Request name</Text>
                     <TextInput
                       style={styles.input}
                       value={name}
                       onChangeText={setName}
-                      placeholder="e.g. Blood Panel, Chest X-Ray"
+                      placeholder="e.g. Submit progress photos"
                       placeholderTextColor={colors.text.muted}
                     />
                   </View>
@@ -204,13 +204,13 @@ export default function TestRequestsScreen() {
                       style={styles.input}
                       value={instructions}
                       onChangeText={setInstructions}
-                      placeholder="e.g. Fasting required"
+                      placeholder="e.g. Any instructions"
                       placeholderTextColor={colors.text.muted}
                     />
                   </View>
                   <DateField label="Due date" value={dueDate} onChange={setDueDate} />
                   <Button
-                    label={saving ? 'Saving…' : editingId !== null ? 'Save changes' : 'Request test/scan'}
+                    label={saving ? 'Saving…' : editingId !== null ? 'Save changes' : 'Send request'}
                     onPress={handleSaveForm}
                     loading={saving}
                   />
@@ -223,8 +223,8 @@ export default function TestRequestsScreen() {
           !showForm ? (
             <EmptyState
               icon="🧪"
-              title="No test/scan requests"
-              subtitle={isOwnPatient ? "Your care team hasn't requested any tests or scans yet." : 'This patient has no test/scan requests yet.'}
+              title="No requests"
+              subtitle={isOwnPatient ? "Your team hasn't sent any requests yet." : 'This client has no requests yet.'}
             />
           ) : null
         }

@@ -37,7 +37,7 @@ function PatientMedications({ patientId }: { patientId: number }) {
       const data = await getAssignments(patientId);
       setItems(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load peptides');
+      setError(e instanceof Error ? e.message : 'Failed to load protocols');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -82,9 +82,9 @@ function PatientMedications({ patientId }: { patientId: number }) {
       )}
       ListEmptyComponent={
         <EmptyState
-          icon="💊"
-          title="No peptides assigned"
-          subtitle="Your prescriptions and dosing schedule will appear here once set up by your care team."
+          icon="📋"
+          title="No protocols assigned"
+          subtitle="Your protocol and schedule will appear here once set up by your team."
         />
       }
     />
@@ -131,7 +131,7 @@ function StaffMedications() {
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search peptides..."
+          placeholder="Search protocols..."
           placeholderTextColor={colors.text.muted}
           value={search}
           onChangeText={setSearch}
@@ -178,12 +178,12 @@ function StaffMedications() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="💊"
-              title={search ? 'No results' : 'No peptides'}
+              icon="📋"
+              title={search ? 'No results' : 'No protocols'}
               subtitle={
                 search
-                  ? `No peptides match "${search}"`
-                  : 'Add the first peptide to the catalog.'
+                  ? `No protocols match "${search}"`
+                  : 'Add the first protocol to the catalog.'
               }
             />
           }
@@ -203,9 +203,9 @@ export default function MedicationsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Peptides</Text>
+          <Text style={styles.title}>Protocols</Text>
           <Text style={styles.subtitle}>
-            {isStaff ? 'Peptide catalog' : 'Your active prescriptions'}
+            {isStaff ? 'Protocol catalog' : 'Your active protocols'}
           </Text>
         </View>
 

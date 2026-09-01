@@ -135,7 +135,7 @@ export default function DocumentsScreen() {
         style={styles.tagInput}
         value={editTag}
         onChangeText={setEditTag}
-        placeholder="Tag (e.g. Lab Report)"
+        placeholder="Tag (e.g. Report)"
         placeholderTextColor={colors.text.muted}
       />
       <View style={styles.editActions}>
@@ -178,7 +178,7 @@ export default function DocumentsScreen() {
           <EmptyState
             icon="📄"
             title="No documents yet"
-            subtitle={canManage ? 'Tap "Upload Document" to add a scan or report.' : 'This patient has no documents yet.'}
+            subtitle={canManage ? 'Tap "Upload Document" to add a file.' : 'This client has no documents yet.'}
           />
         }
         renderItem={({ item }) => (

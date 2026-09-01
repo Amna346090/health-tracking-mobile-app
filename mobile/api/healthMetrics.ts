@@ -1,35 +1,9 @@
 import { api } from './client';
 
-export type HealthMetricType =
-  | 'CHOLESTEROL_TOTAL'
-  | 'CHOLESTEROL_LDL'
-  | 'CHOLESTEROL_HDL'
-  | 'TRIGLYCERIDES'
-  | 'BLOOD_GLUCOSE'
-  | 'BLOOD_PRESSURE_SYSTOLIC'
-  | 'BLOOD_PRESSURE_DIASTOLIC'
-  | 'OTHER';
-
-export const HEALTH_METRIC_TYPE_LABEL: Record<HealthMetricType, string> = {
-  CHOLESTEROL_TOTAL: 'Total Cholesterol',
-  CHOLESTEROL_LDL: 'LDL Cholesterol',
-  CHOLESTEROL_HDL: 'HDL Cholesterol',
-  TRIGLYCERIDES: 'Triglycerides',
-  BLOOD_GLUCOSE: 'Blood Glucose',
-  BLOOD_PRESSURE_SYSTOLIC: 'Blood Pressure (Systolic)',
-  BLOOD_PRESSURE_DIASTOLIC: 'Blood Pressure (Diastolic)',
-  OTHER: 'Other',
-};
-
-export const HEALTH_METRIC_TYPES: HealthMetricType[] = [
-  'CHOLESTEROL_TOTAL', 'CHOLESTEROL_LDL', 'CHOLESTEROL_HDL', 'TRIGLYCERIDES',
-  'BLOOD_GLUCOSE', 'BLOOD_PRESSURE_SYSTOLIC', 'BLOOD_PRESSURE_DIASTOLIC', 'OTHER',
-];
-
 export interface HealthMetric {
   id: number;
   patientId: number;
-  type: HealthMetricType;
+  type: string;
   label: string | null;
   value: number;
   unit: string | null;
@@ -44,16 +18,25 @@ export interface MetricTrendPoint {
   value: number;
 }
 
-export function getMetrics(patientId: number, type?: HealthMetricType): Promise<HealthMetric[]> {
-  return api.get<HealthMetric[]>(`/patients/${patientId}/health-metrics${type ? `?type=${type}` : ''}`);
+/** Category names this client has at least one entry for — drives the picker chips. */
+export function getMetricTypes(patientId: number): Promise<string[]> {
+  return api.get<string[]>(`/patients/${patientId}/health-metrics/types`);
 }
 
-export function getMetricTrend(patientId: number, type: HealthMetricType, limit = 30): Promise<MetricTrendPoint[]> {
-  return api.get<MetricTrendPoint[]>(`/patients/${patientId}/health-metrics/trend?type=${type}&limit=${limit}`);
+export function getMetrics(patientId: number, type?: string): Promise<HealthMetric[]> {
+  return api.get<HealthMetric[]>(
+    `/patients/${patientId}/health-metrics${type ? `?type=${encodeURIComponent(type)}` : ''}`,
+  );
+}
+
+export function getMetricTrend(patientId: number, type: string, limit = 30): Promise<MetricTrendPoint[]> {
+  return api.get<MetricTrendPoint[]>(
+    `/patients/${patientId}/health-metrics/trend?type=${encodeURIComponent(type)}&limit=${limit}`,
+  );
 }
 
 export interface CreateHealthMetricInput {
-  type: HealthMetricType;
+  type: string;
   label?: string | null;
   value: number;
   unit?: string | null;

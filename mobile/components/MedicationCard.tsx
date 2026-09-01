@@ -6,15 +6,6 @@ import type { TodayScheduleItem, MedicationAssignment, DoseStatus } from '../api
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const FORM_LABEL: Record<string, string> = {
-  TABLET: 'tablet',
-  CAPSULE: 'capsule',
-  LIQUID: 'dose',
-  INJECTION: 'injection',
-  TOPICAL: 'application',
-  OTHER: 'unit',
-};
-
 const FOOD_LABEL: Record<string, string> = {
   WITH_FOOD: 'With food',
   WITHOUT_FOOD: 'Without food',
@@ -43,7 +34,7 @@ function formatDoseDetail(
 ): string | null {
   const parts: string[] = [];
   if (quantityPerDose) {
-    const unit = form ? FORM_LABEL[form] ?? 'unit' : 'unit';
+    const unit = form?.trim() || 'unit';
     parts.push(`${quantityPerDose} ${unit}${quantityPerDose > 1 ? 's' : ''}`);
   }
   if (foodInstruction) parts.push(FOOD_LABEL[foodInstruction] ?? foodInstruction);
@@ -88,7 +79,7 @@ export function TodayMedicationCard({ item, onMarkTaken, disabled }: ScheduleCar
           disabled={disabled}
           activeOpacity={0.7}
         >
-          <Text style={styles.markBtnText}>Mark as Taken</Text>
+          <Text style={styles.markBtnText}>Mark as Done</Text>
         </TouchableOpacity>
       )}
     </View>

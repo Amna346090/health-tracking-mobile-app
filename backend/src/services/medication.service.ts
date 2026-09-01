@@ -1,13 +1,13 @@
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
-import { MedicationForm, FoodInstruction } from '@prisma/client';
+import { FoodInstruction } from '@prisma/client';
 
 export interface CreateMedicationInput {
   name: string;
   dosage?: string;
   doseAmount?: number;
   doseUnit?: string;
-  form?: MedicationForm;
+  form?: string;
   quantityPerDose?: number;
   foodInstruction?: FoodInstruction;
   instructions?: string;
@@ -55,7 +55,7 @@ export async function deleteMedication(id: number) {
   const assignmentCount = await prisma.medicationAssignment.count({ where: { medicationId: id } });
   if (assignmentCount > 0) {
     throw new AppError(
-      `Cannot delete: ${assignmentCount} patient assignment(s) reference this medication. Remove those assignments first.`,
+      `Cannot delete: ${assignmentCount} client assignment(s) reference this protocol. Remove those assignments first.`,
       409,
     );
   }

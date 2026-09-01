@@ -124,23 +124,23 @@ export default function AssignMedicationScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Text style={styles.backText}>← Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Assign Peptide</Text>
+            <Text style={styles.navTitle}>Assign Protocol</Text>
             <View style={styles.navSpacer} />
           </View>
 
-          {/* Peptide badge */}
+          {/* Protocol badge */}
           <View style={styles.medBadge}>
-            <Text style={styles.medBadgeLabel}>Peptide</Text>
+            <Text style={styles.medBadgeLabel}>Protocol</Text>
             <Text style={styles.medBadgeName}>{medicationName}</Text>
           </View>
 
-          {/* Patient picker */}
+          {/* Client picker */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Select Patient *</Text>
+            <Text style={styles.sectionLabel}>Select Client *</Text>
             {patientsLoading ? (
               <ActivityIndicator color={colors.primary} />
             ) : patients.length === 0 ? (
-              <Text style={styles.noPatients}>No patients found</Text>
+              <Text style={styles.noPatients}>No clients found</Text>
             ) : (
               patients.map((p) => (
                 <TouchableOpacity
@@ -233,7 +233,7 @@ export default function AssignMedicationScreen() {
             {saving ? (
               <ActivityIndicator color={colors.text.inverse} />
             ) : (
-              <Text style={styles.saveBtnText}>Assign to Patient</Text>
+              <Text style={styles.saveBtnText}>Assign to Client</Text>
             )}
           </TouchableOpacity>
         </ScrollView>

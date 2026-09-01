@@ -52,7 +52,7 @@ function EventCard({ event, onPhotoPress }: { event: TimelineEvent; onPhotoPress
     return (
       <View style={styles.card}>
         <View style={[styles.iconBox, { backgroundColor: color + '22' }]}>
-          <Text style={styles.iconText}>{STATUS_ICON[event.status] ?? '💊'}</Text>
+          <Text style={styles.iconText}>{STATUS_ICON[event.status] ?? '📋'}</Text>
         </View>
         <View style={styles.cardBody}>
           <Text style={styles.cardTitle}>{event.medication.name}</Text>
@@ -75,7 +75,7 @@ function EventCard({ event, onPhotoPress }: { event: TimelineEvent; onPhotoPress
           <Text style={styles.iconText}>📋</Text>
         </View>
         <View style={styles.cardBody}>
-          <Text style={styles.cardTitle}>Health log</Text>
+          <Text style={styles.cardTitle}>Check-in</Text>
           <Text style={styles.cardSub}>
             {[
               event.weight ? `${event.weight} kg` : null,

@@ -44,7 +44,7 @@ export default function MedicationDetailScreen() {
   function handleDelete() {
     if (!medication) return;
     Alert.alert(
-      'Delete peptide?',
+      'Delete protocol?',
       `Delete ${medication.dosage ? `${medication.name} · ${medication.dosage}` : medication.name}? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -76,7 +76,7 @@ export default function MedicationDetailScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.center}>
-          <Text style={styles.errorText}>{error ?? 'Peptide not found'}</Text>
+          <Text style={styles.errorText}>{error ?? 'Protocol not found'}</Text>
         </View>
       </SafeAreaView>
     );
@@ -96,16 +96,16 @@ export default function MedicationDetailScreen() {
           {medication.dosage && <Text style={styles.dosage}>{medication.dosage}</Text>}
           <View style={styles.countBadge}>
             <Text style={styles.countText}>
-              {medication._count.assignments} active patient{medication._count.assignments !== 1 ? 's' : ''}
+              {medication._count.assignments} active client{medication._count.assignments !== 1 ? 's' : ''}
             </Text>
           </View>
         </View>
 
         {medication.form && (
-          <InfoRow label="Form" value={formatEnum(medication.form)} />
+          <InfoRow label="Type" value={medication.form} />
         )}
         {medication.quantityPerDose !== null && (
-          <InfoRow label="Quantity per dose" value={String(medication.quantityPerDose)} />
+          <InfoRow label="Quantity" value={String(medication.quantityPerDose)} />
         )}
         {medication.foodInstruction && (
           <InfoRow label="Food instruction" value={formatEnum(medication.foodInstruction)} />
@@ -114,7 +114,7 @@ export default function MedicationDetailScreen() {
           <InfoRow label="Instructions" value={medication.instructions} />
         )}
         {medication.prescribingNotes && (
-          <InfoRow label="Prescribing notes" value={medication.prescribingNotes} />
+          <InfoRow label="Protocol notes" value={medication.prescribingNotes} />
         )}
 
         <TouchableOpacity
@@ -126,7 +126,7 @@ export default function MedicationDetailScreen() {
           }
           activeOpacity={0.8}
         >
-          <Text style={styles.assignBtnText}>Assign to Patient</Text>
+          <Text style={styles.assignBtnText}>Assign to Client</Text>
         </TouchableOpacity>
 
         {user?.role === 'ADMIN' && (

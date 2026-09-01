@@ -46,10 +46,10 @@ export async function runReminderJob(): Promise<void> {
   for (const assignment of assignments) {
     const { patient, medication } = assignment;
     const { user } = patient;
-    const title = 'Medication Reminder';
+    const title = 'Protocol Reminder';
     const body = medication.dosage
-      ? `Time to take ${medication.name} (${medication.dosage})`
-      : `Time to take ${medication.name}`;
+      ? `Time for ${medication.name} (${medication.dosage})`
+      : `Time for ${medication.name}`;
     const htmlBody = `<p>${body}</p>`;
     const params = { medicationName: medication.name, dosage: medication.dosage };
 

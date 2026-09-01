@@ -130,7 +130,7 @@ export default function PatientHealthLogScreen() {
 
   const patientName = patient
     ? `${patient.user.firstName} ${patient.user.lastName}`
-    : 'Patient';
+    : 'Client';
 
   const Header = (
     <View>
@@ -153,7 +153,7 @@ export default function PatientHealthLogScreen() {
       {showForm && savedLogId === null && (
         <View style={styles.formCard}>
           <View style={styles.staffBanner}>
-            <Text style={styles.staffBannerText}>Staff entry — logged on patient's behalf</Text>
+            <Text style={styles.staffBannerText}>Staff entry — logged on client's behalf</Text>
           </View>
 
           <View style={styles.row}>
@@ -173,7 +173,7 @@ export default function PatientHealthLogScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>How is the patient feeling?</Text>
+            <Text style={styles.fieldLabel}>How is the client feeling?</Text>
             <FeelingPicker value={feeling} onChange={setFeeling} />
           </View>
 
@@ -183,7 +183,7 @@ export default function PatientHealthLogScreen() {
               style={[styles.input, styles.textArea]}
               value={notes}
               onChangeText={setNotes}
-              placeholder="Observations, symptoms..."
+              placeholder="Observations, notes..."
               placeholderTextColor={colors.text.muted}
               multiline
               textAlignVertical="top"
@@ -252,7 +252,7 @@ export default function PatientHealthLogScreen() {
           renderItem={({ item }) => <HealthLogCard log={item} />}
           ListEmptyComponent={
             !showForm
-              ? <EmptyState icon="📈" title="No health logs" subtitle="Tap 'Add Entry' to record the first entry for this patient." />
+              ? <EmptyState icon="📈" title="No check-ins" subtitle="Tap 'Add Entry' to record the first entry for this client." />
               : null
           }
         />

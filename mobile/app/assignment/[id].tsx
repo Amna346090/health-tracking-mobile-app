@@ -88,7 +88,7 @@ export default function AssignmentDetailScreen() {
       await logDose(assignmentId, { status: 'TAKEN' });
       await loadLogs(); // Refresh dose history
     } catch (e) {
-      Alert.alert('Could not log dose', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setMarking(false);
     }
@@ -104,7 +104,7 @@ export default function AssignmentDetailScreen() {
         await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
       }
     } catch (e) {
-      Alert.alert('Could not download prescription', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert('Could not download PDF', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setDownloading(false);
     }
@@ -184,7 +184,7 @@ export default function AssignmentDetailScreen() {
           {downloading ? (
             <ActivityIndicator color={colors.primary} />
           ) : (
-            <Text style={styles.downloadBtnText}>Download Prescription</Text>
+            <Text style={styles.downloadBtnText}>Download PDF</Text>
           )}
         </TouchableOpacity>
 
@@ -199,24 +199,24 @@ export default function AssignmentDetailScreen() {
             {marking ? (
               <ActivityIndicator color={colors.text.inverse} />
             ) : (
-              <Text style={styles.markBtnText}>Mark Today's Dose as Taken</Text>
+              <Text style={styles.markBtnText}>Mark Today's Task as Done</Text>
             )}
           </TouchableOpacity>
         )}
 
         {todayLogged && (
           <View style={styles.todayDoneCard}>
-            <Text style={styles.todayDoneText}>Today's dose logged ✓</Text>
+            <Text style={styles.todayDoneText}>Today's task done ✓</Text>
           </View>
         )}
 
         {/* Dose history */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dose History</Text>
+          <Text style={styles.sectionTitle}>Task History</Text>
           {logsLoading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
           ) : logs.length === 0 ? (
-            <EmptyState icon="📋" title="No doses logged yet" subtitle="" />
+            <EmptyState icon="📋" title="No tasks logged yet" subtitle="" />
           ) : (
             logs.map((log) => (
               <View key={log.id} style={styles.logRow}>

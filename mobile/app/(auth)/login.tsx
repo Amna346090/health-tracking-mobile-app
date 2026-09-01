@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 import { useAuth } from '../../context/auth';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
@@ -56,9 +57,12 @@ export default function LoginScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.logo}>💊</Text>
-            <Text style={styles.title}>SFLBiotrack</Text>
-            <Text style={styles.subtitle}>Sign in to continue tracking your health</Text>
+            <Svg width={56} height={56} viewBox="0 0 64 64" style={styles.logo}>
+              <Circle cx={25} cy={32} r={13} stroke={colors.primary} strokeWidth={4} fill="none" />
+              <Circle cx={39} cy={32} r={13} stroke={colors.primary} strokeWidth={4} fill="none" />
+            </Svg>
+            <Text style={styles.title}>Tandem</Text>
+            <Text style={styles.subtitle}>Sign in to continue</Text>
           </View>
 
           {/* Form */}
@@ -122,7 +126,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   logo: {
-    fontSize: 48,
     marginBottom: spacing.sm,
   },
   title: {

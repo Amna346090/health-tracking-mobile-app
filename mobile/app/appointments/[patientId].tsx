@@ -240,7 +240,7 @@ export default function AppointmentsScreen() {
                 style={styles.input}
                 value={reason}
                 onChangeText={setReason}
-                placeholder="e.g. Follow-up checkup"
+                placeholder="e.g. Follow-up call"
                 placeholderTextColor={colors.text.muted}
               />
             </View>
@@ -306,7 +306,7 @@ export default function AppointmentsScreen() {
             <EmptyState
               icon="🗓️"
               title="No appointments yet"
-              subtitle={canManage ? 'Tap the button above to book one.' : 'This patient has no appointments yet.'}
+              subtitle={canManage ? 'Tap the button above to book one.' : 'This client has no appointments yet.'}
             />
           ) : null
         }

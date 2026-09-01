@@ -66,7 +66,7 @@ export default function EditPatientScreen() {
           providerId: p.providerId,
         });
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load patient'))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load client'))
       .finally(() => setLoading(false));
     if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
   }, [pid]);
@@ -114,7 +114,7 @@ export default function EditPatientScreen() {
           </Pressable>
         </View>
         <View style={styles.center}>
-          <Text style={styles.formErrorText}>{error ?? 'Patient not found'}</Text>
+          <Text style={styles.formErrorText}>{error ?? 'Client not found'}</Text>
         </View>
       </SafeAreaView>
     );
@@ -128,7 +128,7 @@ export default function EditPatientScreen() {
             <Pressable onPress={() => router.back()}>
               <Text style={styles.backText}>← Cancel</Text>
             </Pressable>
-            <Text style={styles.navTitle}>Edit Patient</Text>
+            <Text style={styles.navTitle}>Edit Client</Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -152,7 +152,7 @@ export default function EditPatientScreen() {
               onChange={(gender) => setValues((v) => (v ? { ...v, gender } : v))}
             />
 
-            <Input label="Health issue / condition" value={values.healthIssue} onChangeText={set('healthIssue')} />
+            <Input label="Focus area" value={values.healthIssue} onChangeText={set('healthIssue')} />
             <Input label="Phone" value={values.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
             <Input label="Address" value={values.address} onChangeText={set('address')} />
 

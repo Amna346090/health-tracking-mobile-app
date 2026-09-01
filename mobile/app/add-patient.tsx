@@ -80,9 +80,9 @@ export default function AddPatientScreen() {
         }
       }
 
-      Alert.alert('Patient created', undefined, [{ text: 'OK', onPress: goToPatient }]);
+      Alert.alert('Client created', undefined, [{ text: 'OK', onPress: goToPatient }]);
     } catch (err) {
-      setErrors({ form: (err as Error).message ?? 'Could not create patient.' });
+      setErrors({ form: (err as Error).message ?? 'Could not create client.' });
     } finally {
       setSaving(false);
     }
@@ -96,7 +96,7 @@ export default function AddPatientScreen() {
             <Pressable onPress={() => router.back()}>
               <Text style={styles.backText}>← Cancel</Text>
             </Pressable>
-            <Text style={styles.navTitle}>Add Patient</Text>
+            <Text style={styles.navTitle}>Add Client</Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -150,14 +150,14 @@ export default function AddPatientScreen() {
             />
 
             <Input
-              label="Health issue / condition (optional)"
+              label="Focus area (optional)"
               value={values.healthIssue}
               onChangeText={set('healthIssue')}
-              placeholder="e.g. Type 2 Diabetes"
+              placeholder="e.g. Weight loss, muscle gain"
               onSubmitEditing={handleSave}
             />
 
-            <Button label="Create patient" onPress={handleSave} loading={saving} />
+            <Button label="Create client" onPress={handleSave} loading={saving} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

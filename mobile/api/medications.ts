@@ -1,13 +1,12 @@
 import { api } from './client';
 
-export type MedicationForm = 'TABLET' | 'CAPSULE' | 'LIQUID' | 'INJECTION' | 'TOPICAL' | 'OTHER';
 export type FoodInstruction = 'WITH_FOOD' | 'WITHOUT_FOOD' | 'EITHER';
 
 export interface Medication {
   id: number;
   name: string;
   dosage: string | null;
-  form: MedicationForm | null;
+  form: string | null;
   quantityPerDose: number | null;
   foodInstruction: FoodInstruction | null;
   instructions: string | null;
@@ -27,7 +26,7 @@ export function getMedicationById(id: number): Promise<Medication> {
 export interface MedicationInput {
   name: string;
   dosage?: string;
-  form?: MedicationForm;
+  form?: string;
   quantityPerDose?: number;
   foodInstruction?: FoodInstruction;
   instructions?: string;

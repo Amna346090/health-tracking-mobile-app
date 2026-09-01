@@ -53,7 +53,7 @@ export default function TestRequestsQueueScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Test/Scan Requests</Text>
+        <Text style={styles.title}>Requests</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -83,7 +83,7 @@ export default function TestRequestsQueueScreen() {
           onRefresh={() => load(true)}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.emptyText}>No test/scan requests yet.</Text>
+              <Text style={styles.emptyText}>No requests yet.</Text>
             </View>
           }
           renderItem={({ item }) => {

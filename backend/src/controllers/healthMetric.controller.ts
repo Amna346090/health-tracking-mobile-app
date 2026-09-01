@@ -1,13 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { HealthMetricType } from '@prisma/client';
 import * as healthMetricService from '../services/healthMetric.service';
 import { assertPatientAccess } from '../middleware/patientAccess';
 import { AppError } from '../middleware/errorHandler';
-
-const VALID_TYPES: HealthMetricType[] = [
-  'CHOLESTEROL_TOTAL', 'CHOLESTEROL_LDL', 'CHOLESTEROL_HDL', 'TRIGLYCERIDES',
-  'BLOOD_GLUCOSE', 'BLOOD_PRESSURE_SYSTOLIC', 'BLOOD_PRESSURE_DIASTOLIC', 'OTHER',
-];
 
 function parseId(raw: string): number {
   const id = parseInt(raw, 10);
@@ -15,19 +9,30 @@ function parseId(raw: string): number {
   return id;
 }
 
+function parseType(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export async function listMetrics(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const patientId = parseId(req.params.patientId);
     await assertPatientAccess(req, patientId);
 
-    const { type } = req.query;
-    if (type !== undefined && !VALID_TYPES.includes(type as HealthMetricType)) {
-      res.status(400).json({ status: 'error', message: `type must be one of: ${VALID_TYPES.join(', ')}` });
-      return;
-    }
-
-    const metrics = await healthMetricService.getMetricsForPatient(patientId, type as HealthMetricType | undefined);
+    const type = parseType(req.query.type);
+    const metrics = await healthMetricService.getMetricsForPatient(patientId, type);
     res.json({ status: 'ok', data: metrics });
+  } catch (err) { next(err); }
+}
+
+export async function listMetricTypes(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patientId = parseId(req.params.patientId);
+    await assertPatientAccess(req, patientId);
+
+    const types = await healthMetricService.getMetricTypesForPatient(patientId);
+    res.json({ status: 'ok', data: types });
   } catch (err) { next(err); }
 }
 
@@ -36,14 +41,14 @@ export async function getTrend(req: Request, res: Response, next: NextFunction):
     const patientId = parseId(req.params.patientId);
     await assertPatientAccess(req, patientId);
 
-    const { type } = req.query;
-    if (!type || !VALID_TYPES.includes(type as HealthMetricType)) {
-      res.status(400).json({ status: 'error', message: `type must be one of: ${VALID_TYPES.join(', ')}` });
+    const type = parseType(req.query.type);
+    if (!type) {
+      res.status(400).json({ status: 'error', message: 'type is required' });
       return;
     }
 
     const limit = Math.min(Number(req.query.limit ?? 30), 100);
-    const trend = await healthMetricService.getMetricTrend(patientId, type as HealthMetricType, limit);
+    const trend = await healthMetricService.getMetricTrend(patientId, type, limit);
     res.json({ status: 'ok', data: trend });
   } catch (err) { next(err); }
 }
@@ -53,9 +58,10 @@ export async function createMetric(req: Request, res: Response, next: NextFuncti
     const patientId = parseId(req.params.patientId);
     await assertPatientAccess(req, patientId);
 
-    const { type, label, value, unit, recordedAt, documentId } = req.body;
-    if (!type || !VALID_TYPES.includes(type)) {
-      res.status(400).json({ status: 'error', message: `type must be one of: ${VALID_TYPES.join(', ')}` });
+    const { label, value, unit, recordedAt, documentId } = req.body;
+    const type = parseType(req.body.type);
+    if (!type) {
+      res.status(400).json({ status: 'error', message: 'type is required' });
       return;
     }
     if (value === undefined || value === null || isNaN(Number(value))) {

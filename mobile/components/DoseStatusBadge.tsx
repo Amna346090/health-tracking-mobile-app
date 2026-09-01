@@ -9,12 +9,12 @@ const CONFIG: Record<
   BadgeVariant,
   { label: string; bg: string; text: string }
 > = {
-  TAKEN:    { label: 'Taken',    bg: colors.successBg, text: colors.success },
+  TAKEN:    { label: 'Done',     bg: colors.successBg, text: colors.success },
   MISSED:   { label: 'Missed',   bg: colors.dangerBg,  text: colors.danger },
   SKIPPED:  { label: 'Skipped',  bg: colors.bg.subtle,  text: colors.text.secondary },
   DUE:      { label: 'Due',      bg: colors.warningBg,  text: colors.warning },
   UPCOMING: { label: 'Upcoming', bg: colors.primaryBg,  text: colors.primary },
-  NONE:     { label: 'No log',   bg: colors.bg.subtle,  text: colors.text.muted },
+  NONE:     { label: 'None',     bg: colors.bg.subtle,  text: colors.text.muted },
 };
 
 interface Props {

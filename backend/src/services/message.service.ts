@@ -57,7 +57,7 @@ export async function createMessage(data: CreateMessageInput) {
         data: {
           userId: staff.id,
           type: 'NEW_MESSAGE',
-          title: 'New patient message',
+          title: 'New client message',
           body: preview,
           patientId: data.patientId,
         },
@@ -67,7 +67,7 @@ export async function createMessage(data: CreateMessageInput) {
       broadcastToUser(staff.id, 'notification');
 
       if (staff.notifPush && staff.pushToken) {
-        sendPushNotification(staff.pushToken, 'New patient message', preview, {
+        sendPushNotification(staff.pushToken, 'New client message', preview, {
           messageId: message.id,
           patientId: data.patientId,
         }).catch((e) => {

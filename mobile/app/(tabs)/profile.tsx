@@ -113,7 +113,7 @@ function ProgressPhotosSection({ patientId }: { patientId: number }) {
       ) : photos.length === 0 ? (
         <Card variant="outlined">
           <Text style={styles.emptyText}>
-            No photos yet. Attach a photo when logging a health entry.
+            No photos yet. Attach a photo when adding a check-in.
           </Text>
         </Card>
       ) : (
@@ -167,7 +167,7 @@ function NotificationSettings({ initial, userEmail }: { initial: { push: boolean
           <View style={notifStyles.row}>
             <View style={notifStyles.labelCol}>
               <Text style={notifStyles.label}>Push notifications</Text>
-              <Text style={notifStyles.sub}>Peptide reminders on this device</Text>
+              <Text style={notifStyles.sub}>Protocol reminders on this device</Text>
             </View>
             <Switch
               value={push}
@@ -287,13 +287,13 @@ export default function ProfileScreen() {
         {/* Patient profile */}
         {user.patientProfile && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>PATIENT PROFILE</Text>
+            <Text style={styles.sectionTitle}>CLIENT PROFILE</Text>
             <Card variant="outlined" padding={0}>
               <View style={styles.cardInner}>
                 <ProfileRow label="Date of birth" value={user.patientProfile.dateOfBirth ? formatDate(user.patientProfile.dateOfBirth) : '—'} />
                 <ProfileRow label="Age"           value={ageFromDob(user.patientProfile.dateOfBirth) !== null ? `${ageFromDob(user.patientProfile.dateOfBirth)}` : '—'} />
                 <ProfileRow label="Gender"        value={formatGender(user.patientProfile.gender)} />
-                <ProfileRow label="Health issue"  value={user.patientProfile.healthIssue ?? '—'} />
+                <ProfileRow label="Focus area"  value={user.patientProfile.healthIssue ?? '—'} />
                 <ProfileRow label="Phone"          value={user.patientProfile.phone   ?? '—'} />
                 <ProfileRow label="Address"        value={user.patientProfile.address ?? '—'} />
               </View>

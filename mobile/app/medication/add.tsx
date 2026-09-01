@@ -15,17 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { createMedication } from '../../api/medications';
-import type { MedicationForm, FoodInstruction } from '../../api/medications';
+import type { FoodInstruction } from '../../api/medications';
 import { ChipPicker } from '../../components/ChipPicker';
-
-const FORM_OPTIONS: { value: MedicationForm; label: string }[] = [
-  { value: 'TABLET', label: 'Tablet' },
-  { value: 'CAPSULE', label: 'Capsule' },
-  { value: 'LIQUID', label: 'Liquid' },
-  { value: 'INJECTION', label: 'Injection' },
-  { value: 'TOPICAL', label: 'Topical' },
-  { value: 'OTHER', label: 'Other' },
-];
 
 const FOOD_OPTIONS: { value: FoodInstruction; label: string }[] = [
   { value: 'WITH_FOOD', label: 'With food' },
@@ -38,7 +29,7 @@ export default function AddMedicationScreen() {
 
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
-  const [form, setForm] = useState<MedicationForm | null>(null);
+  const [form, setForm] = useState('');
   const [quantityPerDose, setQuantityPerDose] = useState('');
   const [foodInstruction, setFoodInstruction] = useState<FoodInstruction | null>(null);
   const [instructions, setInstructions] = useState('');
@@ -55,7 +46,7 @@ export default function AddMedicationScreen() {
       await createMedication({
         name: name.trim(),
         dosage: dosage.trim() || undefined,
-        form: form ?? undefined,
+        form: form.trim() || undefined,
         quantityPerDose: quantity && !isNaN(quantity) ? quantity : undefined,
         foodInstruction: foodInstruction ?? undefined,
         instructions: instructions.trim() || undefined,
@@ -63,7 +54,7 @@ export default function AddMedicationScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('Failed to create peptide', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert('Failed to create protocol', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setSaving(false);
     }
@@ -80,7 +71,7 @@ export default function AddMedicationScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Text style={styles.backText}>← Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Add Peptide</Text>
+            <Text style={styles.navTitle}>Add Protocol</Text>
             <View style={styles.navSpacer} />
           </View>
 
@@ -89,21 +80,26 @@ export default function AddMedicationScreen() {
               label="Name *"
               value={name}
               onChangeText={setName}
-              placeholder="e.g. Metformin"
+              placeholder="e.g. Morning routine"
               autoCapitalize="words"
             />
             <Field
-              label="Dosage"
+              label="Amount"
               value={dosage}
               onChangeText={setDosage}
-              placeholder="e.g. 500mg twice daily"
+              placeholder="e.g. 2 units, twice daily"
             />
-            <ChipPicker label="Form" options={FORM_OPTIONS} value={form} onChange={setForm} />
             <Field
-              label="Quantity per dose"
+              label="Type"
+              value={form}
+              onChangeText={setForm}
+              placeholder="Optional"
+            />
+            <Field
+              label="Quantity"
               value={quantityPerDose}
               onChangeText={setQuantityPerDose}
-              placeholder="e.g. 2 (tablets)"
+              placeholder="e.g. 2"
               keyboardType="number-pad"
             />
             <ChipPicker
@@ -120,10 +116,10 @@ export default function AddMedicationScreen() {
               multiline
             />
             <Field
-              label="Prescribing notes"
+              label="Protocol notes"
               value={prescribingNotes}
               onChangeText={setPrescribingNotes}
-              placeholder="Internal notes for care team"
+              placeholder="Internal notes for your team"
               multiline
             />
           </View>
@@ -137,7 +133,7 @@ export default function AddMedicationScreen() {
             {saving ? (
               <ActivityIndicator color={colors.text.inverse} />
             ) : (
-              <Text style={styles.saveBtnText}>Save Peptide</Text>
+              <Text style={styles.saveBtnText}>Save Protocol</Text>
             )}
           </TouchableOpacity>
         </ScrollView>

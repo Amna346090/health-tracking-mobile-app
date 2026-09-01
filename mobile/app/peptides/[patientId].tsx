@@ -142,7 +142,7 @@ export default function PatientPeptidesScreen() {
         await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
       }
     } catch (e) {
-      Alert.alert('Could not download prescription', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert('Could not download PDF', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setDownloadingId(null);
     }
@@ -181,7 +181,7 @@ export default function PatientPeptidesScreen() {
   }
 
   function handleDelete(item: MedicationAssignment) {
-    Alert.alert('Delete peptide?', `Remove ${item.medication.name} from this patient's active peptides? This also stops its dose reminders.`, [
+    Alert.alert('Delete protocol?', `Remove ${item.medication.name} from this client's active protocols? This also stops its task reminders.`, [
       { text: 'Never mind', style: 'cancel' },
       {
         text: 'Delete',
@@ -276,7 +276,7 @@ export default function PatientPeptidesScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Peptides</Text>
+        <Text style={styles.title}>Protocols</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -287,7 +287,7 @@ export default function PatientPeptidesScreen() {
         ListHeaderComponent={EditForm}
         ListEmptyComponent={
           !editingItem ? (
-            <EmptyState icon="💊" title="No peptides assigned" subtitle="Assign one from this patient's dashboard." />
+            <EmptyState icon="📋" title="No protocols assigned" subtitle="Assign one from this client's dashboard." />
           ) : null
         }
         renderItem={({ item }) => (
@@ -326,7 +326,7 @@ export default function PatientPeptidesScreen() {
                       <DateField label="Date" value={orderDate} onChange={setOrderDate} />
                     </View>
                     <View style={styles.half}>
-                      <Input label="Dose" value={orderDose} onChangeText={setOrderDose} placeholder="e.g. 5mg" />
+                      <Input label="Task" value={orderDose} onChangeText={setOrderDose} placeholder="e.g. 5 units" />
                     </View>
                   </View>
                   <View style={styles.formActions}>

@@ -143,8 +143,8 @@ function SummaryRow({ summary }: { summary: PatientSummary }) {
 
   return (
     <View style={crmStyles.statsRow}>
-      <AdherenceBadge rate={summary.adherence.last7d.rate}  label="7-day adherence" />
-      <AdherenceBadge rate={summary.adherence.last30d.rate} label="30-day adherence" />
+      <AdherenceBadge rate={summary.adherence.last7d.rate}  label="7-day completion" />
+      <AdherenceBadge rate={summary.adherence.last30d.rate} label="30-day completion" />
       <View style={crmStyles.statCard}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
           <Text style={crmStyles.statValue}>
@@ -163,7 +163,7 @@ function SummaryRow({ summary }: { summary: PatientSummary }) {
           {summary.daysSinceLastLog !== null ? String(summary.daysSinceLastLog) : '—'}
         </Text>
         <Text style={crmStyles.statLabel}>
-          {summary.daysSinceLastLog === 0 ? 'Logged today' : 'days since log'}
+          {summary.daysSinceLastLog === 0 ? 'Checked in today' : 'days since check-in'}
         </Text>
       </View>
     </View>
@@ -184,7 +184,7 @@ function MiniEventRow({ event }: { event: TimelineEvent }) {
   } else if (event.type === 'HEALTH_LOG') {
     const emoji = event.feeling ? FEELING_EMOJI[event.feeling as FeelingStatus] : '';
     icon  = '📋';
-    title = 'Health log';
+    title = 'Check-in';
     sub   = [event.weight ? `${event.weight} kg` : null, emoji].filter(Boolean).join(' · ') || 'Recorded';
   } else {
     icon  = '📷';
@@ -287,8 +287,8 @@ export default function PatientDashboardScreen() {
   function handleDeletePatient() {
     if (!patient) return;
     Alert.alert(
-      'Delete patient?',
-      `Delete ${patient.user.firstName} ${patient.user.lastName}? This permanently removes their account and all associated health data. This cannot be undone.`,
+      'Delete client?',
+      `Delete ${patient.user.firstName} ${patient.user.lastName}? This permanently removes their account and all associated data. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -319,7 +319,7 @@ export default function PatientDashboardScreen() {
 
   const patientName = patient
     ? `${patient.user.firstName} ${patient.user.lastName}`
-    : 'Patient';
+    : 'Client';
 
   return (
     <SafeAreaView style={crmStyles.safe} edges={['top']}>
@@ -383,7 +383,7 @@ export default function PatientDashboardScreen() {
             <View style={crmStyles.infoCard}>
               <InfoItem label="Age" value={ageFromDob(patient.dateOfBirth) !== null ? `${ageFromDob(patient.dateOfBirth)}` : '—'} />
               <InfoItem label="Gender" value={formatGender(patient.gender) ?? '—'} />
-              <InfoItem label="Health issue" value={patient.healthIssue ?? '—'} />
+              <InfoItem label="Focus area" value={patient.healthIssue ?? '—'} />
             </View>
           </View>
         )}
@@ -422,7 +422,7 @@ export default function PatientDashboardScreen() {
               </View>
               {STAFF_FEATURES_ENABLED && (
                 <InfoItem
-                  label="Provider"
+                  label="Coach"
                   value={(() => {
                     const provider = providers.find((p) => p.id === patient.providerId);
                     return provider ? `${provider.user.firstName} ${provider.user.lastName}` : 'Unassigned (all staff)';
@@ -503,15 +503,15 @@ export default function PatientDashboardScreen() {
         <View style={crmStyles.section}>
           <Text style={crmStyles.sectionTitle}>QUICK LINKS</Text>
           <View style={crmStyles.quickLinks}>
-            <QuickLink icon="📈"  label="Health logs"    onPress={() => router.push(`/health-log/${pid}`)} />
-            <QuickLink icon="⏰"  label="Peptides"    onPress={() => router.push(`/peptides/${pid}`)} />
+            <QuickLink icon="📈"  label="Check-ins"    onPress={() => router.push(`/health-log/${pid}`)} />
+            <QuickLink icon="⏰"  label="Protocols"    onPress={() => router.push(`/peptides/${pid}`)} />
             <QuickLink icon="🕐"  label="Full timeline"  onPress={() => router.push(`/history/${pid}`)} />
             <QuickLink icon="📷"  label="Progress photos" onPress={() => router.push(`/photos/${pid}`)} />
             <QuickLink icon="📄"  label="Documents" onPress={() => router.push(`/documents/${pid}`)} />
             <QuickLink icon="🗓️"  label="Appointments" onPress={() => router.push(`/appointments/${pid}`)} />
             <QuickLink icon="💬"  label="Messages" onPress={() => router.push(`/messages/${pid}`)} />
-            <QuickLink icon="🧪"  label="Test/scan requests" onPress={() => router.push(`/test-requests/${pid}`)} />
-            <QuickLink icon="🩺"  label="Health metrics" onPress={() => router.push(`/health-metrics/${pid}`)} />
+            <QuickLink icon="🧪"  label="Requests" onPress={() => router.push(`/test-requests/${pid}`)} />
+            <QuickLink icon="🩺"  label="Measurements" onPress={() => router.push(`/health-metrics/${pid}`)} />
           </View>
         </View>
 

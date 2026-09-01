@@ -29,7 +29,7 @@ async function sendReminder(
 ): Promise<void> {
   const { patient } = testRequest;
   const { user } = patient;
-  const title = 'Test/Scan Reminder';
+  const title = 'Request Reminder';
   const htmlBody = `<p>${bodyText}</p>`;
 
   prisma.notification.create({
@@ -125,7 +125,7 @@ export async function runTestRequestReminderJob(): Promise<void> {
     include: PATIENT_INCLUDE,
   });
   for (const req of dueIn2Days) {
-    await sendReminder(req, 'before-2d', `"${req.name}" is due in 2 days. Please submit your results soon.`, { testName: req.name, stage: 'in2Days' });
+    await sendReminder(req, 'before-2d', `"${req.name}" is due in 2 days. Please complete it soon.`, { testName: req.name, stage: 'in2Days' });
   }
 
   const dueToday = await prisma.testRequest.findMany({
@@ -133,7 +133,7 @@ export async function runTestRequestReminderJob(): Promise<void> {
     include: PATIENT_INCLUDE,
   });
   for (const req of dueToday) {
-    await sendReminder(req, 'day-of', `"${req.name}" is due today. Please submit your results.`, { testName: req.name, stage: 'dueToday' });
+    await sendReminder(req, 'day-of', `"${req.name}" is due today. Please complete it.`, { testName: req.name, stage: 'dueToday' });
   }
 
   const overdue = await prisma.testRequest.findMany({
@@ -143,7 +143,7 @@ export async function runTestRequestReminderJob(): Promise<void> {
   for (const req of overdue) {
     const daysOverdue = Math.round((today.getTime() - req.dueDate.getTime()) / (24 * 60 * 60 * 1000));
     if (daysOverdue > 0 && daysOverdue % OVERDUE_NAG_INTERVAL_DAYS === 0) {
-      await sendReminder(req, `overdue-${daysOverdue}`, `"${req.name}" is now ${daysOverdue} days overdue. Please submit your results as soon as possible.`, { testName: req.name, stage: 'overdue', daysOverdue });
+      await sendReminder(req, `overdue-${daysOverdue}`, `"${req.name}" is now ${daysOverdue} days overdue. Please complete it as soon as possible.`, { testName: req.name, stage: 'overdue', daysOverdue });
     }
   }
 }

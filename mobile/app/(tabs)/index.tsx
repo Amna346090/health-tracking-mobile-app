@@ -115,7 +115,7 @@ export default function DashboardScreen() {
         ),
       );
     } catch (e) {
-      Alert.alert('Could not log dose', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setMarkingId(null);
     }
@@ -185,9 +185,9 @@ export default function DashboardScreen() {
         {/* ── Quick stats row (patients only) ── */}
         {isPatient && (
           <View style={styles.statsRow}>
-            <StatBadge icon="💊" label="Peptides" value={schedule.length > 0 ? String(schedule.length) : '—'} />
-            <StatBadge icon="✅" label="Taken today" value={schedule.length > 0 ? String(takenCount) : '—'} />
-            <StatBadge icon="📊" label="Adherence" value={adherence !== null ? `${adherence}%` : '—'} />
+            <StatBadge icon="📋" label="Protocols" value={schedule.length > 0 ? String(schedule.length) : '—'} />
+            <StatBadge icon="✅" label="Done today" value={schedule.length > 0 ? String(takenCount) : '—'} />
+            <StatBadge icon="📊" label="Completion" value={adherence !== null ? `${adherence}%` : '—'} />
           </View>
         )}
 
@@ -198,8 +198,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="users" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Patients</Text>
-                  <Text style={styles.navCardSubtext}>View and manage all patients</Text>
+                  <Text style={styles.navCardText}>Clients</Text>
+                  <Text style={styles.navCardSubtext}>View and manage all clients</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -208,8 +208,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="package" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Peptides</Text>
-                  <Text style={styles.navCardSubtext}>Manage peptide types and doses</Text>
+                  <Text style={styles.navCardText}>Protocols</Text>
+                  <Text style={styles.navCardSubtext}>Manage protocol types and schedules</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -219,7 +219,7 @@ export default function DashboardScreen() {
                 <Feather name="heart" size={18} color={colors.primary} />
                 <View>
                   <Text style={styles.navCardText}>Touch-Base</Text>
-                  <Text style={styles.navCardSubtext}>Patients due for a check-in</Text>
+                  <Text style={styles.navCardSubtext}>Clients due for a check-in</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -239,7 +239,7 @@ export default function DashboardScreen() {
                 <Feather name="calendar" size={18} color={colors.primary} />
                 <View>
                   <Text style={styles.navCardText}>Appointments</Text>
-                  <Text style={styles.navCardSubtext}>Upcoming visits with patients</Text>
+                  <Text style={styles.navCardSubtext}>Upcoming visits with clients</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -248,8 +248,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="clipboard" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Test/scan requests</Text>
-                  <Text style={styles.navCardSubtext}>Lab and imaging orders to track</Text>
+                  <Text style={styles.navCardText}>Requests</Text>
+                  <Text style={styles.navCardSubtext}>Items to follow up on</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -261,7 +261,7 @@ export default function DashboardScreen() {
         {isPatient && summary && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Health Summary</Text>
+              <Text style={styles.sectionTitle}>Summary</Text>
               <TouchableOpacity onPress={() => patientId && router.push(`/history/${patientId}`)}>
                 <Text style={summaryStyles.viewAll}>View history →</Text>
               </TouchableOpacity>
@@ -272,7 +272,7 @@ export default function DashboardScreen() {
                 <Text style={summaryStyles.value}>
                   {summary.adherence.last7d.rate !== null ? `${summary.adherence.last7d.rate}%` : '—'}
                 </Text>
-                <Text style={summaryStyles.label}>7-day adherence</Text>
+                <Text style={summaryStyles.label}>7-day completion</Text>
               </View>
               {/* Weight trend */}
               <View style={summaryStyles.card}>
@@ -296,7 +296,7 @@ export default function DashboardScreen() {
                   {summary.daysSinceLastLog !== null ? String(summary.daysSinceLastLog) : '—'}
                 </Text>
                 <Text style={summaryStyles.label}>
-                  {summary.daysSinceLastLog === 0 ? 'Logged today' : 'days since log'}
+                  {summary.daysSinceLastLog === 0 ? 'Checked in today' : 'days since check-in'}
                 </Text>
               </View>
             </View>
@@ -307,7 +307,7 @@ export default function DashboardScreen() {
         {isPatient && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Peptides</Text>
+            <Text style={styles.sectionTitle}>Today's Tasks</Text>
             {schedule.length > 0 && (
               <Text style={styles.sectionBadge}>{dueCount} due</Text>
             )}
@@ -320,9 +320,9 @@ export default function DashboardScreen() {
           ) : schedule.length === 0 ? (
             <Card>
               <EmptyState
-                icon="💊"
+                icon="📋"
                 title="Nothing scheduled today"
-                subtitle="Your care team hasn't set up a schedule yet — check back soon."
+                subtitle="Your team hasn't set up a schedule yet — check back soon."
               />
             </Card>
           ) : (
@@ -358,7 +358,7 @@ export default function DashboardScreen() {
                 <EmptyState
                   icon="🗓️"
                   title="No upcoming appointments"
-                  subtitle="Tap above to request one with your care team."
+                  subtitle="Tap above to request one with your team."
                 />
               </Card>
             ) : (
@@ -393,7 +393,7 @@ export default function DashboardScreen() {
                   <EmptyState
                     icon="💬"
                     title="No messages yet"
-                    subtitle="Your care team hasn't sent any messages yet."
+                    subtitle="Your team hasn't sent any messages yet."
                   />
                 ) : (
                   <View>
@@ -430,7 +430,7 @@ export default function DashboardScreen() {
             </View>
             <TouchableOpacity onPress={() => patientId && router.push(`/notes/${patientId}`)}>
               <Card>
-                <Text style={summaryStyles.viewAll}>View notes from your care team →</Text>
+                <Text style={summaryStyles.viewAll}>View notes from your team →</Text>
               </Card>
             </TouchableOpacity>
           </View>
@@ -440,7 +440,7 @@ export default function DashboardScreen() {
         {isPatient && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Test/Scan Requests</Text>
+              <Text style={styles.sectionTitle}>Requests</Text>
               {openTestRequestCount > 0 && (
                 <Text style={styles.sectionBadge}>{openTestRequestCount} open</Text>
               )}
@@ -450,8 +450,8 @@ export default function DashboardScreen() {
                 {testRequests.length === 0 ? (
                   <EmptyState
                     icon="🧪"
-                    title="No test/scan requests"
-                    subtitle="Your care team hasn't requested any tests or scans yet."
+                    title="No requests"
+                    subtitle="Your team hasn't sent any requests yet."
                   />
                 ) : (
                   <Text style={summaryStyles.viewAll}>View requests →</Text>
@@ -465,11 +465,11 @@ export default function DashboardScreen() {
         {isPatient && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Health Metrics</Text>
+              <Text style={styles.sectionTitle}>Measurements</Text>
             </View>
             <TouchableOpacity onPress={() => patientId && router.push(`/health-metrics/${patientId}`)}>
               <Card>
-                <Text style={summaryStyles.viewAll}>Log cholesterol, bloodwork, and more →</Text>
+                <Text style={summaryStyles.viewAll}>Log your measurements and progress →</Text>
               </Card>
             </TouchableOpacity>
           </View>
@@ -479,7 +479,7 @@ export default function DashboardScreen() {
         {isPatient && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Health Logs</Text>
+            <Text style={styles.sectionTitle}>Recent Check-ins</Text>
           </View>
           {scheduleLoading ? (
             <Card style={styles.loadingCard}>
@@ -489,8 +489,8 @@ export default function DashboardScreen() {
             <Card>
               <EmptyState
                 icon="📈"
-                title="No health logs yet"
-                subtitle="Tap Health Log below to record your weight, mood, and more."
+                title="No check-ins yet"
+                subtitle="Tap Check-ins below to record your weight, mood, and more."
               />
             </Card>
           ) : (

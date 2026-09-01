@@ -141,7 +141,7 @@ export default function MessagesScreen() {
           contentContainerStyle={styles.list}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           ListEmptyComponent={
-            <EmptyState icon="💬" title="No messages yet" subtitle="Your care team hasn't sent any messages yet." />
+            <EmptyState icon="💬" title="No messages yet" subtitle="Your team hasn't sent any messages yet." />
           }
           renderItem={({ item, index }) => {
             const olderNeighbor = messages[index - 1];

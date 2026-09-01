@@ -49,7 +49,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="medications"
         options={{
-          title: 'Peptides',
+          title: 'Protocols',
           tabBarIcon: ({ color, size }) => <TabIcon name="medical-outline" color={color} size={size} />,
         }}
       />
@@ -58,7 +58,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="health-log"
         options={{
-          title: 'Health Log',
+          title: 'Check-ins',
           href: isStaffOrAdmin ? null : undefined,
           tabBarIcon: ({ color, size }) => <TabIcon name="pulse-outline" color={color} size={size} />,
         }}
@@ -76,7 +76,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="patients"
         options={{
-          title: 'Patients',
+          title: 'Clients',
           href: isStaffOrAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => <TabIcon name="people-outline" color={color} size={size} />,
         }}

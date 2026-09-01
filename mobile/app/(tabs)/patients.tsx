@@ -78,7 +78,7 @@ export default function PatientsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Patients</Text>
+          <Text style={styles.headerTitle}>Clients</Text>
           {!loading && (
             <Text style={styles.headerCount}>{patients.length} total</Text>
           )}
@@ -116,7 +116,7 @@ export default function PatientsScreen() {
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>
-                {query ? 'No patients match your search.' : 'No patients yet.'}
+                {query ? 'No clients match your search.' : 'No clients yet.'}
               </Text>
             </View>
           }

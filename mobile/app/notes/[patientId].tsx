@@ -172,7 +172,7 @@ export default function NotesScreen() {
           ) : null
         }
         ListEmptyComponent={
-          <EmptyState icon="📝" title="No notes yet" subtitle={canEdit ? 'Internal notes are only visible to staff and admin.' : 'Your care team hasn’t added any notes yet.'} />
+          <EmptyState icon="📝" title="No notes yet" subtitle={canEdit ? 'Internal notes are only visible to staff and admin.' : 'Your team hasn’t added any notes yet.'} />
         }
         renderItem={({ item }) => (
           <Card style={styles.noteCard}>

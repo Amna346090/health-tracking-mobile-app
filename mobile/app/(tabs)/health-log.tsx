@@ -117,7 +117,7 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
     <View style={formStyles.card}>
       {staffMode && (
         <View style={formStyles.staffBanner}>
-          <Text style={formStyles.staffBannerText}>Adding entry on patient's behalf</Text>
+          <Text style={formStyles.staffBannerText}>Adding entry on client's behalf</Text>
         </View>
       )}
 
@@ -175,7 +175,7 @@ function NewEntryForm({ patientId, onCreated, staffMode }: NewEntryFormProps) {
           style={[formStyles.input, formStyles.textArea]}
           value={form.notes}
           onChangeText={set('notes')}
-          placeholder="Any symptoms, observations, or comments..."
+          placeholder="Any notes, observations, or comments..."
           placeholderTextColor={colors.text.muted}
           multiline
           textAlignVertical="top"
@@ -331,8 +331,8 @@ function PatientHealthLog({ patientId }: { patientId: number }) {
         !showForm ? (
           <EmptyState
             icon="📈"
-            title="No logs yet"
-            subtitle="Tap 'New Entry' to record your first health entry."
+            title="No check-ins yet"
+            subtitle="Tap 'New Entry' to record your first check-in."
           />
         ) : null
       }
@@ -394,7 +394,7 @@ function StaffHealthLog() {
         </TouchableOpacity>
       )}
       ListEmptyComponent={
-        <EmptyState icon="👥" title="No patients found" subtitle="Patient accounts will appear here." />
+        <EmptyState icon="👥" title="No clients found" subtitle="Client accounts will appear here." />
       }
     />
   );
@@ -417,9 +417,9 @@ export default function HealthLogScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Health Log</Text>
+            <Text style={styles.title}>Check-ins</Text>
             <Text style={styles.subtitle}>
-              {isStaff ? 'View and manage patient health records' : 'Track weight, mood, and how you\'re feeling'}
+              {isStaff ? 'View and manage client check-ins' : 'Track weight, mood, and how you\'re feeling'}
             </Text>
           </View>
           {!isStaff && patientId && (
@@ -529,8 +529,8 @@ function PatientHealthLogWithForm({
         !externalShowForm ? (
           <EmptyState
             icon="📈"
-            title="No logs yet"
-            subtitle="Tap 'New Entry' above to record your first health entry."
+            title="No check-ins yet"
+            subtitle="Tap 'New Entry' above to record your first check-in."
           />
         ) : null
       }
