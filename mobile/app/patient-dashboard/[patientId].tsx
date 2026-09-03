@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { api } from '../../api/client';
 import { getTimeline, getSummary, type TimelineEvent, type PatientSummary } from '../../api/timeline';
@@ -30,30 +32,30 @@ import { STAFF_FEATURES_ENABLED } from '../../config';
 import { useAuth } from '../../context/auth';
 import { getUploadHistory, type UploadAuditLogEntry } from '../../api/uploadAudit';
 
-const UPLOAD_ACTION_LABEL: Record<UploadAuditLogEntry['action'], string> = {
-  UPLOADED: 'uploaded',
-  EDITED: 'edited',
-  DELETED: 'deleted',
-};
-
 const UPLOAD_ACTION_ICON: Record<UploadAuditLogEntry['action'], string> = {
   UPLOADED: '⬆️',
   EDITED: '✏️',
   DELETED: '🗑️',
 };
 
-function UploadHistoryRow({ entry }: { entry: UploadAuditLogEntry }) {
+function uploadActionKey(entry: UploadAuditLogEntry): string {
+  const entity = entry.entityType.toLowerCase() === 'photo' ? 'photo' : 'document';
+  const action = entry.action.toLowerCase();
+  return `patientDashboard.uploadAction.${entity}_${action}`;
+}
+
+function UploadHistoryRow({ entry, t }: { entry: UploadAuditLogEntry; t: TFunction }) {
   return (
     <View style={crmStyles.miniEvent}>
       <Text style={crmStyles.miniIcon}>{UPLOAD_ACTION_ICON[entry.action]}</Text>
       <View style={{ flex: 1 }}>
         <Text style={crmStyles.miniTitle}>
-          {entry.performedBy.firstName} {entry.performedBy.lastName} {UPLOAD_ACTION_LABEL[entry.action]} a {entry.entityType.toLowerCase()}
+          {entry.performedBy.firstName} {entry.performedBy.lastName} {t(uploadActionKey(entry))}
         </Text>
         {entry.detail && <Text style={crmStyles.miniSub}>{entry.detail}</Text>}
       </View>
       <Text style={crmStyles.miniTime}>
-        {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        {new Date(entry.createdAt).toLocaleDateString(t('language.locale'), { month: 'short', day: 'numeric' })}
       </Text>
     </View>
   );
@@ -73,29 +75,33 @@ interface PatientMeta {
   touchBaseRemindersPaused: boolean;
 }
 
-const TOUCH_BASE_THRESHOLD_PRESETS: { label: string; days: number }[] = [
-  { label: '1 week', days: 7 },
-  { label: '2 weeks', days: 14 },
-  { label: '1 month', days: 30 },
-  { label: '2 months', days: 60 },
-  { label: '3 months', days: 90 },
-];
-
-// Admin-only, for verifying the reminder pipeline actually fires without waiting days/weeks.
-const TEST_THRESHOLD_PRESETS: { label: string; days: number }[] = [
-  { label: '1 minute', days: 1 / 1440 },
-  { label: '5 minutes', days: 5 / 1440 },
-  { label: '10 minutes', days: 10 / 1440 },
-];
-
-function formatThresholdDays(days: number): string {
-  if (days < 1) return `${Math.round(days * 1440)} min`;
-  return `${days} days`;
+function getTouchBaseThresholdPresets(t: TFunction): { label: string; days: number }[] {
+  return [
+    { label: t('touchBase.presetOneWeek'), days: 7 },
+    { label: t('touchBase.presetTwoWeeks'), days: 14 },
+    { label: t('touchBase.presetOneMonth'), days: 30 },
+    { label: t('touchBase.presetTwoMonths'), days: 60 },
+    { label: t('touchBase.presetThreeMonths'), days: 90 },
+  ];
 }
 
-function formatLastContact(iso: string | null): string {
-  if (!iso) return 'Never';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+// Admin-only, for verifying the reminder pipeline actually fires without waiting days/weeks.
+function getTestThresholdPresets(t: TFunction): { label: string; days: number }[] {
+  return [
+    { label: t('touchBase.testOneMinute'), days: 1 / 1440 },
+    { label: t('touchBase.testFiveMinutes'), days: 5 / 1440 },
+    { label: t('touchBase.testTenMinutes'), days: 10 / 1440 },
+  ];
+}
+
+function formatThresholdDays(days: number, t: TFunction): string {
+  if (days < 1) return t('touchBase.thresholdMin', { count: Math.round(days * 1440) });
+  return t('touchBase.thresholdDays', { count: days });
+}
+
+function formatLastContact(iso: string | null, t: TFunction): string {
+  if (!iso) return t('patientDashboard.never');
+  return new Date(iso).toLocaleDateString(t('language.locale'), { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function ageFromDob(iso: string | null): number | null {
@@ -110,10 +116,12 @@ function ageFromDob(iso: string | null): number | null {
   return age;
 }
 
-function formatGender(gender: string | null): string | null {
+function formatGender(gender: string | null, t: TFunction): string | null {
   if (!gender) return null;
-  if (gender === 'PREFER_NOT_TO_SAY') return 'Prefer not to say';
-  return gender.charAt(0) + gender.slice(1).toLowerCase();
+  if (gender === 'MALE') return t('patientForm.male');
+  if (gender === 'FEMALE') return t('patientForm.female');
+  if (gender === 'PREFER_NOT_TO_SAY') return t('profile.preferNotToSay');
+  return t('patientForm.other');
 }
 
 // ─── Adherence ring ───────────────────────────────────────────────────────────
@@ -133,7 +141,7 @@ function AdherenceBadge({ rate, label }: { rate: number | null; label: string })
 
 const TREND_ARROW: Record<string, string> = { UP: '↑', DOWN: '↓', STABLE: '→' };
 
-function SummaryRow({ summary }: { summary: PatientSummary }) {
+function SummaryRow({ summary, t }: { summary: PatientSummary; t: TFunction }) {
   const trendSymbol = summary.weight.trend ? TREND_ARROW[summary.weight.trend] : null;
   const trendColor  = summary.weight.trend === 'UP'
     ? (colors.danger ?? '#ef4444')
@@ -143,8 +151,8 @@ function SummaryRow({ summary }: { summary: PatientSummary }) {
 
   return (
     <View style={crmStyles.statsRow}>
-      <AdherenceBadge rate={summary.adherence.last7d.rate}  label="7-day completion" />
-      <AdherenceBadge rate={summary.adherence.last30d.rate} label="30-day completion" />
+      <AdherenceBadge rate={summary.adherence.last7d.rate}  label={t('patientDashboard.sevenDayAdherence')} />
+      <AdherenceBadge rate={summary.adherence.last30d.rate} label={t('patientDashboard.thirtyDayAdherence')} />
       <View style={crmStyles.statCard}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
           <Text style={crmStyles.statValue}>
@@ -155,7 +163,7 @@ function SummaryRow({ summary }: { summary: PatientSummary }) {
           )}
         </View>
         <Text style={crmStyles.statLabel}>
-          {summary.weight.latest !== null ? 'kg (weight)' : 'No weight data'}
+          {summary.weight.latest !== null ? t('patientDashboard.kgWeight') : t('patientDashboard.noWeightData')}
         </Text>
       </View>
       <View style={crmStyles.statCard}>
@@ -163,7 +171,7 @@ function SummaryRow({ summary }: { summary: PatientSummary }) {
           {summary.daysSinceLastLog !== null ? String(summary.daysSinceLastLog) : '—'}
         </Text>
         <Text style={crmStyles.statLabel}>
-          {summary.daysSinceLastLog === 0 ? 'Checked in today' : 'days since check-in'}
+          {summary.daysSinceLastLog === 0 ? t('patientDashboard.loggedToday') : t('patientDashboard.daysSinceLog')}
         </Text>
       </View>
     </View>
@@ -172,7 +180,7 @@ function SummaryRow({ summary }: { summary: PatientSummary }) {
 
 // ─── Mini timeline event row ──────────────────────────────────────────────────
 
-function MiniEventRow({ event }: { event: TimelineEvent }) {
+function MiniEventRow({ event, t }: { event: TimelineEvent; t: TFunction }) {
   let icon = '•';
   let title = '';
   let sub = '';
@@ -180,16 +188,16 @@ function MiniEventRow({ event }: { event: TimelineEvent }) {
   if (event.type === 'MEDICATION_LOG') {
     icon = event.status === 'TAKEN' ? '✅' : event.status === 'MISSED' ? '❌' : '⏭';
     title = event.medication.name;
-    sub   = event.status.charAt(0) + event.status.slice(1).toLowerCase();
+    sub   = t(`medications.status.${event.status.toLowerCase()}`);
   } else if (event.type === 'HEALTH_LOG') {
     const emoji = event.feeling ? FEELING_EMOJI[event.feeling as FeelingStatus] : '';
     icon  = '📋';
-    title = 'Check-in';
-    sub   = [event.weight ? `${event.weight} kg` : null, emoji].filter(Boolean).join(' · ') || 'Recorded';
+    title = t('patientDashboard.healthLogTitle');
+    sub   = [event.weight ? `${event.weight} kg` : null, emoji].filter(Boolean).join(' · ') || t('patientDashboard.recorded');
   } else {
     icon  = '📷';
-    title = 'Photo';
-    sub   = event.caption ?? 'No caption';
+    title = t('patientDashboard.photoTitle');
+    sub   = event.caption ?? t('patientDashboard.noCaption');
   }
 
   return (
@@ -200,7 +208,7 @@ function MiniEventRow({ event }: { event: TimelineEvent }) {
         <Text style={crmStyles.miniSub}>{sub}</Text>
       </View>
       <Text style={crmStyles.miniTime}>
-        {new Date(event.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        {new Date(event.timestamp).toLocaleDateString(t('language.locale'), { month: 'short', day: 'numeric' })}
       </Text>
     </View>
   );
@@ -232,6 +240,7 @@ function QuickLink({ icon, label, onPress }: { icon: string; label: string; onPr
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PatientDashboardScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const pid = Number(patientId);
@@ -287,12 +296,12 @@ export default function PatientDashboardScreen() {
   function handleDeletePatient() {
     if (!patient) return;
     Alert.alert(
-      'Delete client?',
-      `Delete ${patient.user.firstName} ${patient.user.lastName}? This permanently removes their account and all associated data. This cannot be undone.`,
+      t('patientDashboard.deletePatientTitle'),
+      t('patientDashboard.deletePatientBody', { name: `${patient.user.firstName} ${patient.user.lastName}` }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await deleteUser(patient.user.id);
@@ -319,13 +328,13 @@ export default function PatientDashboardScreen() {
 
   const patientName = patient
     ? `${patient.user.firstName} ${patient.user.lastName}`
-    : 'Client';
+    : t('patientDashboard.patientFallback');
 
   return (
     <SafeAreaView style={crmStyles.safe} edges={['top']}>
       <View style={crmStyles.navBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={crmStyles.backText}>← Back</Text>
+          <Text style={crmStyles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
         <Text style={crmStyles.navTitle} numberOfLines={1}>{patientName}</Text>
         <View style={{ width: 60 }} />
@@ -347,7 +356,7 @@ export default function PatientDashboardScreen() {
                   })
                 }
               >
-                <Text style={crmStyles.credentialsLink}>View login credentials</Text>
+                <Text style={crmStyles.credentialsLink}>{t('profile.viewLoginCredentials')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -357,7 +366,7 @@ export default function PatientDashboardScreen() {
         {patient?.phone && (
           <View style={crmStyles.contactBar}>
             <View>
-              <Text style={crmStyles.contactLabel}>Phone</Text>
+              <Text style={crmStyles.contactLabel}>{t('patientDashboard.phone')}</Text>
               <Text style={crmStyles.contactValue}>{patient.phone}</Text>
             </View>
             <TouchableOpacity
@@ -366,7 +375,7 @@ export default function PatientDashboardScreen() {
               onPress={() => Linking.openURL(`tel:${patient.phone}`)}
             >
               <Feather name="phone" size={15} color={colors.text.inverse} />
-              <Text style={crmStyles.callBtnText}>Call</Text>
+              <Text style={crmStyles.callBtnText}>{t('patientDashboard.call')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -375,15 +384,15 @@ export default function PatientDashboardScreen() {
         {patient && (
           <View style={crmStyles.section}>
             <View style={crmStyles.sectionRow}>
-              <Text style={crmStyles.sectionTitle}>BASIC INFO</Text>
+              <Text style={crmStyles.sectionTitle}>{t('patientDashboard.basicInfo')}</Text>
               <TouchableOpacity onPress={() => router.push(`/edit-patient/${pid}`)}>
-                <Text style={crmStyles.viewAll}>Edit</Text>
+                <Text style={crmStyles.viewAll}>{t('common.edit')}</Text>
               </TouchableOpacity>
             </View>
             <View style={crmStyles.infoCard}>
-              <InfoItem label="Age" value={ageFromDob(patient.dateOfBirth) !== null ? `${ageFromDob(patient.dateOfBirth)}` : '—'} />
-              <InfoItem label="Gender" value={formatGender(patient.gender) ?? '—'} />
-              <InfoItem label="Focus area" value={patient.healthIssue ?? '—'} />
+              <InfoItem label={t('profile.age')} value={ageFromDob(patient.dateOfBirth) !== null ? `${ageFromDob(patient.dateOfBirth)}` : '—'} />
+              <InfoItem label={t('profile.gender')} value={formatGender(patient.gender, t) ?? '—'} />
+              <InfoItem label={t('profile.healthIssue')} value={patient.healthIssue ?? '—'} />
             </View>
           </View>
         )}
@@ -392,10 +401,10 @@ export default function PatientDashboardScreen() {
         {patient && (
           <View style={crmStyles.section}>
             <View style={crmStyles.sectionRow}>
-              <Text style={crmStyles.sectionTitle}>TOUCH-BASE</Text>
+              <Text style={crmStyles.sectionTitle}>{t('patientDashboard.touchBaseSection')}</Text>
               <View style={crmStyles.toggleRow}>
                 <Text style={crmStyles.toggleLabel}>
-                  {patient.touchBaseRemindersPaused ? 'Reminders paused' : 'Reminders active'}
+                  {patient.touchBaseRemindersPaused ? t('patientDashboard.remindersPaused') : t('patientDashboard.remindersActive')}
                 </Text>
                 <Switch
                   value={!patient.touchBaseRemindersPaused}
@@ -408,8 +417,8 @@ export default function PatientDashboardScreen() {
             <View style={crmStyles.infoCard}>
               <View style={crmStyles.lastContactRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={crmStyles.infoLabel}>Last contact</Text>
-                  <Text style={crmStyles.infoValue}>{formatLastContact(patient.lastContactAt)}</Text>
+                  <Text style={crmStyles.infoLabel}>{t('patientDashboard.lastContact')}</Text>
+                  <Text style={crmStyles.infoValue}>{formatLastContact(patient.lastContactAt, t)}</Text>
                 </View>
                 <TouchableOpacity
                   style={crmStyles.markContactedBtn}
@@ -417,39 +426,39 @@ export default function PatientDashboardScreen() {
                   onPress={handleMarkContacted}
                 >
                   <Feather name="heart" size={12} color={colors.primary} />
-                  <Text style={crmStyles.markContactedText}>{markingContacted ? 'Saving…' : 'Mark as contacted'}</Text>
+                  <Text style={crmStyles.markContactedText}>{markingContacted ? t('appointments.saving') : t('touchBase.markAsContacted')}</Text>
                 </TouchableOpacity>
               </View>
               {STAFF_FEATURES_ENABLED && (
                 <InfoItem
-                  label="Coach"
+                  label={t('patientDashboard.provider')}
                   value={(() => {
                     const provider = providers.find((p) => p.id === patient.providerId);
-                    return provider ? `${provider.user.firstName} ${provider.user.lastName}` : 'Unassigned (all staff)';
+                    return provider ? `${provider.user.firstName} ${provider.user.lastName}` : t('patientDashboard.unassigned');
                   })()}
                 />
               )}
 
               {patient.touchBaseRemindersPaused && (
                 <Text style={crmStyles.pausedNote}>
-                  Reminders paused for this patient. Turn back on to resume.
+                  {t('patientDashboard.pausedNote')}
                 </Text>
               )}
               <>
                   <View style={crmStyles.infoRowNoBorder}>
-                    <Text style={crmStyles.infoLabel}>Threshold</Text>
+                    <Text style={crmStyles.infoLabel}>{t('patientDashboard.threshold')}</Text>
                     <Text style={crmStyles.infoValue}>
-                      {patient.touchBaseThresholdDays ? `${formatThresholdDays(patient.touchBaseThresholdDays)} (custom)` : 'Global default'}
+                      {patient.touchBaseThresholdDays ? `${formatThresholdDays(patient.touchBaseThresholdDays, t)} ${t('patientDashboard.customSuffix')}` : t('patientDashboard.globalDefault')}
                     </Text>
                   </View>
                   <View style={{ marginTop: spacing.sm, marginBottom: spacing.sm }}>
                     <Dropdown
                       options={[
-                        { value: 'default', label: 'Use default' },
-                        ...(!TOUCH_BASE_THRESHOLD_PRESETS.some((p) => p.days === patient.touchBaseThresholdDays) && patient.touchBaseThresholdDays !== null
-                          ? [{ value: String(patient.touchBaseThresholdDays), label: `${formatThresholdDays(patient.touchBaseThresholdDays)} (custom)` }]
+                        { value: 'default', label: t('patientDashboard.useDefault') },
+                        ...(!getTouchBaseThresholdPresets(t).some((p) => p.days === patient.touchBaseThresholdDays) && patient.touchBaseThresholdDays !== null
+                          ? [{ value: String(patient.touchBaseThresholdDays), label: `${formatThresholdDays(patient.touchBaseThresholdDays, t)} ${t('patientDashboard.customSuffix')}` }]
                           : []),
-                        ...TOUCH_BASE_THRESHOLD_PRESETS.map((preset) => ({ value: String(preset.days), label: preset.label })),
+                        ...getTouchBaseThresholdPresets(t).map((preset) => ({ value: String(preset.days), label: preset.label })),
                       ]}
                       value={patient.touchBaseThresholdDays !== null ? String(patient.touchBaseThresholdDays) : 'default'}
                       onChange={(v) => handleSetThreshold(v === 'default' ? null : Number(v))}
@@ -458,13 +467,13 @@ export default function PatientDashboardScreen() {
 
                   {isAdmin && (
                     <View style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>
-                      <Text style={[crmStyles.infoLabel, { marginBottom: spacing.xs }]}>Test threshold</Text>
+                      <Text style={[crmStyles.infoLabel, { marginBottom: spacing.xs }]}>{t('patientDashboard.testThreshold')}</Text>
                       <Dropdown
                         options={[
-                          { value: '', label: 'Choose a test threshold…' },
-                          ...TEST_THRESHOLD_PRESETS.map((preset) => ({ value: String(preset.days), label: preset.label })),
+                          { value: '', label: t('patientDashboard.chooseTestThreshold') },
+                          ...getTestThresholdPresets(t).map((preset) => ({ value: String(preset.days), label: preset.label })),
                         ]}
-                        value={TEST_THRESHOLD_PRESETS.some((p) => p.days === patient.touchBaseThresholdDays) ? String(patient.touchBaseThresholdDays) : ''}
+                        value={getTestThresholdPresets(t).some((p) => p.days === patient.touchBaseThresholdDays) ? String(patient.touchBaseThresholdDays) : ''}
                         onChange={(v) => v && handleSetThreshold(Number(v))}
                       />
                     </View>
@@ -476,17 +485,17 @@ export default function PatientDashboardScreen() {
 
         {/* Notes — pinned near the top since it's used most often */}
         <View style={crmStyles.quickLinks}>
-          <QuickLink icon="📝" label="Notes" onPress={() => router.push(`/notes/${pid}`)} />
+          <QuickLink icon="📝" label={t('healthLog.notes')} onPress={() => router.push(`/notes/${pid}`)} />
         </View>
 
         {/* Summary stats */}
         {summary && (
           <View style={crmStyles.section}>
-            <Text style={crmStyles.sectionTitle}>SUMMARY</Text>
-            <SummaryRow summary={summary} />
+            <Text style={crmStyles.sectionTitle}>{t('patientDashboard.summary')}</Text>
+            <SummaryRow summary={summary} t={t} />
             <View style={crmStyles.photoCount}>
               <Text style={crmStyles.photoCountText}>
-                📷 {summary.totalPhotos} progress photo{summary.totalPhotos !== 1 ? 's' : ''}
+                📷 {t('patientDashboard.progressPhotosCount', { count: summary.totalPhotos })}
               </Text>
             </View>
           </View>
@@ -501,31 +510,31 @@ export default function PatientDashboardScreen() {
 
         {/* Quick links */}
         <View style={crmStyles.section}>
-          <Text style={crmStyles.sectionTitle}>QUICK LINKS</Text>
+          <Text style={crmStyles.sectionTitle}>{t('patientDashboard.quickLinks')}</Text>
           <View style={crmStyles.quickLinks}>
-            <QuickLink icon="📈"  label="Check-ins"    onPress={() => router.push(`/health-log/${pid}`)} />
-            <QuickLink icon="⏰"  label="Protocols"    onPress={() => router.push(`/peptides/${pid}`)} />
-            <QuickLink icon="🕐"  label="Full timeline"  onPress={() => router.push(`/history/${pid}`)} />
-            <QuickLink icon="📷"  label="Progress photos" onPress={() => router.push(`/photos/${pid}`)} />
-            <QuickLink icon="📄"  label="Documents" onPress={() => router.push(`/documents/${pid}`)} />
-            <QuickLink icon="🗓️"  label="Appointments" onPress={() => router.push(`/appointments/${pid}`)} />
-            <QuickLink icon="💬"  label="Messages" onPress={() => router.push(`/messages/${pid}`)} />
-            <QuickLink icon="🧪"  label="Requests" onPress={() => router.push(`/test-requests/${pid}`)} />
-            <QuickLink icon="🩺"  label="Measurements" onPress={() => router.push(`/health-metrics/${pid}`)} />
+            <QuickLink icon="📈"  label={t('patientDashboard.healthLogsLink')}    onPress={() => router.push(`/health-log/${pid}`)} />
+            <QuickLink icon="⏰"  label={t('dashboard.protocols')}    onPress={() => router.push(`/peptides/${pid}`)} />
+            <QuickLink icon="🕐"  label={t('patientDashboard.fullTimeline')}  onPress={() => router.push(`/history/${pid}`)} />
+            <QuickLink icon="📷"  label={t('patientDashboard.progressPhotosLink')} onPress={() => router.push(`/photos/${pid}`)} />
+            <QuickLink icon="📄"  label={t('patientDashboard.documents')} onPress={() => router.push(`/documents/${pid}`)} />
+            <QuickLink icon="🗓️"  label={t('dashboard.appointments')} onPress={() => router.push(`/appointments/${pid}`)} />
+            <QuickLink icon="💬"  label={t('patientDashboard.messages')} onPress={() => router.push(`/messages/${pid}`)} />
+            <QuickLink icon="🧪"  label={t('dashboard.requests')} onPress={() => router.push(`/test-requests/${pid}`)} />
+            <QuickLink icon="🩺"  label={t('patientDashboard.healthMetrics')} onPress={() => router.push(`/health-metrics/${pid}`)} />
           </View>
         </View>
 
         {/* Upload history (admin-only) */}
         {isAdmin && (
           <View style={crmStyles.section}>
-            <Text style={crmStyles.sectionTitle}>UPLOAD HISTORY</Text>
+            <Text style={crmStyles.sectionTitle}>{t('patientDashboard.uploadHistory')}</Text>
             {uploadHistory.length === 0 ? (
-              <Text style={crmStyles.emptyText}>No photo or document activity yet.</Text>
+              <Text style={crmStyles.emptyText}>{t('patientDashboard.noUploadActivity')}</Text>
             ) : (
               <View style={crmStyles.timelineCard}>
                 {uploadHistory.map((entry, i) => (
                   <View key={entry.id}>
-                    <UploadHistoryRow entry={entry} />
+                    <UploadHistoryRow entry={entry} t={t} />
                     {i < uploadHistory.length - 1 && <View style={crmStyles.divider} />}
                   </View>
                 ))}
@@ -538,15 +547,15 @@ export default function PatientDashboardScreen() {
         {timeline.length > 0 && (
           <View style={crmStyles.section}>
             <View style={crmStyles.sectionRow}>
-              <Text style={crmStyles.sectionTitle}>RECENT ACTIVITY</Text>
+              <Text style={crmStyles.sectionTitle}>{t('patientDashboard.recentActivity')}</Text>
               <TouchableOpacity onPress={() => router.push(`/history/${pid}`)}>
-                <Text style={crmStyles.viewAll}>View all →</Text>
+                <Text style={crmStyles.viewAll}>{t('profile.viewAll')}</Text>
               </TouchableOpacity>
             </View>
             <View style={crmStyles.timelineCard}>
               {timeline.map((event, i) => (
                 <View key={`${event.type}-${event.id}`}>
-                  <MiniEventRow event={event} />
+                  <MiniEventRow event={event} t={t} />
                   {i < timeline.length - 1 && <View style={crmStyles.divider} />}
                 </View>
               ))}
@@ -557,7 +566,7 @@ export default function PatientDashboardScreen() {
         <View style={crmStyles.deleteRow}>
           <TouchableOpacity style={crmStyles.deleteBtn} onPress={handleDeletePatient}>
             <Feather name="trash-2" size={13} color={colors.danger} />
-            <Text style={crmStyles.deleteBtnText}>Delete</Text>
+            <Text style={crmStyles.deleteBtnText}>{t('common.delete')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { DoseStatusBadge } from '../../components/DoseStatusBadge';
 import { EmptyState } from '../../components/EmptyState';
@@ -26,8 +28,8 @@ import {
 import { downloadFile } from '../../api/client';
 import { useAuth } from '../../context/auth';
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
+function formatDateTime(iso: string, t: TFunction): string {
+  return new Date(iso).toLocaleString(t('language.locale'), {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -36,6 +38,7 @@ function formatDateTime(iso: string): string {
 }
 
 export default function AssignmentDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -55,10 +58,10 @@ export default function AssignmentDetailScreen() {
     try {
       const all = await getAssignments(user.patientProfile.id, false);
       const found = all.find((a) => a.id === assignmentId);
-      if (!found) { setError('Assignment not found'); return; }
+      if (!found) { setError(t('assignmentDetail.notFound')); return; }
       setAssignment(found);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load assignment');
+      setError(e instanceof Error ? e.message : t('assignmentDetail.failedToLoad'));
     }
   }, [assignmentId, user?.patientProfile?.id]);
 
@@ -88,7 +91,7 @@ export default function AssignmentDetailScreen() {
       await logDose(assignmentId, { status: 'TAKEN' });
       await loadLogs(); // Refresh dose history
     } catch (e) {
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('assignmentDetail.couldNotLogDose'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setMarking(false);
     }
@@ -104,7 +107,7 @@ export default function AssignmentDetailScreen() {
         await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
       }
     } catch (e) {
-      Alert.alert('Could not download PDF', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('assignmentDetail.couldNotDownloadPdf'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setDownloading(false);
     }
@@ -125,11 +128,11 @@ export default function AssignmentDetailScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.navBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.center}>
-          <Text style={styles.errorText}>{error ?? 'Assignment not found'}</Text>
+          <Text style={styles.errorText}>{error ?? t('assignmentDetail.notFound')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -151,7 +154,7 @@ export default function AssignmentDetailScreen() {
         {/* Nav bar */}
         <View style={styles.navBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -162,14 +165,14 @@ export default function AssignmentDetailScreen() {
           <Text style={styles.schedule}>
             {assignment.frequency
               ? [assignment.frequency, assignment.timesOfDay.join(', ')].filter(Boolean).join(' · ')
-              : 'Schedule not set yet'}
+              : t('medications.scheduleNotSet')}
           </Text>
         </View>
 
         {/* Instructions */}
         {assignment.medication.instructions && (
           <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Instructions</Text>
+            <Text style={styles.infoLabel}>{t('medicationDetail.instructions')}</Text>
             <Text style={styles.infoText}>{assignment.medication.instructions}</Text>
           </View>
         )}
@@ -184,7 +187,7 @@ export default function AssignmentDetailScreen() {
           {downloading ? (
             <ActivityIndicator color={colors.primary} />
           ) : (
-            <Text style={styles.downloadBtnText}>Download PDF</Text>
+            <Text style={styles.downloadBtnText}>{t('assignmentDetail.downloadPrescription')}</Text>
           )}
         </TouchableOpacity>
 
@@ -199,29 +202,29 @@ export default function AssignmentDetailScreen() {
             {marking ? (
               <ActivityIndicator color={colors.text.inverse} />
             ) : (
-              <Text style={styles.markBtnText}>Mark Today's Task as Done</Text>
+              <Text style={styles.markBtnText}>{t('assignmentDetail.markTodayDoseTaken')}</Text>
             )}
           </TouchableOpacity>
         )}
 
         {todayLogged && (
           <View style={styles.todayDoneCard}>
-            <Text style={styles.todayDoneText}>Today's task done ✓</Text>
+            <Text style={styles.todayDoneText}>{t('assignmentDetail.todayDoseLogged')}</Text>
           </View>
         )}
 
         {/* Dose history */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Task History</Text>
+          <Text style={styles.sectionTitle}>{t('assignmentDetail.doseHistory')}</Text>
           {logsLoading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
           ) : logs.length === 0 ? (
-            <EmptyState icon="📋" title="No tasks logged yet" subtitle="" />
+            <EmptyState icon="📋" title={t('assignmentDetail.noDosesLoggedYet')} subtitle="" />
           ) : (
             logs.map((log) => (
               <View key={log.id} style={styles.logRow}>
                 <View style={styles.logLeft}>
-                  <Text style={styles.logDate}>{formatDateTime(log.takenAt)}</Text>
+                  <Text style={styles.logDate}>{formatDateTime(log.takenAt, t)}</Text>
                   {log.notes && <Text style={styles.logNotes}>{log.notes}</Text>}
                 </View>
                 <DoseStatusBadge status={log.status} />

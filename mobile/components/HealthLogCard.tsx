@@ -1,14 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography, radius, shadows } from '../theme';
 import { FEELING_EMOJI } from './FeelingPicker';
 import type { HealthLog } from '../api/healthLog';
 
-function formatDate(iso: string): { day: string; month: string; year: string } {
+function formatDate(iso: string, locale: string): { day: string; month: string; year: string } {
   const d = new Date(iso);
   return {
     day:   d.getDate().toString().padStart(2, '0'),
-    month: d.toLocaleDateString('en-US', { month: 'short' }),
+    month: d.toLocaleDateString(locale, { month: 'short' }),
     year:  d.getFullYear().toString(),
   };
 }
@@ -19,7 +20,8 @@ interface Props {
 }
 
 export function HealthLogCard({ log, onPress }: Props) {
-  const { day, month } = formatDate(log.date);
+  const { t } = useTranslation();
+  const { day, month } = formatDate(log.date, t('language.locale'));
   const isStaffEntry = log.createdBy.role !== 'PATIENT';
 
   return (
@@ -61,7 +63,7 @@ export function HealthLogCard({ log, onPress }: Props) {
           {isStaffEntry && (
             <View style={styles.staffRow}>
               <View style={styles.staffBadge}>
-                <Text style={styles.staffBadgeText}>Staff entry</Text>
+                <Text style={styles.staffBadgeText}>{t('history.staffEntry')}</Text>
               </View>
               <Text style={styles.staffName}>
                 {log.createdBy.firstName} {log.createdBy.lastName}

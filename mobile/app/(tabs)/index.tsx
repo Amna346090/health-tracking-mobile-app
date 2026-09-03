@@ -3,11 +3,13 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { onPushEvent } from '../../lib/pushEvents';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/auth';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 import { TodayMedicationCard } from '../../components/MedicationCard';
 import { HealthLogCard } from '../../components/HealthLogCard';
 import { colors, spacing, typography } from '../../theme';
@@ -19,11 +21,11 @@ import { getMessages, type Message } from '../../api/messages';
 import { getTestRequests, type TestRequest } from '../../api/testRequests';
 import { getUnreadCount } from '../../api/notifications';
 
-function greeting(): string {
+function greetingKey(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'dashboard.goodMorning';
+  if (hour < 17) return 'dashboard.goodAfternoon';
+  return 'dashboard.goodEvening';
 }
 
 const TREND_ARROW: Record<string, string> = { UP: '↑', DOWN: '↓', STABLE: '→' };
@@ -34,6 +36,7 @@ const TREND_COLOR: Record<string, string> = {
 };
 
 export default function DashboardScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const router   = useRouter();
   const isPatient = user?.role === 'PATIENT';
@@ -115,7 +118,7 @@ export default function DashboardScreen() {
         ),
       );
     } catch (e) {
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('dashboard.couldNotSave'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setMarkingId(null);
     }
@@ -150,12 +153,13 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.greetingLabel}>{greeting()},</Text>
+              <Text style={styles.greetingLabel}>{t(greetingKey())}</Text>
               <Text style={styles.greetingName}>
                 {user?.firstName} {user?.lastName}
               </Text>
             </View>
             <View style={styles.headerActions}>
+              <LanguageSwitcher />
               {showsNotificationsBell && (
                 <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/notifications')}>
                   <Feather name="bell" size={19} color={colors.text.primary} />
@@ -174,7 +178,7 @@ export default function DashboardScreen() {
             </View>
           </View>
           <Text style={styles.dateText}>
-            {new Date().toLocaleDateString('en-US', {
+            {new Date().toLocaleDateString(t('language.locale'), {
               weekday: 'long',
               month: 'long',
               day: 'numeric',
@@ -185,9 +189,9 @@ export default function DashboardScreen() {
         {/* ── Quick stats row (patients only) ── */}
         {isPatient && (
           <View style={styles.statsRow}>
-            <StatBadge icon="📋" label="Protocols" value={schedule.length > 0 ? String(schedule.length) : '—'} />
-            <StatBadge icon="✅" label="Done today" value={schedule.length > 0 ? String(takenCount) : '—'} />
-            <StatBadge icon="📊" label="Completion" value={adherence !== null ? `${adherence}%` : '—'} />
+            <StatBadge icon="📋" label={t('dashboard.protocols')} value={schedule.length > 0 ? String(schedule.length) : '—'} />
+            <StatBadge icon="✅" label={t('dashboard.doneToday')} value={schedule.length > 0 ? String(takenCount) : '—'} />
+            <StatBadge icon="📊" label={t('dashboard.completion')} value={adherence !== null ? `${adherence}%` : '—'} />
           </View>
         )}
 
@@ -198,8 +202,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="users" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Clients</Text>
-                  <Text style={styles.navCardSubtext}>View and manage all clients</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.clients')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.clientsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -208,8 +212,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="package" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Protocols</Text>
-                  <Text style={styles.navCardSubtext}>Manage protocol types and schedules</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.protocols')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.protocolsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -218,8 +222,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="heart" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Touch-Base</Text>
-                  <Text style={styles.navCardSubtext}>Clients due for a check-in</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.touchBase')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.touchBaseSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -228,8 +232,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="bell" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Notifications</Text>
-                  <Text style={styles.navCardSubtext}>Alerts and updates for your account</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.notifications')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.notificationsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -238,8 +242,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="calendar" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Appointments</Text>
-                  <Text style={styles.navCardSubtext}>Upcoming visits with clients</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.appointments')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.appointmentsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -248,8 +252,8 @@ export default function DashboardScreen() {
               <View style={styles.navCardLeft}>
                 <Feather name="clipboard" size={18} color={colors.primary} />
                 <View>
-                  <Text style={styles.navCardText}>Requests</Text>
-                  <Text style={styles.navCardSubtext}>Items to follow up on</Text>
+                  <Text style={styles.navCardText}>{t('dashboard.requests')}</Text>
+                  <Text style={styles.navCardSubtext}>{t('dashboard.requestsSubtitle')}</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.text.muted} />
@@ -261,9 +265,9 @@ export default function DashboardScreen() {
         {isPatient && summary && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Summary</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.summary')}</Text>
               <TouchableOpacity onPress={() => patientId && router.push(`/history/${patientId}`)}>
-                <Text style={summaryStyles.viewAll}>View history →</Text>
+                <Text style={summaryStyles.viewAll}>{t('dashboard.viewHistory')}</Text>
               </TouchableOpacity>
             </View>
             <View style={summaryStyles.row}>
@@ -272,7 +276,7 @@ export default function DashboardScreen() {
                 <Text style={summaryStyles.value}>
                   {summary.adherence.last7d.rate !== null ? `${summary.adherence.last7d.rate}%` : '—'}
                 </Text>
-                <Text style={summaryStyles.label}>7-day completion</Text>
+                <Text style={summaryStyles.label}>{t('dashboard.sevenDayCompletion')}</Text>
               </View>
               {/* Weight trend */}
               <View style={summaryStyles.card}>
@@ -287,7 +291,7 @@ export default function DashboardScreen() {
                   )}
                 </View>
                 <Text style={summaryStyles.label}>
-                  {summary.weight.latest !== null ? 'kg (weight)' : 'No weight'}
+                  {summary.weight.latest !== null ? t('dashboard.weightUnit') : t('dashboard.noWeight')}
                 </Text>
               </View>
               {/* Last check-in */}
@@ -296,7 +300,7 @@ export default function DashboardScreen() {
                   {summary.daysSinceLastLog !== null ? String(summary.daysSinceLastLog) : '—'}
                 </Text>
                 <Text style={summaryStyles.label}>
-                  {summary.daysSinceLastLog === 0 ? 'Checked in today' : 'days since check-in'}
+                  {summary.daysSinceLastLog === 0 ? t('dashboard.checkedInToday') : t('dashboard.daysSinceCheckin')}
                 </Text>
               </View>
             </View>
@@ -307,9 +311,9 @@ export default function DashboardScreen() {
         {isPatient && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Tasks</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.todaysTasks')}</Text>
             {schedule.length > 0 && (
-              <Text style={styles.sectionBadge}>{dueCount} due</Text>
+              <Text style={styles.sectionBadge}>{dueCount} {t('dashboard.due')}</Text>
             )}
           </View>
 
@@ -321,8 +325,8 @@ export default function DashboardScreen() {
             <Card>
               <EmptyState
                 icon="📋"
-                title="Nothing scheduled today"
-                subtitle="Your team hasn't set up a schedule yet — check back soon."
+                title={t('dashboard.nothingScheduledToday')}
+                subtitle={t('dashboard.noScheduleSubtitle')}
               />
             </Card>
           ) : (
@@ -342,10 +346,10 @@ export default function DashboardScreen() {
         {isPatient && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.upcomingAppointments')}</Text>
               <TouchableOpacity onPress={() => patientId && router.push(`/appointments/${patientId}`)}>
                 <Text style={summaryStyles.viewAll}>
-                  {upcomingAppointments.length > 0 ? 'View all →' : 'Request →'}
+                  {upcomingAppointments.length > 0 ? t('profile.viewAll') : t('dashboard.requestArrow')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -357,20 +361,20 @@ export default function DashboardScreen() {
               <Card>
                 <EmptyState
                   icon="🗓️"
-                  title="No upcoming appointments"
-                  subtitle="Tap above to request one with your team."
+                  title={t('dashboard.noUpcomingAppointments')}
+                  subtitle={t('dashboard.noAppointmentsSubtitle')}
                 />
               </Card>
             ) : (
               upcomingAppointments.slice(0, 2).map((a) => (
                 <Card key={a.id} style={styles.loadingCard}>
                   <Text style={{ ...typography.h4, color: colors.text.primary }}>
-                    {new Date(a.scheduledFor).toLocaleString('en-US', {
+                    {new Date(a.scheduledFor).toLocaleString(t('language.locale'), {
                       weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
                     })}
                   </Text>
                   <Text style={{ ...typography.body2, color: colors.text.muted, marginTop: 2 }}>
-                    {a.reason || 'No reason given'}
+                    {a.reason || t('dashboard.noReasonGiven')}
                   </Text>
                 </Card>
               ))
@@ -382,9 +386,9 @@ export default function DashboardScreen() {
         {isPatient && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Messages</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.messages')}</Text>
               {unreadMessageCount > 0 && (
-                <Text style={styles.sectionBadge}>{unreadMessageCount} unread</Text>
+                <Text style={styles.sectionBadge}>{unreadMessageCount} {t('dashboard.unread')}</Text>
               )}
             </View>
             <TouchableOpacity onPress={() => patientId && router.push(`/messages/${patientId}`)}>
@@ -392,15 +396,15 @@ export default function DashboardScreen() {
                 {messages.length === 0 ? (
                   <EmptyState
                     icon="💬"
-                    title="No messages yet"
-                    subtitle="Your team hasn't sent any messages yet."
+                    title={t('dashboard.noMessagesYet')}
+                    subtitle={t('dashboard.noMessagesSubtitle')}
                   />
                 ) : (
                   <View>
                     <Text style={{ ...typography.body1, color: colors.text.primary }} numberOfLines={2}>
                       {messages[0].body}
                     </Text>
-                    <Text style={summaryStyles.viewAll}>View inbox →</Text>
+                    <Text style={summaryStyles.viewAll}>{t('dashboard.viewInbox')}</Text>
                   </View>
                 )}
               </Card>
@@ -412,11 +416,11 @@ export default function DashboardScreen() {
         {isPatient && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Documents</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.documents')}</Text>
             </View>
             <TouchableOpacity onPress={() => patientId && router.push(`/documents/${patientId}`)}>
               <Card>
-                <Text style={summaryStyles.viewAll}>Upload or view your documents →</Text>
+                <Text style={summaryStyles.viewAll}>{t('dashboard.uploadOrViewDocuments')}</Text>
               </Card>
             </TouchableOpacity>
           </View>
@@ -426,11 +430,11 @@ export default function DashboardScreen() {
         {isPatient && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Notes</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.notes')}</Text>
             </View>
             <TouchableOpacity onPress={() => patientId && router.push(`/notes/${patientId}`)}>
               <Card>
-                <Text style={summaryStyles.viewAll}>View notes from your team →</Text>
+                <Text style={summaryStyles.viewAll}>{t('dashboard.viewNotesFromTeam')}</Text>
               </Card>
             </TouchableOpacity>
           </View>
@@ -440,9 +444,9 @@ export default function DashboardScreen() {
         {isPatient && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Requests</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.requests')}</Text>
               {openTestRequestCount > 0 && (
-                <Text style={styles.sectionBadge}>{openTestRequestCount} open</Text>
+                <Text style={styles.sectionBadge}>{openTestRequestCount} {t('dashboard.open')}</Text>
               )}
             </View>
             <TouchableOpacity onPress={() => patientId && router.push(`/test-requests/${patientId}`)}>
@@ -450,11 +454,11 @@ export default function DashboardScreen() {
                 {testRequests.length === 0 ? (
                   <EmptyState
                     icon="🧪"
-                    title="No requests"
-                    subtitle="Your team hasn't sent any requests yet."
+                    title={t('dashboard.noRequests')}
+                    subtitle={t('dashboard.noRequestsSubtitle')}
                   />
                 ) : (
-                  <Text style={summaryStyles.viewAll}>View requests →</Text>
+                  <Text style={summaryStyles.viewAll}>{t('dashboard.viewRequests')}</Text>
                 )}
               </Card>
             </TouchableOpacity>
@@ -465,11 +469,11 @@ export default function DashboardScreen() {
         {isPatient && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Measurements</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.measurements')}</Text>
             </View>
             <TouchableOpacity onPress={() => patientId && router.push(`/health-metrics/${patientId}`)}>
               <Card>
-                <Text style={summaryStyles.viewAll}>Log your measurements and progress →</Text>
+                <Text style={summaryStyles.viewAll}>{t('dashboard.logMeasurements')}</Text>
               </Card>
             </TouchableOpacity>
           </View>
@@ -479,7 +483,7 @@ export default function DashboardScreen() {
         {isPatient && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Check-ins</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.recentCheckins')}</Text>
           </View>
           {scheduleLoading ? (
             <Card style={styles.loadingCard}>
@@ -489,8 +493,8 @@ export default function DashboardScreen() {
             <Card>
               <EmptyState
                 icon="📈"
-                title="No check-ins yet"
-                subtitle="Tap Check-ins below to record your weight, mood, and more."
+                title={t('dashboard.noCheckinsYet')}
+                subtitle={t('dashboard.noCheckinsSubtitle')}
               />
             </Card>
           ) : (

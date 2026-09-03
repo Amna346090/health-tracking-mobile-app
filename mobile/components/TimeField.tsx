@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 interface TimeFieldProps {
@@ -24,8 +25,8 @@ function formatValue(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function formatDisplay(d: Date): string {
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+function formatDisplay(d: Date, locale: string): string {
+  return d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 }
 
 export function TimeField({
@@ -34,8 +35,9 @@ export function TimeField({
   onChange,
   error,
   hint,
-  placeholder = 'Select a time',
+  placeholder,
 }: TimeFieldProps) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   const selected = toDate(value);
 
@@ -59,7 +61,7 @@ export function TimeField({
         accessibilityHint={hint}
       >
         <Text style={selected ? styles.valueText : styles.placeholderText}>
-          {selected ? formatDisplay(selected) : placeholder}
+          {selected ? formatDisplay(selected, t('language.locale')) : (placeholder ?? t('common.selectTime'))}
         </Text>
         <Feather name="clock" size={18} color={colors.text.secondary} />
       </Pressable>

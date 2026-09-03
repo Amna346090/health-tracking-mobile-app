@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "Tandem",
-    "slug": "sflbiotrack",
+    "slug": "tandem",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "sflbiotrack",
+    "scheme": "tandem",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "assetBundlePatterns": [
@@ -12,14 +12,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sflbiotrack.app"
+      "bundleIdentifier": "com.tandem.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4f46e5"
       },
-      "package": "com.sflbiotrack.app"
+      "package": "com.tandem.app"
     },
     "plugins": [
       "expo-router",

@@ -1,14 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography, radius } from '../theme';
 import type { FeelingStatus } from '../api/healthLog';
 
-const OPTIONS: { value: FeelingStatus; emoji: string; label: string }[] = [
-  { value: 'GREAT',    emoji: '😄', label: 'Great'    },
-  { value: 'GOOD',     emoji: '🙂', label: 'Good'     },
-  { value: 'OKAY',     emoji: '😐', label: 'Okay'     },
-  { value: 'POOR',     emoji: '😟', label: 'Poor'     },
-  { value: 'TERRIBLE', emoji: '😢', label: 'Terrible' },
+const OPTIONS: { value: FeelingStatus; emoji: string; labelKey: string }[] = [
+  { value: 'GREAT',    emoji: '😄', labelKey: 'feeling.great'    },
+  { value: 'GOOD',     emoji: '🙂', labelKey: 'feeling.good'     },
+  { value: 'OKAY',     emoji: '😐', labelKey: 'feeling.okay'     },
+  { value: 'POOR',     emoji: '😟', labelKey: 'feeling.poor'     },
+  { value: 'TERRIBLE', emoji: '😢', labelKey: 'feeling.terrible' },
 ];
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function FeelingPicker({ value, onChange }: Props) {
+  const { t } = useTranslation();
   return (
     <View style={styles.row}>
       {OPTIONS.map((opt) => {
@@ -29,7 +31,7 @@ export function FeelingPicker({ value, onChange }: Props) {
             activeOpacity={0.7}
           >
             <Text style={styles.emoji}>{opt.emoji}</Text>
-            <Text style={[styles.label, selected && styles.labelSelected]}>{opt.label}</Text>
+            <Text style={[styles.label, selected && styles.labelSelected]}>{t(opt.labelKey)}</Text>
           </TouchableOpacity>
         );
       })}

@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
@@ -40,11 +41,12 @@ function todayISO() {
   return new Date().toISOString().split('T')[0];
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export default function HealthMetricsScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -133,7 +135,7 @@ export default function HealthMetricsScreen() {
   async function handleSave() {
     if (!metricType) return;
     const parsed = parseFloat(value);
-    if (isNaN(parsed)) { Alert.alert('Enter a valid number'); return; }
+    if (isNaN(parsed)) { Alert.alert(t('healthMetrics.invalidNumber')); return; }
     setSaving(true);
     try {
       await createMetric(pid, {
@@ -150,7 +152,7 @@ export default function HealthMetricsScreen() {
       await loadCategories();
       await reloadEntries(metricType);
     } catch (e) {
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('healthMetrics.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -176,7 +178,7 @@ export default function HealthMetricsScreen() {
             onPress={() => { setShowNewCat((v) => !v); setShowForm(false); }}
           >
             <Text style={[styles.typeChipText, styles.newChipText, showNewCat && styles.typeChipTextActive]}>
-              + New
+              {t('healthMetrics.newCategoryChip')}
             </Text>
           </TouchableOpacity>
         )}
@@ -188,14 +190,14 @@ export default function HealthMetricsScreen() {
             style={[styles.input, styles.newCatInput]}
             value={newCat}
             onChangeText={setNewCat}
-            placeholder="New category name"
+            placeholder={t('healthMetrics.newCategoryPlaceholder')}
             placeholderTextColor={colors.text.muted}
             autoFocus
             onSubmitEditing={handleAddCategory}
             returnKeyType="done"
           />
           <TouchableOpacity style={styles.newCatAddBtn} onPress={handleAddCategory} activeOpacity={0.8}>
-            <Text style={styles.newCatAddText}>Add</Text>
+            <Text style={styles.newCatAddText}>{t('healthMetrics.addCategory')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -207,7 +209,7 @@ export default function HealthMetricsScreen() {
           activeOpacity={0.8}
         >
           <Text style={[styles.addBtnText, showForm && styles.addBtnTextActive]}>
-            {showForm ? '✕' : `+ Log ${metricType}`}
+            {showForm ? '✕' : t('healthMetrics.logType', { type: metricType })}
           </Text>
         </TouchableOpacity>
       )}
@@ -216,41 +218,41 @@ export default function HealthMetricsScreen() {
         <Card style={styles.formCard}>
           {isStaff && !isOwnPatient && (
             <View style={styles.staffBanner}>
-              <Text style={styles.staffBannerText}>Staff entry — logged on client's behalf</Text>
+              <Text style={styles.staffBannerText}>{t('healthLogDetail.staffBanner')}</Text>
             </View>
           )}
           <View style={styles.row}>
             <View style={styles.half}>
-              <Text style={styles.fieldLabel}>Value</Text>
+              <Text style={styles.fieldLabel}>{t('healthMetrics.value')}</Text>
               <TextInput
                 style={styles.input}
                 value={value}
                 onChangeText={setValue}
-                placeholder="e.g. 82"
+                placeholder={t('healthMetrics.valuePlaceholder')}
                 placeholderTextColor={colors.text.muted}
                 keyboardType="decimal-pad"
               />
             </View>
             <View style={styles.half}>
-              <Text style={styles.fieldLabel}>Unit</Text>
+              <Text style={styles.fieldLabel}>{t('healthMetrics.unit')}</Text>
               <TextInput
                 style={styles.input}
                 value={unit}
                 onChangeText={setUnit}
-                placeholder="e.g. kg, cm, %"
+                placeholder={t('healthMetrics.unitPlaceholder')}
                 placeholderTextColor={colors.text.muted}
               />
             </View>
           </View>
-          <DateField label="Date" value={date} onChange={setDate} maximumDate={new Date()} />
+          <DateField label={t('appointments.date')} value={date} onChange={setDate} maximumDate={new Date()} />
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Supporting report (optional)</Text>
+            <Text style={styles.fieldLabel}>{t('healthMetrics.supportingReportOptional')}</Text>
             {attachedDoc ? (
               <View style={styles.attachedDoc}>
-                <Text style={styles.attachedDocText}>Report attached ✓</Text>
+                <Text style={styles.attachedDocText}>{t('healthMetrics.reportAttached')}</Text>
                 <TouchableOpacity onPress={() => setAttachedDoc(null)}>
-                  <Text style={styles.removeAttachment}>Remove</Text>
+                  <Text style={styles.removeAttachment}>{t('common.remove')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -259,7 +261,7 @@ export default function HealthMetricsScreen() {
           </View>
 
           <Button
-            label={saving ? 'Saving…' : 'Save entry'}
+            label={saving ? t('appointments.saving') : t('healthMetrics.saveEntry')}
             onPress={handleSave}
             loading={saving}
           />
@@ -270,7 +272,7 @@ export default function HealthMetricsScreen() {
         <MetricChart data={trend} label={metricType} />
       )}
 
-      {entries.length > 0 && <Text style={styles.sectionTitle}>History</Text>}
+      {entries.length > 0 && <Text style={styles.sectionTitle}>{t('healthLog.history')}</Text>}
     </View>
   );
 
@@ -286,9 +288,9 @@ export default function HealthMetricsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Measurements</Text>
+        <Text style={styles.title}>{t('patientDashboard.healthMetrics')}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -301,14 +303,14 @@ export default function HealthMetricsScreen() {
           showForm || showNewCat ? null : !metricType ? (
             <EmptyState
               icon="📊"
-              title="No measurements yet"
-              subtitle={canLog ? 'Tap "+ New" to start tracking something.' : 'Nothing tracked yet.'}
+              title={t('healthMetrics.noCategoriesTitle')}
+              subtitle={canLog ? t('healthMetrics.tapNewToStart') : t('healthMetrics.nothingTrackedYet')}
             />
           ) : (
             <EmptyState
               icon="📊"
-              title="No entries yet"
-              subtitle={canLog ? `Tap "+ Log ${metricType}" to add the first one.` : 'No entries logged yet.'}
+              title={t('healthMetrics.noEntriesTitle')}
+              subtitle={canLog ? t('healthMetrics.tapAboveToLog', { type: metricType }) : t('healthMetrics.noEntriesLogged')}
             />
           )
         }
@@ -316,7 +318,7 @@ export default function HealthMetricsScreen() {
           <Card style={styles.entryCard}>
             <Text style={styles.entryValue}>{item.value} {item.unit ?? ''}</Text>
             <Text style={styles.entryMeta}>
-              {formatDate(item.recordedAt)}{item.documentId ? ' · Linked to a report' : ''}
+              {formatDate(item.recordedAt, t('language.locale'))}{item.documentId ? t('healthMetrics.linkedToReport') : ''}
             </Text>
           </Card>
         )}

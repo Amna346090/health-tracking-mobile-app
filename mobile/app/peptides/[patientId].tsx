@@ -8,6 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
@@ -23,6 +25,18 @@ import {
 
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'As needed', 'Weekly'];
 
+const FREQUENCY_LABEL_KEY: Record<string, string> = {
+  'Once daily': 'medicationForm.frequencyOptions.onceDaily',
+  'Twice daily': 'medicationForm.frequencyOptions.twiceDaily',
+  'Three times daily': 'medicationForm.frequencyOptions.threeTimesDaily',
+  'As needed': 'medicationForm.frequencyOptions.asNeeded',
+  'Weekly': 'medicationForm.frequencyOptions.weekly',
+};
+
+function frequencyLabel(f: string, t: TFunction): string {
+  return FREQUENCY_LABEL_KEY[f] ? t(FREQUENCY_LABEL_KEY[f]) : f;
+}
+
 const FREQUENCY_DEFAULT_COUNT: Record<string, number> = {
   'Once daily': 1,
   'Twice daily': 2,
@@ -31,8 +45,8 @@ const FREQUENCY_DEFAULT_COUNT: Record<string, number> = {
   'Weekly': 1,
 };
 
-function formatOrderDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatOrderDate(iso: string, t: TFunction): string {
+  return new Date(iso).toLocaleDateString(t('language.locale'), { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function timesForCount(current: string[], count: number): string[] {
@@ -41,6 +55,7 @@ function timesForCount(current: string[], count: number): string[] {
 }
 
 export default function PatientPeptidesScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const pid = Number(patientId);
@@ -127,7 +142,7 @@ export default function PatientPeptidesScreen() {
       setAssignments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
       setEditingItem(null);
     } catch (e) {
-      Alert.alert('Could not save changes', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('notes.saveChangesFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -142,7 +157,7 @@ export default function PatientPeptidesScreen() {
         await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
       }
     } catch (e) {
-      Alert.alert('Could not download PDF', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('peptidesPatient.couldNotDownloadPrescription'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setDownloadingId(null);
     }
@@ -162,7 +177,7 @@ export default function PatientPeptidesScreen() {
       setOrders((prev) => ({ ...prev, [assignmentId]: [order, ...(prev[assignmentId] ?? [])] }));
       setOrderFormFor(null);
     } catch (e) {
-      Alert.alert('Could not save order', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('peptidesPatient.couldNotSaveOrder'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSavingOrder(false);
     }
@@ -174,17 +189,17 @@ export default function PatientPeptidesScreen() {
       await deleteOrder(pid, assignmentId, order.id);
       setOrders((prev) => ({ ...prev, [assignmentId]: (prev[assignmentId] ?? []).filter((o) => o.id !== order.id) }));
     } catch (e) {
-      Alert.alert('Could not delete order', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('peptidesPatient.couldNotDeleteOrder'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setDeletingOrderId(null);
     }
   }
 
   function handleDelete(item: MedicationAssignment) {
-    Alert.alert('Delete protocol?', `Remove ${item.medication.name} from this client's active protocols? This also stops its task reminders.`, [
-      { text: 'Never mind', style: 'cancel' },
+    Alert.alert(t('medicationDetail.deletePeptideTitle'), t('peptidesPatient.deleteConfirmBody', { name: item.medication.name }), [
+      { text: t('appointments.neverMind'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           setDeletingId(item.id);
@@ -192,7 +207,7 @@ export default function PatientPeptidesScreen() {
             await deactivateAssignment(pid, item.id);
             setAssignments((prev) => prev.filter((a) => a.id !== item.id));
           } catch (e) {
-            Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.');
+            Alert.alert(t('medicationDetail.couldNotDelete'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
           } finally {
             setDeletingId(null);
           }
@@ -211,10 +226,10 @@ export default function PatientPeptidesScreen() {
 
   const EditForm = editingItem && (
     <Card style={styles.formCard}>
-      <Text style={styles.formTitle}>Edit {editingItem.medication.name}</Text>
+      <Text style={styles.formTitle}>{t('peptidesPatient.editTitle', { name: editingItem.medication.name })}</Text>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Frequency</Text>
+        <Text style={styles.fieldLabel}>{t('peptidesPatient.frequencyFieldLabel')}</Text>
         <View style={styles.chipRow}>
           {FREQUENCIES.map((f) => (
             <TouchableOpacity
@@ -223,7 +238,7 @@ export default function PatientPeptidesScreen() {
               onPress={() => handleFrequencyChange(f)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.chipText, frequency === f && styles.chipTextSelected]}>{f}</Text>
+              <Text style={[styles.chipText, frequency === f && styles.chipTextSelected]}>{frequencyLabel(f, t)}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -231,40 +246,40 @@ export default function PatientPeptidesScreen() {
 
       <View style={styles.field}>
         <Text style={styles.fieldLabel}>
-          Times per day — {times.length} {times.length === 1 ? 'time' : 'times'}
+          {t('medicationForm.timesPerDay', { count: times.length })}
         </Text>
         <View style={{ gap: spacing.sm }}>
-          {times.map((t, i) => (
+          {times.map((time, i) => (
             <View key={i} style={styles.timeRow}>
               <View style={styles.flex}>
-                <TimeField label={`Time ${i + 1}`} value={t} onChange={(v) => updateTime(i, v)} />
+                <TimeField label={t('medicationForm.timeSlotLabel', { n: i + 1 })} value={time} onChange={(v) => updateTime(i, v)} />
               </View>
-              <TouchableOpacity onPress={() => removeTime(i)} style={styles.removeTimeBtn} accessibilityLabel="Remove this time">
+              <TouchableOpacity onPress={() => removeTime(i)} style={styles.removeTimeBtn} accessibilityLabel={t('medicationForm.removeTimeA11y')}>
                 <Text style={styles.removeTimeText}>✕</Text>
               </TouchableOpacity>
             </View>
           ))}
           <TouchableOpacity onPress={addTime} style={styles.addTimeBtn} activeOpacity={0.7}>
-            <Text style={styles.addTimeText}>+ Add time</Text>
+            <Text style={styles.addTimeText}>{t('peptidesPatient.addTime')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.row}>
         <View style={styles.half}>
-          <DateField label="Start date" value={startDate} onChange={setStartDate} />
+          <DateField label={t('peptidesPatient.startDateLabel')} value={startDate} onChange={setStartDate} />
         </View>
         <View style={styles.half}>
-          <DateField label="End date (optional)" value={endDate} onChange={setEndDate} />
+          <DateField label={t('peptidesPatient.endDateOptionalLabel')} value={endDate} onChange={setEndDate} />
         </View>
       </View>
 
       <View style={styles.formActions}>
         <TouchableOpacity onPress={() => setEditingItem(null)} style={styles.cancelBtn}>
-          <Text style={styles.cancelBtnText}>Cancel</Text>
+          <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Button label={saving ? 'Saving…' : 'Save changes'} onPress={handleSaveEdit} loading={saving} />
+          <Button label={saving ? t('appointments.saving') : t('appointments.saveChanges')} onPress={handleSaveEdit} loading={saving} />
         </View>
       </View>
     </Card>
@@ -274,9 +289,9 @@ export default function PatientPeptidesScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Protocols</Text>
+        <Text style={styles.title}>{t('peptidesPatient.title')}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -287,7 +302,7 @@ export default function PatientPeptidesScreen() {
         ListHeaderComponent={EditForm}
         ListEmptyComponent={
           !editingItem ? (
-            <EmptyState icon="📋" title="No protocols assigned" subtitle="Assign one from this client's dashboard." />
+            <EmptyState icon="📋" title={t('medications.noneAssignedTitle')} subtitle={t('peptidesPatient.assignFromDashboard')} />
           ) : null
         }
         renderItem={({ item }) => (
@@ -299,16 +314,16 @@ export default function PatientPeptidesScreen() {
                 <Text style={styles.schedule}>
                   {item.frequency
                     ? [item.frequency, item.timesOfDay.join(', ')].filter(Boolean).join(' · ')
-                    : 'Schedule not set yet'}
+                    : t('medications.scheduleNotSet')}
                 </Text>
               </View>
             </View>
 
             <View style={styles.ordersBlock}>
-              <Text style={styles.ordersLabel}>Order history</Text>
+              <Text style={styles.ordersLabel}>{t('peptidesPatient.orderHistory')}</Text>
               {(orders[item.id] ?? []).map((order) => (
                 <View key={order.id} style={styles.orderRow}>
-                  <Text style={styles.orderDate}>{formatOrderDate(order.date)}</Text>
+                  <Text style={styles.orderDate}>{formatOrderDate(order.date, t)}</Text>
                   <Text style={styles.orderDose}>{order.dose}</Text>
                   <TouchableOpacity onPress={() => handleDeleteOrder(item.id, order)} disabled={deletingOrderId === order.id}>
                     <Text style={styles.orderDeleteText}>✕</Text>
@@ -316,26 +331,26 @@ export default function PatientPeptidesScreen() {
                 </View>
               ))}
               {(orders[item.id] ?? []).length === 0 && orderFormFor !== item.id && (
-                <Text style={styles.ordersEmpty}>No orders logged yet.</Text>
+                <Text style={styles.ordersEmpty}>{t('peptidesPatient.noOrdersLoggedYet')}</Text>
               )}
 
               {orderFormFor === item.id ? (
                 <View style={styles.orderForm}>
                   <View style={styles.row}>
                     <View style={styles.half}>
-                      <DateField label="Date" value={orderDate} onChange={setOrderDate} />
+                      <DateField label={t('appointments.date')} value={orderDate} onChange={setOrderDate} />
                     </View>
                     <View style={styles.half}>
-                      <Input label="Task" value={orderDose} onChangeText={setOrderDose} placeholder="e.g. 5 units" />
+                      <Input label={t('peptidesPatient.doseLabel')} value={orderDose} onChangeText={setOrderDose} placeholder={t('peptidesPatient.dosePlaceholder')} />
                     </View>
                   </View>
                   <View style={styles.formActions}>
                     <TouchableOpacity onPress={() => setOrderFormFor(null)} style={styles.cancelBtn}>
-                      <Text style={styles.cancelBtnText}>Cancel</Text>
+                      <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                     <View style={{ flex: 1 }}>
                       <Button
-                        label={savingOrder ? 'Saving…' : 'Save order'}
+                        label={savingOrder ? t('appointments.saving') : t('peptidesPatient.saveOrder')}
                         onPress={() => handleSaveOrder(item.id)}
                         loading={savingOrder}
                       />
@@ -344,21 +359,21 @@ export default function PatientPeptidesScreen() {
                 </View>
               ) : (
                 <TouchableOpacity onPress={() => openOrderForm(item.id)}>
-                  <Text style={styles.addOrderText}>+ Add order</Text>
+                  <Text style={styles.addOrderText}>{t('peptidesPatient.addOrder')}</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             <View style={styles.medActions}>
               <TouchableOpacity onPress={() => handleDownloadPrescription(item)} disabled={downloadingId === item.id}>
-                <Text style={styles.actionLink}>{downloadingId === item.id ? 'Downloading…' : 'PDF'}</Text>
+                <Text style={styles.actionLink}>{downloadingId === item.id ? t('peptidesPatient.downloading') : t('peptidesPatient.pdfLabel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => openEdit(item)}>
-                <Text style={styles.actionLink}>Edit</Text>
+                <Text style={styles.actionLink}>{t('common.edit')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id}>
                 <Text style={[styles.actionLink, { color: colors.danger }]}>
-                  {deletingId === item.id ? 'Deleting…' : 'Delete'}
+                  {deletingId === item.id ? t('medicationDetail.deleting') : t('common.delete')}
                 </Text>
               </TouchableOpacity>
             </View>

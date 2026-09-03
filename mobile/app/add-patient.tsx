@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography } from '../theme';
 import { Button } from '../components/Button';
 import { DateField } from '../components/DateField';
@@ -18,13 +19,6 @@ import { Input } from '../components/Input';
 import { ChipPicker } from '../components/ChipPicker';
 import { registerApi } from '../api/auth';
 import type { Gender } from '../api/auth';
-
-const GENDER_OPTIONS: { value: Gender; label: string }[] = [
-  { value: 'MALE', label: 'Male' },
-  { value: 'FEMALE', label: 'Female' },
-  { value: 'OTHER', label: 'Other' },
-  { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' },
-];
 
 interface FormValues {
   firstName: string;
@@ -36,6 +30,13 @@ interface FormValues {
 }
 
 export default function AddPatientScreen() {
+  const { t } = useTranslation();
+  const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+    { value: 'MALE', label: t('patientForm.male') },
+    { value: 'FEMALE', label: t('patientForm.female') },
+    { value: 'OTHER', label: t('patientForm.other') },
+    { value: 'PREFER_NOT_TO_SAY', label: t('profile.preferNotToSay') },
+  ];
   const router = useRouter();
 
   const [values, setValues] = useState<FormValues>({
@@ -51,8 +52,8 @@ export default function AddPatientScreen() {
 
   function validate(): boolean {
     const next: typeof errors = {};
-    if (!values.firstName.trim()) next.firstName = 'First name is required';
-    if (!values.phone.trim()) next.phone = 'Phone number is required';
+    if (!values.firstName.trim()) next.firstName = t('patientForm.firstNameRequired');
+    if (!values.phone.trim()) next.phone = t('patientForm.phoneRequired');
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -80,9 +81,9 @@ export default function AddPatientScreen() {
         }
       }
 
-      Alert.alert('Client created', undefined, [{ text: 'OK', onPress: goToPatient }]);
+      Alert.alert(t('patientForm.patientCreated'), undefined, [{ text: t('common.ok'), onPress: goToPatient }]);
     } catch (err) {
-      setErrors({ form: (err as Error).message ?? 'Could not create client.' });
+      setErrors({ form: (err as Error).message ?? t('patientForm.createFailed') });
     } finally {
       setSaving(false);
     }
@@ -94,9 +95,9 @@ export default function AddPatientScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.navBar}>
             <Pressable onPress={() => router.back()}>
-              <Text style={styles.backText}>← Cancel</Text>
+              <Text style={styles.backText}>{t('patientForm.cancelWithArrow')}</Text>
             </Pressable>
-            <Text style={styles.navTitle}>Add Client</Text>
+            <Text style={styles.navTitle}>{t('patientForm.addTitle')}</Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -109,7 +110,7 @@ export default function AddPatientScreen() {
 
             <View style={styles.row}>
               <Input
-                label="First name"
+                label={t('patientForm.firstName')}
                 value={values.firstName}
                 onChangeText={set('firstName')}
                 error={errors.firstName}
@@ -117,7 +118,7 @@ export default function AddPatientScreen() {
                 containerStyle={styles.halfInput}
               />
               <Input
-                label="Last name (optional)"
+                label={t('patientForm.lastNameOptional')}
                 value={values.lastName}
                 onChangeText={set('lastName')}
                 error={errors.lastName}
@@ -127,7 +128,7 @@ export default function AddPatientScreen() {
             </View>
 
             <Input
-              label="Phone"
+              label={t('patientForm.phone')}
               value={values.phone}
               onChangeText={set('phone')}
               error={errors.phone}
@@ -135,7 +136,7 @@ export default function AddPatientScreen() {
             />
 
             <DateField
-              label="Date of birth (optional)"
+              label={t('patientForm.dobOptional')}
               value={values.dateOfBirth}
               onChange={(date) => setValues((v) => ({ ...v, dateOfBirth: date }))}
               error={errors.dateOfBirth}
@@ -143,21 +144,21 @@ export default function AddPatientScreen() {
             />
 
             <ChipPicker
-              label="Gender (optional)"
+              label={t('patientForm.genderOptional')}
               options={GENDER_OPTIONS}
               value={values.gender}
               onChange={(gender) => setValues((v) => ({ ...v, gender }))}
             />
 
             <Input
-              label="Focus area (optional)"
+              label={t('patientForm.healthIssueOptional')}
               value={values.healthIssue}
               onChangeText={set('healthIssue')}
-              placeholder="e.g. Weight loss, muscle gain"
+              placeholder={t('patientForm.healthIssuePlaceholder')}
               onSubmitEditing={handleSave}
             />
 
-            <Button label="Create client" onPress={handleSave} loading={saving} />
+            <Button label={t('patientForm.createPatient')} onPress={handleSave} loading={saving} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
