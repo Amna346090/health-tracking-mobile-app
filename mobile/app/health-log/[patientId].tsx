@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { HealthLogCard } from '../../components/HealthLogCard';
@@ -50,6 +51,7 @@ function todayISO() {
 }
 
 export default function PatientHealthLogScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const pid = Number(patientId);
@@ -95,7 +97,7 @@ export default function PatientHealthLogScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleSave = async () => {
-    if (!date.trim()) { Alert.alert('Date required'); return; }
+    if (!date.trim()) { Alert.alert(t('healthLog.dateRequired')); return; }
     setSaving(true);
     try {
       const log = await createHealthLog(pid, {
@@ -114,7 +116,7 @@ export default function PatientHealthLogScreen() {
       setWeight(''); setHeight(''); setFeeling(null); setNotes('');
       setSavedLogId(log.id); // move to photo step
     } catch (e) {
-      Alert.alert('Could not save entry', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('healthLog.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -130,7 +132,7 @@ export default function PatientHealthLogScreen() {
 
   const patientName = patient
     ? `${patient.user.firstName} ${patient.user.lastName}`
-    : 'Patient';
+    : t('patientDashboard.patientFallback');
 
   const Header = (
     <View>
@@ -138,14 +140,14 @@ export default function PatientHealthLogScreen() {
       {/* Photo-attachment step (appears after form is saved) */}
       {savedLogId !== null && (
         <View style={styles.formCard}>
-          <Text style={styles.photoStepTitle}>Entry saved! Attach a photo?</Text>
+          <Text style={styles.photoStepTitle}>{t('healthLogDetail.entrySavedAttachPhoto')}</Text>
           <PhotoPicker
             patientId={pid}
             healthLogId={savedLogId}
             onUploaded={() => { setSavedLogId(null); setShowForm(false); }}
           />
           <TouchableOpacity style={styles.skipBtn} onPress={() => { setSavedLogId(null); setShowForm(false); }}>
-            <Text style={styles.skipBtnText}>Skip →</Text>
+            <Text style={styles.skipBtnText}>{t('healthLog.skip')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -153,37 +155,37 @@ export default function PatientHealthLogScreen() {
       {showForm && savedLogId === null && (
         <View style={styles.formCard}>
           <View style={styles.staffBanner}>
-            <Text style={styles.staffBannerText}>Staff entry — logged on patient's behalf</Text>
+            <Text style={styles.staffBannerText}>{t('healthLogDetail.staffBanner')}</Text>
           </View>
 
           <View style={styles.row}>
             <View style={styles.half}>
-              <Text style={styles.fieldLabel}>Date *</Text>
-              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor={colors.text.muted} />
+              <Text style={styles.fieldLabel}>{t('healthLog.date')}</Text>
+              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder={t('healthLog.datePlaceholder')} placeholderTextColor={colors.text.muted} />
             </View>
             <View style={styles.half}>
-              <Text style={styles.fieldLabel}>Weight (kg)</Text>
-              <TextInput style={styles.input} value={weight} onChangeText={setWeight} placeholder="e.g. 70.5" placeholderTextColor={colors.text.muted} keyboardType="decimal-pad" />
+              <Text style={styles.fieldLabel}>{t('healthLog.weightKg')}</Text>
+              <TextInput style={styles.input} value={weight} onChangeText={setWeight} placeholder={t('healthLog.weightPlaceholder')} placeholderTextColor={colors.text.muted} keyboardType="decimal-pad" />
             </View>
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Height (cm)</Text>
-            <TextInput style={styles.input} value={height} onChangeText={setHeight} placeholder="e.g. 175" placeholderTextColor={colors.text.muted} keyboardType="decimal-pad" />
+            <Text style={styles.fieldLabel}>{t('healthLog.heightCm')}</Text>
+            <TextInput style={styles.input} value={height} onChangeText={setHeight} placeholder={t('healthLog.heightPlaceholder')} placeholderTextColor={colors.text.muted} keyboardType="decimal-pad" />
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>How is the patient feeling?</Text>
+            <Text style={styles.fieldLabel}>{t('healthLogDetail.howFeelingPatient')}</Text>
             <FeelingPicker value={feeling} onChange={setFeeling} />
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Notes</Text>
+            <Text style={styles.fieldLabel}>{t('healthLog.notes')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={notes}
               onChangeText={setNotes}
-              placeholder="Observations, symptoms..."
+              placeholder={t('healthLogDetail.observationsPlaceholder')}
               placeholderTextColor={colors.text.muted}
               multiline
               textAlignVertical="top"
@@ -198,7 +200,7 @@ export default function PatientHealthLogScreen() {
           >
             {saving
               ? <ActivityIndicator color={colors.text.inverse} />
-              : <Text style={styles.saveBtnText}>Save Entry</Text>
+              : <Text style={styles.saveBtnText}>{t('healthLog.saveEntry')}</Text>
             }
           </TouchableOpacity>
         </View>
@@ -209,7 +211,7 @@ export default function PatientHealthLogScreen() {
       )}
 
       {logs.length > 0 && (
-        <Text style={styles.sectionTitle}>History</Text>
+        <Text style={styles.sectionTitle}>{t('healthLog.history')}</Text>
       )}
     </View>
   );
@@ -220,7 +222,7 @@ export default function PatientHealthLogScreen() {
         {/* Nav bar */}
         <View style={styles.navBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.addBtn, showForm && styles.addBtnActive]}
@@ -228,7 +230,7 @@ export default function PatientHealthLogScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.addBtnText, showForm && styles.addBtnTextActive]}>
-              {showForm ? '✕' : '+ Add Entry'}
+              {showForm ? '✕' : t('healthLogDetail.addEntry')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -252,7 +254,7 @@ export default function PatientHealthLogScreen() {
           renderItem={({ item }) => <HealthLogCard log={item} />}
           ListEmptyComponent={
             !showForm
-              ? <EmptyState icon="📈" title="No health logs" subtitle="Tap 'Add Entry' to record the first entry for this patient." />
+              ? <EmptyState icon="📈" title={t('healthLogDetail.noLogsTitle')} subtitle={t('healthLogDetail.noLogsSubtitle')} />
               : null
           }
         />

@@ -8,6 +8,7 @@ import {
   FlatList,
   Text,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, radius, typography } from '../theme';
 import type { Photo } from '../api/photos';
 
@@ -72,6 +73,7 @@ export function PhotoGrid({
   refreshing,
   onRefresh,
 }: FullGridProps) {
+  const { t } = useTranslation();
   const size = cellSize();
 
   return (
@@ -98,7 +100,7 @@ export function PhotoGrid({
       )}
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>No photos yet</Text>
+          <Text style={styles.emptyText}>{t('photoGallery.noPhotosYet')}</Text>
         </View>
       }
     />

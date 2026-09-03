@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
 import { getTimeline, type TimelineEvent } from '../../api/timeline';
 import { FEELING_EMOJI } from '../../components/FeelingPicker';
@@ -20,18 +22,18 @@ const PAGE = 30;
 
 // ─── Date grouping helpers ────────────────────────────────────────────────────
 
-function dateLabel(isoDate: string): string {
+function dateLabel(isoDate: string, t: TFunction): string {
   const d = new Date(isoDate);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return 'Today';
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  if (d.toDateString() === today.toDateString()) return t('messages.today');
+  if (d.toDateString() === yesterday.toDateString()) return t('messages.yesterday');
+  return d.toLocaleDateString(t('language.locale'), { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+function timeLabel(iso: string, t: TFunction): string {
+  return new Date(iso).toLocaleTimeString(t('language.locale'), { hour: 'numeric', minute: '2-digit' });
 }
 
 // ─── Event card ───────────────────────────────────────────────────────────────
@@ -46,23 +48,23 @@ const STATUS_ICON: Record<string, string> = {
   TAKEN: '✅', MISSED: '❌', SKIPPED: '⏭',
 };
 
-function EventCard({ event, onPhotoPress }: { event: TimelineEvent; onPhotoPress?: (id: number) => void }) {
+function EventCard({ event, onPhotoPress, t }: { event: TimelineEvent; onPhotoPress?: (id: number) => void; t: TFunction }) {
   if (event.type === 'MEDICATION_LOG') {
     const color = STATUS_COLOR[event.status] ?? colors.text.secondary;
     return (
       <View style={styles.card}>
         <View style={[styles.iconBox, { backgroundColor: color + '22' }]}>
-          <Text style={styles.iconText}>{STATUS_ICON[event.status] ?? '💊'}</Text>
+          <Text style={styles.iconText}>{STATUS_ICON[event.status] ?? '📋'}</Text>
         </View>
         <View style={styles.cardBody}>
           <Text style={styles.cardTitle}>{event.medication.name}</Text>
           <Text style={[styles.cardSub, { color }]}>
-            {event.status.charAt(0) + event.status.slice(1).toLowerCase()}
+            {t(`medications.status.${event.status.toLowerCase()}`)}
             {event.medication.dosage ? ` · ${event.medication.dosage}` : ''}
           </Text>
           {event.notes ? <Text style={styles.cardNote}>{event.notes}</Text> : null}
         </View>
-        <Text style={styles.cardTime}>{timeLabel(event.timestamp)}</Text>
+        <Text style={styles.cardTime}>{timeLabel(event.timestamp, t)}</Text>
       </View>
     );
   }
@@ -75,19 +77,19 @@ function EventCard({ event, onPhotoPress }: { event: TimelineEvent; onPhotoPress
           <Text style={styles.iconText}>📋</Text>
         </View>
         <View style={styles.cardBody}>
-          <Text style={styles.cardTitle}>Health log</Text>
+          <Text style={styles.cardTitle}>{t('patientDashboard.healthLogTitle')}</Text>
           <Text style={styles.cardSub}>
             {[
               event.weight ? `${event.weight} kg` : null,
               event.height ? `${event.height} cm` : null,
               emoji,
-            ].filter(Boolean).join(' · ') || 'Notes only'}
+            ].filter(Boolean).join(' · ') || t('history.notesOnly')}
           </Text>
           {event.createdBy.role !== 'PATIENT' && (
-            <Text style={styles.staffTag}>Staff entry</Text>
+            <Text style={styles.staffTag}>{t('history.staffEntry')}</Text>
           )}
         </View>
-        <Text style={styles.cardTime}>{timeLabel(event.timestamp)}</Text>
+        <Text style={styles.cardTime}>{timeLabel(event.timestamp, t)}</Text>
       </View>
     );
   }
@@ -101,10 +103,10 @@ function EventCard({ event, onPhotoPress }: { event: TimelineEvent; onPhotoPress
     >
       <Image source={{ uri: event.url }} style={styles.photoThumb} resizeMode="cover" />
       <View style={styles.cardBody}>
-        <Text style={styles.cardTitle}>Photo uploaded</Text>
-        <Text style={styles.cardSub}>{event.caption ?? 'No caption'}</Text>
+        <Text style={styles.cardTitle}>{t('history.photoUploaded')}</Text>
+        <Text style={styles.cardSub}>{event.caption ?? t('patientDashboard.noCaption')}</Text>
       </View>
-      <Text style={styles.cardTime}>{timeLabel(event.timestamp)}</Text>
+      <Text style={styles.cardTime}>{timeLabel(event.timestamp, t)}</Text>
     </TouchableOpacity>
   );
 }
@@ -125,14 +127,14 @@ type ListItem =
   | { kind: 'header'; label: string; key: string }
   | { kind: 'event';  event: TimelineEvent; key: string };
 
-function buildList(events: TimelineEvent[]): ListItem[] {
+function buildList(events: TimelineEvent[], t: TFunction): ListItem[] {
   const items: ListItem[] = [];
   let lastDay = '';
   for (const event of events) {
     const day = event.timestamp.slice(0, 10);
     if (day !== lastDay) {
       lastDay = day;
-      items.push({ kind: 'header', label: dateLabel(event.timestamp), key: `hdr-${day}` });
+      items.push({ kind: 'header', label: dateLabel(event.timestamp, t), key: `hdr-${day}` });
     }
     items.push({ kind: 'event', event, key: `${event.type}-${event.id}` });
   }
@@ -142,6 +144,7 @@ function buildList(events: TimelineEvent[]): ListItem[] {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
+  const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const pid = Number(patientId);
@@ -171,15 +174,15 @@ export default function HistoryScreen() {
 
   useFocusEffect(useCallback(() => { load(true); }, [pid]));
 
-  const listItems = buildList(events);
+  const listItems = buildList(events, t);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Activity History</Text>
+        <Text style={styles.title}>{t('history.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -201,7 +204,7 @@ export default function HistoryScreen() {
           }
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.emptyText}>No activity yet.</Text>
+              <Text style={styles.emptyText}>{t('history.noActivityYet')}</Text>
             </View>
           }
           renderItem={({ item }) =>
@@ -211,6 +214,7 @@ export default function HistoryScreen() {
                 <EventCard
                   event={item.event}
                   onPhotoPress={(id) => router.push(`/photo/${id}`)}
+                  t={t}
                 />
               )
           }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../theme';
 
 interface Option<T extends string> {
@@ -16,6 +17,7 @@ interface Props<T extends string> {
 }
 
 export function Dropdown<T extends string>({ label, options, value, onChange }: Props<T>) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
 
@@ -23,7 +25,7 @@ export function Dropdown<T extends string>({ label, options, value, onChange }: 
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
       <TouchableOpacity style={styles.field} onPress={() => setOpen(true)} activeOpacity={0.7}>
-        <Text style={styles.fieldText}>{selected?.label ?? 'Select…'}</Text>
+        <Text style={styles.fieldText}>{selected?.label ?? t('common.select')}</Text>
         <Feather name="chevron-down" size={16} color={colors.text.secondary} />
       </TouchableOpacity>
 

@@ -9,6 +9,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 interface InputProps extends TextInputProps {
@@ -19,6 +20,7 @@ interface InputProps extends TextInputProps {
 }
 
 export function Input({ label, error, hint, containerStyle, ...textInputProps }: InputProps) {
+  const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const [secureVisible, setSecureVisible] = useState(false);
 
@@ -45,7 +47,7 @@ export function Input({ label, error, hint, containerStyle, ...textInputProps }:
           <Pressable
             onPress={() => setSecureVisible((v) => !v)}
             style={styles.eyeButton}
-            accessibilityLabel={secureVisible ? 'Hide password' : 'Show password'}
+            accessibilityLabel={secureVisible ? t('common.hidePassword') : t('common.showPassword')}
             hitSlop={8}
           >
             <Feather

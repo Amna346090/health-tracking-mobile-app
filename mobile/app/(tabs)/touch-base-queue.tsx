@@ -6,21 +6,24 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getTouchBaseQueue, markContacted, type TouchBaseQueueItem } from '../../api/touchBase';
 
-function daysSince(iso: string | null): string {
-  if (!iso) return 'Never contacted';
+function daysSince(iso: string | null, t: TFunction): string {
+  if (!iso) return t('touchBase.neverContacted');
   const days = Math.round((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
-  return `${days} day${days !== 1 ? 's' : ''} ago`;
+  return t('touchBase.daysAgo', { count: days });
 }
 
-function formatThresholdDays(days: number): string {
-  if (days < 1) return `${Math.round(days * 1440)} min`;
-  return `${days} days`;
+function formatThresholdDays(days: number, t: TFunction): string {
+  if (days < 1) return t('touchBase.thresholdMin', { count: Math.round(days * 1440) });
+  return t('touchBase.thresholdDays', { count: days });
 }
 
 export default function TouchBaseQueueScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [queue, setQueue] = useState<TouchBaseQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,10 +59,10 @@ export default function TouchBaseQueueScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Touch-Base Queue</Text>
+        <Text style={styles.headerTitle}>{t('touchBase.queueTitle')}</Text>
         {!loading && (
           <Text style={styles.headerCount}>
-            {queue.length} overdue or nearing threshold
+            {t('touchBase.overdueCount', { count: queue.length })}
           </Text>
         )}
       </View>
@@ -77,7 +80,7 @@ export default function TouchBaseQueueScreen() {
           onRefresh={() => load(true)}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.emptyText}>No patients overdue or nearing their touch-base threshold. 🎉</Text>
+              <Text style={styles.emptyText}>{t('touchBase.noPatientsOverdue')}</Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -85,12 +88,12 @@ export default function TouchBaseQueueScreen() {
               <Text style={styles.cardName}>{item.user.firstName} {item.user.lastName}</Text>
               <View style={styles.infoRow}>
                 <View>
-                  <Text style={styles.cardSub}>Last contact: {daysSince(item.lastContactAt)}</Text>
-                  <Text style={styles.cardSub}>Threshold: {formatThresholdDays(item.thresholdDays)}</Text>
+                  <Text style={styles.cardSub}>{t('touchBase.lastContact', { time: daysSince(item.lastContactAt, t) })}</Text>
+                  <Text style={styles.cardSub}>{t('touchBase.threshold', { value: formatThresholdDays(item.thresholdDays, t) })}</Text>
                 </View>
                 <View style={[styles.badge, item.overdue ? styles.badgeOverdue : styles.badgeDue]}>
                   <Text style={[styles.badgeText, item.overdue ? styles.badgeTextOverdue : styles.badgeTextDue]}>
-                    {item.overdue ? 'Overdue' : 'Due Soon'}
+                    {item.overdue ? t('touchBase.overdue') : t('touchBase.dueSoon')}
                   </Text>
                 </View>
               </View>
@@ -100,13 +103,13 @@ export default function TouchBaseQueueScreen() {
                   disabled={contactingId === item.id}
                   onPress={() => handleMarkContacted(item.id)}
                 >
-                  <Text style={styles.contactedBtnText}>{contactingId === item.id ? 'Saving…' : 'Mark as contacted'}</Text>
+                  <Text style={styles.contactedBtnText}>{contactingId === item.id ? t('touchBase.saving') : t('touchBase.markAsContacted')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.messageBtn]}
                   onPress={() => router.push(`/messages/${item.id}`)}
                 >
-                  <Text style={styles.messageBtnText}>Contact them</Text>
+                  <Text style={styles.messageBtnText}>{t('touchBase.contactThem')}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>

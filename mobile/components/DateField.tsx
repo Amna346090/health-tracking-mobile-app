@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 interface DateFieldProps {
@@ -28,8 +29,8 @@ function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function formatDisplay(d: Date): string {
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+function formatDisplay(d: Date, locale: string): string {
+  return d.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 export function DateField({
@@ -38,10 +39,11 @@ export function DateField({
   onChange,
   error,
   hint,
-  placeholder = 'Select a date',
+  placeholder,
   maximumDate,
   minimumDate,
 }: DateFieldProps) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   const selected = toDate(value);
 
@@ -65,7 +67,7 @@ export function DateField({
         accessibilityHint={hint}
       >
         <Text style={selected ? styles.valueText : styles.placeholderText}>
-          {selected ? formatDisplay(selected) : placeholder}
+          {selected ? formatDisplay(selected, t('language.locale')) : (placeholder ?? t('common.selectDate'))}
         </Text>
         <Feather name="calendar" size={18} color={colors.text.secondary} />
       </Pressable>

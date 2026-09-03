@@ -60,6 +60,7 @@ import {
 import { markContacted } from '../controllers/touchBase.controller';
 import {
   listMetrics,
+  listMetricTypes,
   getTrend,
   createMetric,
   deleteMetric,
@@ -152,8 +153,9 @@ router.patch('/:patientId/test-requests/:id', updateTestRequest);
 router.post('/:patientId/contact', requireRoles(Role.STAFF, Role.ADMIN), markContacted);
 
 // ─── Health metric sub-routes ──────────────────────────────────────────────────
-// /trend must come before /:id, same convention as health-logs
+// /trend and /types must come before the bare collection route
 router.get('/:patientId/health-metrics/trend', getTrend);
+router.get('/:patientId/health-metrics/types', listMetricTypes);
 router.get('/:patientId/health-metrics', listMetrics);
 router.post('/:patientId/health-metrics', createMetric);
 router.delete('/:patientId/health-metrics/:id', deleteMetric);

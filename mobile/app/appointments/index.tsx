@@ -6,14 +6,15 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAllAppointments, type AppointmentWithPatient, type AppointmentStatus } from '../../api/appointments';
 
-const STATUS_LABEL: Record<AppointmentStatus, string> = {
-  SCHEDULED: 'Scheduled',
-  RESCHEDULED: 'Rescheduled',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
+const STATUS_KEY: Record<AppointmentStatus, string> = {
+  SCHEDULED: 'appointments.status.scheduled',
+  RESCHEDULED: 'appointments.status.rescheduled',
+  COMPLETED: 'appointments.status.completed',
+  CANCELLED: 'appointments.status.cancelled',
 };
 
 const STATUS_COLORS: Record<AppointmentStatus, { bg: string; text: string }> = {
@@ -23,13 +24,14 @@ const STATUS_COLORS: Record<AppointmentStatus, { bg: string; text: string }> = {
   CANCELLED: { bg: colors.dangerBg, text: colors.danger },
 };
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
+function formatWhen(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, {
     month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   });
 }
 
 export default function AppointmentsQueueScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,9 +55,9 @@ export default function AppointmentsQueueScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Appointments</Text>
+        <Text style={styles.title}>{t('dashboard.appointments')}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -70,7 +72,7 @@ export default function AppointmentsQueueScreen() {
           onRefresh={() => load(true)}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.emptyText}>No appointments scheduled yet.</Text>
+              <Text style={styles.emptyText}>{t('appointments.noneScheduled')}</Text>
             </View>
           }
           renderItem={({ item }) => {
@@ -79,10 +81,10 @@ export default function AppointmentsQueueScreen() {
               <TouchableOpacity style={styles.card} onPress={() => router.push(`/patient-dashboard/${item.patientId}`)} activeOpacity={0.8}>
                 <View style={styles.cardBody}>
                   <Text style={styles.cardName}>{item.patient.user.firstName} {item.patient.user.lastName}</Text>
-                  <Text style={styles.cardSub}>{formatWhen(item.scheduledFor)} · {item.reason || 'No reason given'}</Text>
+                  <Text style={styles.cardSub}>{formatWhen(item.scheduledFor, t('language.locale'))} · {item.reason || t('appointments.noReasonGiven')}</Text>
                 </View>
                 <View style={[styles.badge, { backgroundColor: colorSet.bg }]}>
-                  <Text style={[styles.badgeText, { color: colorSet.text }]}>{STATUS_LABEL[item.status]}</Text>
+                  <Text style={[styles.badgeText, { color: colorSet.text }]}>{t(STATUS_KEY[item.status])}</Text>
                 </View>
               </TouchableOpacity>
             );

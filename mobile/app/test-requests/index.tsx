@@ -6,24 +6,26 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAllTestRequests, type TestRequestWithPatient, type TestRequestStatus } from '../../api/testRequests';
 
-const STATUS_LABEL: Record<TestRequestStatus, string> = {
-  PENDING: 'Pending',
-  SUBMITTED: 'Submitted',
-  CANCELLED: 'Cancelled',
+const STATUS_KEY: Record<TestRequestStatus, string> = {
+  PENDING: 'testRequests.status.pending',
+  SUBMITTED: 'testRequests.status.submitted',
+  CANCELLED: 'testRequests.status.cancelled',
 };
 
 function isOverdue(req: TestRequestWithPatient): boolean {
   return req.status === 'PENDING' && new Date(req.dueDate).getTime() < Date.now();
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export default function TestRequestsQueueScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [requests, setRequests] = useState<TestRequestWithPatient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,9 +53,9 @@ export default function TestRequestsQueueScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.backWithArrow')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Test/Scan Requests</Text>
+        <Text style={styles.title}>{t('testRequests.title')}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -62,13 +64,13 @@ export default function TestRequestsQueueScreen() {
           style={[styles.filterBtn, filter === 'all' && styles.filterBtnActive]}
           onPress={() => setFilter('all')}
         >
-          <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>All</Text>
+          <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>{t('testRequests.all')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.filterBtn, filter === 'overdue' && styles.filterBtnActive]}
           onPress={() => setFilter('overdue')}
         >
-          <Text style={[styles.filterText, filter === 'overdue' && styles.filterTextActive]}>Overdue only</Text>
+          <Text style={[styles.filterText, filter === 'overdue' && styles.filterTextActive]}>{t('testRequests.overdueOnly')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -83,7 +85,7 @@ export default function TestRequestsQueueScreen() {
           onRefresh={() => load(true)}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.emptyText}>No test/scan requests yet.</Text>
+              <Text style={styles.emptyText}>{t('testRequests.noneYet')}</Text>
             </View>
           }
           renderItem={({ item }) => {
@@ -92,11 +94,11 @@ export default function TestRequestsQueueScreen() {
               <TouchableOpacity style={styles.card} onPress={() => router.push(`/patient-dashboard/${item.patientId}`)} activeOpacity={0.8}>
                 <View style={styles.cardBody}>
                   <Text style={styles.cardName}>{item.patient.user.firstName} {item.patient.user.lastName}</Text>
-                  <Text style={styles.cardSub}>{item.name} · Due {formatDate(item.dueDate)}</Text>
+                  <Text style={styles.cardSub}>{item.name} · {t('testRequests.due', { date: formatDate(item.dueDate, t('language.locale')) })}</Text>
                 </View>
                 <View style={[styles.badge, overdue ? styles.badgeOverdue : styles.badgeDefault]}>
                   <Text style={[styles.badgeText, overdue ? styles.badgeTextOverdue : styles.badgeTextDefault]}>
-                    {overdue ? 'Overdue' : STATUS_LABEL[item.status]}
+                    {overdue ? t('touchBase.overdue') : t(STATUS_KEY[item.status])}
                   </Text>
                 </View>
               </TouchableOpacity>

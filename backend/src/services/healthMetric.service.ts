@@ -1,15 +1,25 @@
-import { HealthMetricType } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 
-export async function getMetricsForPatient(patientId: number, type?: HealthMetricType) {
+export async function getMetricsForPatient(patientId: number, type?: string) {
   return prisma.healthMetric.findMany({
     where: { patientId, ...(type && { type }) },
     orderBy: { recordedAt: 'desc' },
   });
 }
 
-export async function getMetricTrend(patientId: number, type: HealthMetricType, limit = 30) {
+/** Distinct category names this patient has at least one entry for — drives the picker chips. */
+export async function getMetricTypesForPatient(patientId: number): Promise<string[]> {
+  const rows = await prisma.healthMetric.findMany({
+    where: { patientId },
+    distinct: ['type'],
+    select: { type: true },
+    orderBy: { type: 'asc' },
+  });
+  return rows.map((r) => r.type);
+}
+
+export async function getMetricTrend(patientId: number, type: string, limit = 30) {
   const metrics = await prisma.healthMetric.findMany({
     where: { patientId, type },
     select: { recordedAt: true, value: true },
@@ -25,7 +35,7 @@ export async function getMetricTrend(patientId: number, type: HealthMetricType, 
 
 export interface CreateHealthMetricInput {
   patientId: number;
-  type: HealthMetricType;
+  type: string;
   label?: string | null;
   value: number;
   unit?: string | null;
