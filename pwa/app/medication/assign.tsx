@@ -10,21 +10,21 @@ import {
   Platform,
   FlatList,
 } from 'react-native';
-import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
-import { createAssignment } from '../../api/assignments';
 import { api } from '../../api/client';
 import { TimeField } from '../../components/TimeField';
 import { DateField } from '../../components/DateField';
+import { createAssignmentOffline } from '../../offline/entities/assignments';
+import { listPatientsCached, mergePatientsFromServer } from '../../offline/entities/patients';
 
 interface PatientOption {
-  id: number;
-  userId: number;
+  id: string | number;
+  userId: string | number;
   user: { id: number; firstName: string; lastName: string; email: string | null; username: string | null };
 }
 
@@ -74,13 +74,21 @@ export default function AssignMedicationScreen() {
     new Date().toISOString().split('T')[0], // YYYY-MM-DD
   );
   const [endDate, setEndDate] = useState('');
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.get<PatientOption[]>('/patients')
-      .then(setPatients)
-      .catch(() => setPatients([]))
-      .finally(() => setPatientsLoading(false));
+    (async () => {
+      const cached = await listPatientsCached();
+      if (cached.length > 0) { setPatients(cached); setPatientsLoading(false); }
+      try {
+        const data = await api.get<PatientOption[]>('/patients');
+        const merged = await mergePatientsFromServer(data as never);
+        setPatients(merged as unknown as PatientOption[]);
+      } catch {
+        // offline — keep showing the cached list
+      } finally {
+        setPatientsLoading(false);
+      }
+    })();
   }, []);
 
   function handleFrequencyChange(f: string) {
@@ -105,27 +113,20 @@ export default function AssignMedicationScreen() {
     frequency.trim().length > 0 &&
     startDate.trim().length > 0;
 
+  // Written to local storage and reflected immediately; syncs to the server right away if
+  // online, or as soon as the connection comes back if not.
   const handleAssign = async () => {
     if (!canSubmit || !selectedPatient) return;
-    setSaving(true);
-    try {
-      const validTimes = times.filter(Boolean);
-      await createAssignment(selectedPatient.id, {
-        medicationId: Number(medicationId),
-        frequency,
-        timesPerDay: validTimes.length || undefined,
-        timesOfDay: validTimes,
-        startDate,
-        endDate: endDate.trim() || null,
-      });
-      Alert.alert(t('medicationForm.assignmentCreatedTitle'), t('medicationForm.assignmentCreatedBody', { name: medicationName }), [
-        { text: t('common.ok'), onPress: () => router.back() },
-      ]);
-    } catch (e) {
-      Alert.alert(t('medicationForm.assignFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
-    }
+    const validTimes = times.filter(Boolean);
+    await createAssignmentOffline(selectedPatient.id, {
+      medicationId: isNaN(Number(medicationId)) ? medicationId : Number(medicationId),
+      frequency,
+      timesPerDay: validTimes.length || undefined,
+      timesOfDay: validTimes,
+      startDate,
+      endDate: endDate.trim() || null,
+    });
+    router.back();
   };
 
   return (
@@ -240,16 +241,12 @@ export default function AssignMedicationScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.saveBtn, (!canSubmit || saving) && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, !canSubmit && styles.saveBtnDisabled]}
             onPress={handleAssign}
-            disabled={!canSubmit || saving}
+            disabled={!canSubmit}
             activeOpacity={0.8}
           >
-            {saving ? (
-              <ActivityIndicator color={colors.text.inverse} />
-            ) : (
-              <Text style={styles.saveBtnText}>{t('medicationDetail.assignToPatient')}</Text>
-            )}
+            <Text style={styles.saveBtnText}>{t('medicationDetail.assignToPatient')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

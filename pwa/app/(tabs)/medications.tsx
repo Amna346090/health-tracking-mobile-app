@@ -19,7 +19,10 @@ import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator'
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { AssignmentCard, CatalogMedicationCard } from '../../components/MedicationCard';
 import { getAssignments, type MedicationAssignment } from '../../api/assignments';
-import { getAllMedications, type Medication } from '../../api/medications';
+import { getAllMedications } from '../../api/medications';
+import { listMedicationsCached, mergeMedicationsFromServer, type OfflineMedication as Medication } from '../../offline/entities/medications';
+import { cache, onCacheChanged } from '../../offline/cache';
+import { sameList } from '../../offline/util';
 
 // ─── Patient view ─────────────────────────────────────────────────────────────
 
@@ -102,30 +105,56 @@ function PatientMedications({ patientId }: { patientId: number }) {
 function StaffMedications() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [items, setItems] = useState<Medication[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Medication[]>(() => cache.listSync<Medication>('medications'));
+  const [loading, setLoading] = useState(() => cache.listSync<Medication>('medications').length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const hasLoadedRef = useRef(false);
 
+  const byNameAsc = (list: Medication[]) => [...list].sort((a, b) => a.name.localeCompare(b.name));
+
+  // Local-only refresh — never hits the network. Reacting to a local change with a network
+  // re-check would race that change's own request (e.g. it could return before a delete
+  // reaches the server, still see the old row, and put it right back).
+  const refreshFromCache = useCallback(async (query?: string): Promise<number> => {
+    const cached = await listMedicationsCached();
+    const q = query?.trim().toLowerCase();
+    const cachedFiltered = byNameAsc(q ? cached.filter((m) => m.name.toLowerCase().includes(q)) : cached);
+    setItems((prev) => (sameList(prev, cachedFiltered) ? prev : cachedFiltered));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, []);
+
   const load = useCallback(async (query?: string, isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
     setError(null);
+    const cachedCount = await refreshFromCache(query);
+
     try {
       const data = await getAllMedications(query || undefined);
-      setItems(data);
+      if (query) {
+        // A filtered fetch — just top up the cache with these results, never prune by it
+        // (that would wipe out cached peptides that simply don't match this search).
+        await cache.putMany('medications', data);
+        const sorted = byNameAsc(data);
+        setItems((prev) => (sameList(prev, sorted) ? prev : sorted));
+      } else {
+        const merged = byNameAsc(await mergeMedicationsFromServer(data));
+        setItems((prev) => (sameList(prev, merged) ? prev : merged));
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('medications.failedToLoadCatalog'));
+      if (cachedCount === 0) setError(e instanceof Error ? e.message : t('medications.failedToLoadCatalog'));
     } finally {
       setLoading(false);
       setRefreshing(false);
       hasLoadedRef.current = true;
     }
-  }, [t]);
+  }, [t, refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('medications', () => refreshFromCache(search)), [refreshFromCache, search]);
 
   // Debounce search
   useEffect(() => {

@@ -24,7 +24,10 @@ import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { useAuth } from '../../context/auth';
-import { getMessages, markMessageRead, sendMessage, type Message } from '../../api/messages';
+import { getMessages, markMessageRead, sendMessage } from '../../api/messages';
+import { listMessagesCached, mergeMessagesFromServer, type Message } from '../../offline/entities/messages';
+import { sameList } from '../../offline/util';
+import { cache, onCacheChanged } from '../../offline/cache';
 import { onPushEvent } from '../../lib/pushEvents';
 
 function dayLabel(iso: string, t: TFunction): string {
@@ -56,25 +59,37 @@ export default function MessagesScreen() {
   const canSend = isOwnPatient || user?.role !== 'PATIENT';
   const listRef = useRef<FlatList<Message>>(null);
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialMessages = () => cache.listSync<Message>('messages').filter((m) => m.patientId === pid).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [loading, setLoading] = useState(() => initialMessages().length === 0);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
 
   const hasLoadedRef = useRef(false);
 
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    // Cached messages are shown right away so the thread is viewable offline; only
+    // sending a new message (and marking one read) still requires a live connection.
+    const cached = await listMessagesCached(pid);
+    setMessages((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, [pid]);
+
   const load = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
     try {
       const data = await getMessages(pid);
-      setMessages([...data].reverse());
+      const merged = (await mergeMessagesFromServer(pid, data)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      setMessages((prev) => (sameList(prev, merged) ? prev : merged));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       hasLoadedRef.current = true;
     }
-  }, [pid]);
+  }, [pid, refreshFromCache]);
 
   // Scrolls to the newest message. Fires several times over half a second —
   // a full list refetch can take a moment to lay out, so one attempt isn't
@@ -88,6 +103,7 @@ export default function MessagesScreen() {
   // Opening the screen (manually or via a notification tap) should always land on the
   // newest message, not wherever the list's initial layout happened to settle.
   useFocusEffect(useCallback(() => { load().then(scrollToBottom); }, [load, scrollToBottom]));
+  useEffect(() => onCacheChanged('messages', () => refreshFromCache()), [refreshFromCache]);
 
   // Live refresh: a reply arrives from the other party while this chat is open.
   useEffect(() => onPushEvent(`message:${pid}`, () => {

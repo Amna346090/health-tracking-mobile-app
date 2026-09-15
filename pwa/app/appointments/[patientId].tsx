@@ -25,12 +25,13 @@ import { Button } from '../../components/Button';
 import { DateField } from '../../components/DateField';
 import { TimeField } from '../../components/TimeField';
 import { useAuth } from '../../context/auth';
+import { getAppointments } from '../../api/appointments';
 import {
-  getAppointments,
-  createAppointment,
-  updateAppointment,
-  type Appointment,
-} from '../../api/appointments';
+  listAppointmentsCached, mergeAppointmentsFromServer, createAppointmentOffline, updateAppointmentOffline, isTempId,
+  type OfflineAppointment as Appointment,
+} from '../../offline/entities/appointments';
+import { sameList } from '../../offline/util';
+import { cache, onCacheChanged } from '../../offline/cache';
 
 const STATUS_KEY: Record<Appointment['status'], string> = {
   SCHEDULED: 'appointments.status.scheduled',
@@ -75,37 +76,53 @@ export default function AppointmentsScreen() {
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const pid = Number(patientId);
+  const pidIsTemp = isTempId(patientId);
+  const pid = pidIsTemp ? patientId : Number(patientId);
   const isOwnPatient = user?.role === 'PATIENT' && user.patientProfile?.id === pid;
   const canManage = isOwnPatient || user?.role !== 'PATIENT';
 
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialAppointments = () => cache.listSync<Appointment>('appointments').filter((a) => String(a.patientId) === String(pid));
+  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  const [loading, setLoading] = useState(() => initialAppointments().length === 0);
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
   const [date, setDate] = useState(todayISO());
   const [time, setTime] = useState('09:00');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [durationMinutes, setDurationMinutes] = useState('30');
-  const [saving, setSaving] = useState(false);
 
   const hasLoadedRef = useRef(false);
 
+  function byWhenAsc(a: Appointment, b: Appointment) {
+    return new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime();
+  }
+
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    const cached = (await listAppointmentsCached(pid)).sort(byWhenAsc);
+    setAppointments((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, [pid]);
+
   const load = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
+    if (pidIsTemp) { setLoading(false); hasLoadedRef.current = true; return; }
     try {
-      const data = await getAppointments(pid);
-      setAppointments(data.sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime()));
+      const data = await getAppointments(pid as number);
+      const merged = (await mergeAppointmentsFromServer(pid, data)).sort(byWhenAsc);
+      setAppointments((prev) => (sameList(prev, merged) ? prev : merged));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       hasLoadedRef.current = true;
     }
-  }, [pid]);
+  }, [pid, pidIsTemp, refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('appointments', () => refreshFromCache()), [refreshFromCache]);
 
   function openRequestForm() {
     setEditingId(null);
@@ -136,44 +153,34 @@ export default function AppointmentsScreen() {
     setShowForm(true);
   }
 
+  // Saved locally and shown immediately; syncs to the server in the background.
   async function handleSave() {
-    setSaving(true);
-    try {
-      const scheduledFor = new Date(`${date}T${time}:00`).toISOString();
-      const parsedDuration = durationMinutes.trim() ? Number(durationMinutes) : null;
-      if (editingId !== null) {
-        const updated = await updateAppointment(pid, editingId, {
-          scheduledFor,
-          reason: reason.trim() || null,
-          ...(!isOwnPatient && { notes: notes.trim() || null }),
-          durationMinutes: parsedDuration,
-        });
-        setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-      } else {
-        const created = await createAppointment(pid, {
-          scheduledFor,
-          reason: reason.trim() || null,
-          ...(!isOwnPatient && { notes: notes.trim() || null }),
-          durationMinutes: parsedDuration,
-        });
-        setAppointments((prev) => [...prev, created]);
-      }
-      setShowForm(false);
-      setEditingId(null);
-    } catch (e) {
-      Alert.alert(t('appointments.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
+    const scheduledFor = new Date(`${date}T${time}:00`).toISOString();
+    const parsedDuration = durationMinutes.trim() ? Number(durationMinutes) : null;
+    if (editingId !== null) {
+      const updated = await updateAppointmentOffline(pid, editingId, {
+        scheduledFor,
+        reason: reason.trim() || null,
+        ...(!isOwnPatient && { notes: notes.trim() || null }),
+        durationMinutes: parsedDuration,
+      });
+      setAppointments((prev) => prev.map((a) => (String(a.id) === String(updated.id) ? updated : a)));
+    } else if (user) {
+      const created = await createAppointmentOffline(pid, {
+        scheduledFor,
+        reason: reason.trim() || null,
+        ...(!isOwnPatient && { notes: notes.trim() || null }),
+        durationMinutes: parsedDuration,
+      }, user.id);
+      setAppointments((prev) => [...prev, created]);
     }
+    setShowForm(false);
+    setEditingId(null);
   }
 
   async function handleMarkCompleted(appointment: Appointment) {
-    try {
-      const updated = await updateAppointment(pid, appointment.id, { status: 'COMPLETED' });
-      setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-    } catch (e) {
-      Alert.alert(t('appointments.updateFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    }
+    const updated = await updateAppointmentOffline(pid, appointment.id, { status: 'COMPLETED' });
+    setAppointments((prev) => prev.map((a) => (String(a.id) === String(updated.id) ? updated : a)));
   }
 
   function handleCancel(appointment: Appointment) {
@@ -183,12 +190,8 @@ export default function AppointmentsScreen() {
         text: t('appointments.cancelAppointmentAction'),
         style: 'destructive',
         onPress: async () => {
-          try {
-            const updated = await updateAppointment(pid, appointment.id, { status: 'CANCELLED' });
-            setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-          } catch (e) {
-            Alert.alert(t('appointments.cancelFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-          }
+          const updated = await updateAppointmentOffline(pid, appointment.id, { status: 'CANCELLED' });
+          setAppointments((prev) => prev.map((a) => (String(a.id) === String(updated.id) ? updated : a)));
         },
       },
     ]);
@@ -271,9 +274,8 @@ export default function AppointmentsScreen() {
             </View>
           )}
           <Button
-            label={saving ? t('appointments.saving') : editingId !== null ? t('appointments.saveChanges') : isOwnPatient ? t('appointments.requestAppointmentBtn') : t('appointments.scheduleAppointmentBtn')}
+            label={editingId !== null ? t('appointments.saveChanges') : isOwnPatient ? t('appointments.requestAppointmentBtn') : t('appointments.scheduleAppointmentBtn')}
             onPress={handleSave}
-            loading={saving}
           />
         </Card>
       )}

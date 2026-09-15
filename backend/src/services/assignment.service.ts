@@ -201,6 +201,7 @@ export async function logDose(
   loggedByRole: Role,
   status: DoseStatus,
   notes?: string,
+  takenAt?: Date,
 ) {
   const assignment = await prisma.medicationAssignment.findUnique({
     where: { id: assignmentId },
@@ -220,7 +221,9 @@ export async function logDose(
       userId: loggedByUserId,
       status,
       notes: notes ?? null,
-      takenAt: new Date(),
+      // Offline-logged doses carry the time they actually happened rather than when the
+      // request finally reaches the server; falls back to now for the normal online path.
+      takenAt: takenAt ?? new Date(),
     },
     include: { user: { select: LOG_USER_SELECT } },
   });

@@ -26,10 +26,14 @@ import { DateField } from '../../components/DateField';
 import { TimeField } from '../../components/TimeField';
 import { Input } from '../../components/Input';
 import { downloadFile } from '../../api/client';
+import { getAssignments, getOrders, prescriptionPdfPath } from '../../api/assignments';
 import {
-  getAssignments, deactivateAssignment, updateAssignment, prescriptionPdfPath,
-  getOrders, createOrder, deleteOrder, type MedicationAssignment, type MedicationOrder,
-} from '../../api/assignments';
+  listAssignmentsCached, mergeAssignmentsFromServer, updateAssignmentOffline, deactivateAssignmentOffline,
+  listOrdersCached, mergeOrdersFromServer, createOrderOffline, deleteOrderOffline, isTempId,
+  type OfflineAssignment as MedicationAssignment, type OfflineOrder as MedicationOrder,
+} from '../../offline/entities/assignments';
+import { sameList, sameListMap, byCreatedDesc } from '../../offline/util';
+import { cache, onCacheChanged } from '../../offline/cache';
 
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'As needed', 'Weekly'];
 
@@ -66,12 +70,13 @@ export default function PatientPeptidesScreen() {
   const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
-  const pid = Number(patientId);
+  const pidIsTemp = isTempId(patientId);
+  const pid = pidIsTemp ? patientId : Number(patientId);
 
-  const [assignments, setAssignments] = useState<MedicationAssignment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const initialAssignments = () => cache.listSync<MedicationAssignment>('assignments').filter((a) => String(a.patientId) === String(pid));
+  const [assignments, setAssignments] = useState<MedicationAssignment[]>(initialAssignments);
+  const [loading, setLoading] = useState(() => initialAssignments().length === 0);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const [editingItem, setEditingItem] = useState<MedicationAssignment | null>(null);
   const [frequency, setFrequency] = useState(FREQUENCIES[0]);
@@ -79,33 +84,57 @@ export default function PatientPeptidesScreen() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [refillsAllowed, setRefillsAllowed] = useState('');
-  const [saving, setSaving] = useState(false);
 
-  const [orders, setOrders] = useState<Record<number, MedicationOrder[]>>({});
-  const [orderFormFor, setOrderFormFor] = useState<number | null>(null);
+  const [orders, setOrders] = useState<Record<string, MedicationOrder[]>>({});
+  const [orderFormFor, setOrderFormFor] = useState<string | null>(null);
   const [orderDate, setOrderDate] = useState('');
   const [orderDose, setOrderDose] = useState('');
-  const [savingOrder, setSavingOrder] = useState(false);
-  const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
 
   const hasLoadedRef = useRef(false);
 
+  const byOrderDateDesc = (list: MedicationOrder[]) => [...list].sort((a, b) => b.date.localeCompare(a.date));
+
+  // Local-only refresh — never hits the network. Reacting to a local change with a network
+  // re-check would race that change's own request (e.g. it could return before a delete
+  // reaches the server, still see the old row, and put it right back).
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    const cached = byCreatedDesc(await listAssignmentsCached(pid));
+    setAssignments((prev) => (sameList(prev, cached) ? prev : cached));
+    const cachedOrders = await Promise.all(cached.map((a) => listOrdersCached(a.id).then((o) => [a.id, byOrderDateDesc(o)] as const)));
+    const cachedOrdersObj = Object.fromEntries(cachedOrders);
+    setOrders((prev) => (sameListMap(prev, cachedOrdersObj) ? prev : cachedOrdersObj));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, [pid]);
+
   const load = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
+
+    if (pidIsTemp) { setLoading(false); hasLoadedRef.current = true; return; }
+
     try {
-      const data = await getAssignments(pid);
-      setAssignments(data);
-      const entries = await Promise.all(data.map((a) => getOrders(pid, a.id).then((o) => [a.id, o] as const)));
-      setOrders(Object.fromEntries(entries));
+      const data = await getAssignments(pid as number);
+      const merged = byCreatedDesc(await mergeAssignmentsFromServer(pid, data));
+      setAssignments((prev) => (sameList(prev, merged) ? prev : merged));
+      const entries = await Promise.all(
+        merged.map((a) => getOrders(pid as number, a.id as number)
+          .then((o) => mergeOrdersFromServer(a.id, o))
+          .then((o) => [a.id, byOrderDateDesc(o)] as const)),
+      );
+      const entriesObj = Object.fromEntries(entries);
+      setOrders((prev) => (sameListMap(prev, entriesObj) ? prev : entriesObj));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       hasLoadedRef.current = true;
     }
-  }, [pid]);
+  }, [pid, pidIsTemp, refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('assignments', () => refreshFromCache()), [refreshFromCache]);
+  useEffect(() => onCacheChanged('medicationOrders', () => refreshFromCache()), [refreshFromCache]);
 
   function openEdit(item: MedicationAssignment) {
     setEditingItem(item);
@@ -135,31 +164,28 @@ export default function PatientPeptidesScreen() {
 
   async function handleSaveEdit() {
     if (!editingItem) return;
-    setSaving(true);
-    try {
-      const parsedRefills = refillsAllowed.trim() ? parseInt(refillsAllowed.trim(), 10) : null;
-      const validTimes = times.filter(Boolean);
-      const updated = await updateAssignment(pid, editingItem.id, {
-        frequency,
-        timesPerDay: validTimes.length || undefined,
-        timesOfDay: validTimes,
-        startDate,
-        endDate: endDate.trim() || null,
-        refillsAllowed: parsedRefills !== null && !isNaN(parsedRefills) ? parsedRefills : null,
-      });
-      setAssignments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-      setEditingItem(null);
-    } catch (e) {
-      Alert.alert(t('notes.saveChangesFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
-    }
+    const parsedRefills = refillsAllowed.trim() ? parseInt(refillsAllowed.trim(), 10) : null;
+    const validTimes = times.filter(Boolean);
+    const updated = await updateAssignmentOffline(pid, editingItem.id, {
+      frequency,
+      timesPerDay: validTimes.length || undefined,
+      timesOfDay: validTimes,
+      startDate,
+      endDate: endDate.trim() || null,
+      refillsAllowed: parsedRefills !== null && !isNaN(parsedRefills) ? parsedRefills : null,
+    });
+    setAssignments((prev) => prev.map((a) => (String(a.id) === String(updated.id) ? updated : a)));
+    setEditingItem(null);
   }
 
   async function handleDownloadPrescription(item: MedicationAssignment) {
-    setDownloadingId(item.id);
+    if (isTempId(item.id)) {
+      Alert.alert(t('peptidesPatient.couldNotDownloadPrescription'), t('offlineSync.genericError'));
+      return;
+    }
+    setDownloadingId(String(item.id));
     try {
-      const path = prescriptionPdfPath(pid, item.id);
+      const path = prescriptionPdfPath(pid as number, item.id as number);
       const fileUri = await downloadFile(path, `prescription-${item.id}.pdf`);
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
@@ -171,36 +197,22 @@ export default function PatientPeptidesScreen() {
     }
   }
 
-  function openOrderForm(assignmentId: number) {
+  function openOrderForm(assignmentId: string) {
     setOrderFormFor(assignmentId);
     setOrderDate(new Date().toISOString().slice(0, 10));
     setOrderDose('');
   }
 
-  async function handleSaveOrder(assignmentId: number) {
+  async function handleSaveOrder(assignmentId: string) {
     if (!orderDate || !orderDose.trim()) return;
-    setSavingOrder(true);
-    try {
-      const order = await createOrder(pid, assignmentId, { date: orderDate, dose: orderDose.trim() });
-      setOrders((prev) => ({ ...prev, [assignmentId]: [order, ...(prev[assignmentId] ?? [])] }));
-      setOrderFormFor(null);
-    } catch (e) {
-      Alert.alert(t('peptidesPatient.couldNotSaveOrder'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSavingOrder(false);
-    }
+    const order = await createOrderOffline(pid, assignmentId, { date: orderDate, dose: orderDose.trim() });
+    setOrders((prev) => ({ ...prev, [assignmentId]: [order, ...(prev[assignmentId] ?? [])] }));
+    setOrderFormFor(null);
   }
 
-  async function handleDeleteOrder(assignmentId: number, order: MedicationOrder) {
-    setDeletingOrderId(order.id);
-    try {
-      await deleteOrder(pid, assignmentId, order.id);
-      setOrders((prev) => ({ ...prev, [assignmentId]: (prev[assignmentId] ?? []).filter((o) => o.id !== order.id) }));
-    } catch (e) {
-      Alert.alert(t('peptidesPatient.couldNotDeleteOrder'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setDeletingOrderId(null);
-    }
+  async function handleDeleteOrder(assignmentId: string, order: MedicationOrder) {
+    await deleteOrderOffline(pid, assignmentId, order.id);
+    setOrders((prev) => ({ ...prev, [assignmentId]: (prev[assignmentId] ?? []).filter((o) => String(o.id) !== String(order.id)) }));
   }
 
   function handleDelete(item: MedicationAssignment) {
@@ -210,15 +222,8 @@ export default function PatientPeptidesScreen() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          setDeletingId(item.id);
-          try {
-            await deactivateAssignment(pid, item.id);
-            setAssignments((prev) => prev.filter((a) => a.id !== item.id));
-          } catch (e) {
-            Alert.alert(t('medicationDetail.couldNotDelete'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-          } finally {
-            setDeletingId(null);
-          }
+          await deactivateAssignmentOffline(pid, item.id);
+          setAssignments((prev) => prev.filter((a) => String(a.id) !== String(item.id)));
         },
       },
     ]);
@@ -287,7 +292,7 @@ export default function PatientPeptidesScreen() {
           <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Button label={saving ? t('appointments.saving') : t('appointments.saveChanges')} onPress={handleSaveEdit} loading={saving} />
+          <Button label={t('appointments.saveChanges')} onPress={handleSaveEdit} />
         </View>
       </View>
     </Card>
@@ -329,20 +334,20 @@ export default function PatientPeptidesScreen() {
 
             <View style={styles.ordersBlock}>
               <Text style={styles.ordersLabel}>{t('peptidesPatient.orderHistory')}</Text>
-              {(orders[item.id] ?? []).map((order) => (
+              {(orders[String(item.id)] ?? []).map((order) => (
                 <View key={order.id} style={styles.orderRow}>
                   <Text style={styles.orderDate}>{formatOrderDate(order.date, t)}</Text>
                   <Text style={styles.orderDose}>{order.dose}</Text>
-                  <TouchableOpacity onPress={() => handleDeleteOrder(item.id, order)} disabled={deletingOrderId === order.id}>
+                  <TouchableOpacity onPress={() => handleDeleteOrder(String(item.id), order)}>
                     <Text style={styles.orderDeleteText}>✕</Text>
                   </TouchableOpacity>
                 </View>
               ))}
-              {(orders[item.id] ?? []).length === 0 && orderFormFor !== item.id && (
+              {(orders[String(item.id)] ?? []).length === 0 && orderFormFor !== String(item.id) && (
                 <Text style={styles.ordersEmpty}>{t('peptidesPatient.noOrdersLoggedYet')}</Text>
               )}
 
-              {orderFormFor === item.id ? (
+              {orderFormFor === String(item.id) ? (
                 <View style={styles.orderForm}>
                   <View style={styles.row}>
                     <View style={styles.half}>
@@ -357,32 +362,26 @@ export default function PatientPeptidesScreen() {
                       <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                     <View style={{ flex: 1 }}>
-                      <Button
-                        label={savingOrder ? t('appointments.saving') : t('peptidesPatient.saveOrder')}
-                        onPress={() => handleSaveOrder(item.id)}
-                        loading={savingOrder}
-                      />
+                      <Button label={t('peptidesPatient.saveOrder')} onPress={() => handleSaveOrder(String(item.id))} />
                     </View>
                   </View>
                 </View>
               ) : (
-                <TouchableOpacity onPress={() => openOrderForm(item.id)}>
+                <TouchableOpacity onPress={() => openOrderForm(String(item.id))}>
                   <Text style={styles.addOrderText}>{t('peptidesPatient.addOrder')}</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             <View style={styles.medActions}>
-              <TouchableOpacity onPress={() => handleDownloadPrescription(item)} disabled={downloadingId === item.id}>
-                <Text style={styles.actionLink}>{downloadingId === item.id ? t('peptidesPatient.downloading') : t('peptidesPatient.pdfLabel')}</Text>
+              <TouchableOpacity onPress={() => handleDownloadPrescription(item)} disabled={downloadingId === String(item.id)}>
+                <Text style={styles.actionLink}>{downloadingId === String(item.id) ? t('peptidesPatient.downloading') : t('peptidesPatient.pdfLabel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => openEdit(item)}>
                 <Text style={styles.actionLink}>{t('common.edit')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id}>
-                <Text style={[styles.actionLink, { color: colors.danger }]}>
-                  {deletingId === item.id ? t('medicationDetail.deleting') : t('common.delete')}
-                </Text>
+              <TouchableOpacity onPress={() => handleDelete(item)}>
+                <Text style={[styles.actionLink, { color: colors.danger }]}>{t('common.delete')}</Text>
               </TouchableOpacity>
             </View>
           </Card>

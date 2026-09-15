@@ -15,6 +15,17 @@
     "pleaseTryAgain": "Please try again.",
     "backWithArrow": "← Back"
   },
+  "offlineSync": {
+    "syncingChip": "Syncing {{count}} change",
+    "syncingChip_plural": "Syncing {{count}} changes",
+    "issuesChip": "{{count}} issue",
+    "issuesChip_plural": "{{count}} issues",
+    "pendingInfo": "{{count}} change waiting to sync",
+    "pendingInfo_plural": "{{count}} changes waiting to sync",
+    "genericError": "This change couldn't be synced.",
+    "retry": "Retry",
+    "discard": "Discard"
+  },
   "auth": {
     "appTagline": "Sign in to continue tracking your health",
     "emailOrUsername": "Email or Username",
@@ -413,7 +424,8 @@
     "usernameOrEmail": "Username / email",
     "password": "Password",
     "notAvailable": "Not available — reset the password to set one.",
-    "longPressHint": "Long-press a value to copy it."
+    "longPressHint": "Long-press a value to copy it.",
+    "pendingSync": "This patient hasn't synced to the server yet — login credentials will be available here once it's back online."
   },
   "documents": {
     "pdf": "PDF",

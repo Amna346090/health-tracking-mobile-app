@@ -11,6 +11,8 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAllAppointments, type AppointmentWithPatient, type AppointmentStatus } from '../../api/appointments';
 import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { cache, onCacheChanged } from '../../offline/cache';
+import { sameList } from '../../offline/util';
 
 const STATUS_KEY: Record<AppointmentStatus, string> = {
   SCHEDULED: 'appointments.status.scheduled',
@@ -35,23 +37,35 @@ function formatWhen(iso: string, locale: string): string {
 export default function AppointmentsQueueScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialAppointments = () => cache.listSync<AppointmentWithPatient>('appointments').filter((a) => a.patient);
+  const [appointments, setAppointments] = useState<AppointmentWithPatient[]>(initialAppointments);
+  const [loading, setLoading] = useState(() => initialAppointments().length === 0);
   const [refreshing, setRefreshing] = useState(false);
+
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    const cached = (await cache.list<AppointmentWithPatient>('appointments')).filter((a) => a.patient);
+    setAppointments((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, []);
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
+    await refreshFromCache();
     try {
-      setAppointments(await getAllAppointments());
+      const data = await getAllAppointments();
+      await cache.putMany('appointments', data);
+      setAppointments((prev) => (sameList(prev, data) ? prev : data));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('appointments', () => refreshFromCache()), [refreshFromCache]);
 
   const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
 

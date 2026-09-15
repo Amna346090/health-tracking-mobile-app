@@ -15,13 +15,14 @@ import type { TFunction } from 'i18next';
 import { colors, radius, spacing, typography } from '../theme';
 import { EmptyState } from '../components/EmptyState';
 import { Card } from '../components/Card';
+import { getNotifications } from '../api/notifications';
 import {
-  getNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
-  deleteNotification,
+  listNotificationsCached, mergeNotificationsFromServer,
+  markNotificationReadOffline, markAllNotificationsReadOffline, deleteNotificationOffline,
   type Notification,
-} from '../api/notifications';
+} from '../offline/entities/notifications';
+import { sameList, byCreatedDesc } from '../offline/util';
+import { cache, onCacheChanged } from '../offline/cache';
 import { onPushEvent } from '../lib/pushEvents';
 
 const TYPE_ROUTE: Record<string, (patientId: number) => string> = {
@@ -109,40 +110,47 @@ function renderNotification(item: Notification, t: TFunction): { title: string; 
 export default function NotificationsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [markingAll, setMarkingAll] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(() => cache.listSync<Notification>('notifications'));
+  const [loading, setLoading] = useState(() => cache.listSync<Notification>('notifications').length === 0);
 
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   const hasLoadedRef = useRef(false);
 
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    const cached = byCreatedDesc(await listNotificationsCached());
+    setNotifications((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, []);
+
   const load = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
     try {
-      setNotifications(await getNotifications());
+      const data = await getNotifications();
+      const merged = byCreatedDesc(await mergeNotificationsFromServer(data));
+      setNotifications((prev) => (sameList(prev, merged) ? prev : merged));
     } catch {
-      // keep state
+      // offline, or a new one simply hasn't arrived — keep showing whatever was cached
     } finally {
       setLoading(false);
       hasLoadedRef.current = true;
     }
-  }, []);
+  }, [refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('notifications', () => refreshFromCache()), [refreshFromCache]);
 
-  // Live refresh: a new notification arrives while this list is open.
+  // Live refresh: a new notification arrives while this list is open (online only —
+  // there's no way to know about a new one while offline, same as any offline-first app).
   useEffect(() => onPushEvent('notification', load), [load]);
 
+  // Marked locally and reflected immediately; syncs to the server in the background.
   async function markOneRead(n: Notification) {
     if (n.readAt) return;
-    try {
-      await markNotificationRead(n.id);
-      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)));
-    } catch {
-      // non-fatal
-    }
+    const updated = await markNotificationReadOffline(n.id);
+    setNotifications((prev) => prev.map((x) => (x.id === n.id ? updated : x)));
   }
 
   async function handlePress(n: Notification) {
@@ -154,28 +162,15 @@ export default function NotificationsScreen() {
   }
 
   async function handleMarkAllRead() {
-    setMarkingAll(true);
-    try {
-      await markAllNotificationsRead();
-      const now = new Date().toISOString();
-      setNotifications((prev) => prev.map((x) => (x.readAt ? x : { ...x, readAt: now })));
-    } catch {
-      // non-fatal
-    } finally {
-      setMarkingAll(false);
-    }
+    const unreadIds = notifications.filter((n) => !n.readAt).map((n) => n.id);
+    await markAllNotificationsReadOffline(unreadIds);
+    const now = new Date().toISOString();
+    setNotifications((prev) => prev.map((x) => (x.readAt ? x : { ...x, readAt: now })));
   }
 
   async function handleDelete(n: Notification) {
-    setDeletingId(n.id);
-    try {
-      await deleteNotification(n.id);
-      setNotifications((prev) => prev.filter((x) => x.id !== n.id));
-    } catch {
-      // non-fatal
-    } finally {
-      setDeletingId(null);
-    }
+    await deleteNotificationOffline(n.id);
+    setNotifications((prev) => prev.filter((x) => x.id !== n.id));
   }
 
   if (loading) {
@@ -202,9 +197,9 @@ export default function NotificationsScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           unreadCount > 0 ? (
-            <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead} disabled={markingAll}>
+            <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
               <Feather name="check-circle" size={13} color={colors.primary} />
-              <Text style={styles.markAllText}>{markingAll ? t('notifications.marking') : t('notifications.markAllAsRead')}</Text>
+              <Text style={styles.markAllText}>{t('notifications.markAllAsRead')}</Text>
             </TouchableOpacity>
           ) : null
         }
@@ -228,10 +223,8 @@ export default function NotificationsScreen() {
                     <Text style={styles.actionLink}>{t('notifications.markRead')}</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id}>
-                  <Text style={[styles.actionLink, { color: colors.danger }]}>
-                    {deletingId === item.id ? t('notifications.deleting') : t('common.delete')}
-                  </Text>
+                <TouchableOpacity onPress={() => handleDelete(item)}>
+                  <Text style={[styles.actionLink, { color: colors.danger }]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </View>
             </Card>

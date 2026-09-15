@@ -8,7 +8,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Alert } from '../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -17,8 +16,8 @@ import { Button } from '../components/Button';
 import { DateField } from '../components/DateField';
 import { Input } from '../components/Input';
 import { ChipPicker } from '../components/ChipPicker';
-import { registerApi } from '../api/auth';
 import type { Gender } from '../api/auth';
+import { createPatientOffline } from '../offline/entities/patients';
 
 interface FormValues {
   firstName: string;
@@ -45,7 +44,6 @@ export default function AddPatientScreen() {
     dateOfBirth: '', gender: null, healthIssue: '', phone: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>> & { form?: string }>({});
-  const [saving, setSaving] = useState(false);
 
   function set(field: keyof FormValues) {
     return (text: string) => setValues((v) => ({ ...v, [field]: text }));
@@ -59,35 +57,20 @@ export default function AddPatientScreen() {
     return Object.keys(next).length === 0;
   }
 
+  // Written to local storage and reflected on screen immediately; the actual create
+  // request syncs to the server in the background (right away if online, queued if not).
   async function handleSave() {
     if (!validate()) return;
-    setSaving(true);
     setErrors({});
-    try {
-      const created = await registerApi({
-        firstName: values.firstName.trim(),
-        phone: values.phone.trim(),
-        lastName: values.lastName.trim() || undefined,
-        dateOfBirth: values.dateOfBirth.trim() || undefined,
-        gender: values.gender ?? undefined,
-        healthIssue: values.healthIssue.trim() || undefined,
-        role: 'PATIENT',
-      });
-
-      function goToPatient() {
-        if (created.patientProfile) {
-          router.replace(`/patient-dashboard/${created.patientProfile.id}`);
-        } else {
-          router.back();
-        }
-      }
-
-      Alert.alert(t('patientForm.patientCreated'), undefined, [{ text: t('changePassword.ok'), onPress: goToPatient }]);
-    } catch (err) {
-      setErrors({ form: (err as Error).message ?? t('patientForm.createFailed') });
-    } finally {
-      setSaving(false);
-    }
+    const created = await createPatientOffline({
+      firstName: values.firstName.trim(),
+      phone: values.phone.trim(),
+      lastName: values.lastName.trim() || undefined,
+      dateOfBirth: values.dateOfBirth.trim() || undefined,
+      gender: values.gender ?? undefined,
+      healthIssue: values.healthIssue.trim() || undefined,
+    });
+    router.replace(`/patient-dashboard/${created.id}`);
   }
 
   return (
@@ -159,7 +142,7 @@ export default function AddPatientScreen() {
               onSubmitEditing={handleSave}
             />
 
-            <Button label={t('patientForm.createPatient')} onPress={handleSave} loading={saving} />
+            <Button label={t('patientForm.createPatient')} onPress={handleSave} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -3,6 +3,7 @@ import { DoseStatus } from '@prisma/client';
 import * as assignmentService from '../services/assignment.service';
 import { assertPatientAccess } from '../middleware/patientAccess';
 import { AppError } from '../middleware/errorHandler';
+import { parseClientTimestamp } from '../lib/clientTimestamp';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -111,7 +112,7 @@ export async function getLogs(req: Request, res: Response, next: NextFunction): 
 export async function createLog(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const assignmentId = parseId(req.params.id);
-    const { status, notes } = req.body;
+    const { status, notes, clientTimestamp } = req.body;
 
     const validStatuses: DoseStatus[] = ['TAKEN', 'MISSED', 'SKIPPED'];
     if (!status || !validStatuses.includes(status as DoseStatus)) {
@@ -122,6 +123,10 @@ export async function createLog(req: Request, res: Response, next: NextFunction)
       return;
     }
 
+    // Lets an action queued while offline keep the time it actually happened instead of
+    // the time it finally reached the server. Ignored if missing, malformed, or in the future.
+    const takenAt = parseClientTimestamp(clientTimestamp);
+
     const assignment = await assignmentService.getAssignmentById(assignmentId);
     await assertPatientAccess(req, assignment.patient.id);
 
@@ -131,6 +136,7 @@ export async function createLog(req: Request, res: Response, next: NextFunction)
       req.user!.role,
       status as DoseStatus,
       notes,
+      takenAt,
     );
     res.status(201).json({ status: 'ok', data: log });
   } catch (err) { next(err); }

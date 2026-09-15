@@ -24,13 +24,7 @@ import { HealthLogCard } from '../../components/HealthLogCard';
 import { WeightChart } from '../../components/WeightChart';
 import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
-import {
-  getHealthLogs,
-  getWeightTrend,
-  createHealthLog,
-  type HealthLog,
-  type WeightDataPoint,
-} from '../../api/healthLog';
+import { getHealthLogs, getWeightTrend, type WeightDataPoint } from '../../api/healthLog';
 import { api } from '../../api/client';
 import { FeelingPicker } from '../../components/FeelingPicker';
 import { PhotoPicker } from '../../components/PhotoPicker';
@@ -39,6 +33,13 @@ import {
 } from 'react-native';
 import { Alert } from '../../lib/alert';
 import type { FeelingStatus } from '../../api/healthLog';
+import {
+  listHealthLogsCached, mergeHealthLogsFromServer, createHealthLogOffline, isTempId,
+  type OfflineHealthLog as HealthLog,
+} from '../../offline/entities/healthLog';
+import { sameData, sameList } from '../../offline/util';
+import { cache, onCacheChanged } from '../../offline/cache';
+import { useAuth } from '../../context/auth';
 
 const SCREEN_W = Dimensions.get('window').width;
 
@@ -55,15 +56,18 @@ export default function PatientHealthLogScreen() {
   const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
-  const pid = Number(patientId);
+  const { user } = useAuth();
+  const pidIsTemp = isTempId(patientId);
+  const pid = pidIsTemp ? patientId : Number(patientId);
 
+  const initialLogs = () => cache.listSync<HealthLog>('healthLogs').filter((l) => String(l.patientId) === String(pid));
   const [patient,   setPatient]   = useState<PatientMeta | null>(null);
-  const [logs,      setLogs]      = useState<HealthLog[]>([]);
+  const [logs,      setLogs]      = useState<HealthLog[]>(initialLogs);
   const [trend,     setTrend]     = useState<WeightDataPoint[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [loading,   setLoading]   = useState(() => initialLogs().length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [showForm,  setShowForm]  = useState(false);
-  const [savedLogId, setSavedLogId] = useState<number | null>(null);
+  const [savedLogId, setSavedLogId] = useState<string | number | null>(null);
 
   // Form state
   const [date,    setDate]    = useState(todayISO);
@@ -71,58 +75,64 @@ export default function PatientHealthLogScreen() {
   const [height,  setHeight]  = useState('');
   const [feeling, setFeeling] = useState<FeelingStatus | null>(null);
   const [notes,   setNotes]   = useState('');
-  const [saving,  setSaving]  = useState(false);
 
   const hasLoadedRef = useRef(false);
 
+  const byDateDesc = (list: HealthLog[]) => [...list].sort((a, b) => b.date.localeCompare(a.date));
+
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    const cachedLogs = byDateDesc(await listHealthLogsCached(pid));
+    setLogs((prev) => (sameList(prev, cachedLogs) ? prev : cachedLogs));
+    if (cachedLogs.length > 0) setLoading(false);
+    return cachedLogs.length;
+  }, [pid]);
+
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
+    if (pidIsTemp) { setLoading(false); setRefreshing(false); hasLoadedRef.current = true; return; }
     try {
       const [patientData, logData, trendData] = await Promise.all([
         api.get<PatientMeta>(`/patients/${pid}`),
-        getHealthLogs(pid, { limit: 50 }),
-        getWeightTrend(pid, 60),
+        getHealthLogs(pid as number, { limit: 50 }),
+        getWeightTrend(pid as number, 60),
       ]);
-      setPatient(patientData);
-      setLogs(logData);
-      setTrend(trendData);
+      setPatient((prev) => (sameData(prev, patientData) ? prev : patientData));
+      const mergedLogs = byDateDesc(await mergeHealthLogsFromServer(pid, logData));
+      setLogs((prev) => (sameList(prev, mergedLogs) ? prev : mergedLogs));
+      setTrend((prev) => (sameData(prev, trendData) ? prev : trendData));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       setRefreshing(false);
       hasLoadedRef.current = true;
     }
-  }, [pid]);
+  }, [pid, pidIsTemp, refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('healthLogs', () => refreshFromCache()), [refreshFromCache]);
 
   const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
 
+  // Saved locally and shown immediately; syncs to the server in the background.
   const handleSave = async () => {
-    if (!date.trim()) { Alert.alert(t('healthLog.dateRequired')); return; }
-    setSaving(true);
-    try {
-      const log = await createHealthLog(pid, {
-        date:    date.trim(),
-        weight:  weight  ? parseFloat(weight)  : null,
-        height:  height  ? parseFloat(height)  : null,
-        feeling: feeling,
-        notes:   notes.trim() || null,
-      });
-      setLogs((prev) => [log, ...prev]);
-      if (log.weight) {
-        const point = { date: log.date.split('T')[0], weight: log.weight };
-        setTrend((prev) => [...prev, point].sort((a, b) => a.date.localeCompare(b.date)));
-      }
-      setDate(todayISO());
-      setWeight(''); setHeight(''); setFeeling(null); setNotes('');
-      setSavedLogId(log.id); // move to photo step
-    } catch (e) {
-      Alert.alert(t('healthLog.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
+    if (!date.trim() || !user) { Alert.alert(t('healthLog.dateRequired')); return; }
+    const log = await createHealthLogOffline(pid, {
+      date:    date.trim(),
+      weight:  weight  ? parseFloat(weight)  : null,
+      height:  height  ? parseFloat(height)  : null,
+      feeling: feeling,
+      notes:   notes.trim() || null,
+    }, { id: user.id, firstName: user.firstName, lastName: user.lastName, role: user.role });
+    setLogs((prev) => [log, ...prev]);
+    if (log.weight) {
+      const point = { date: log.date.split('T')[0], weight: log.weight };
+      setTrend((prev) => [...prev, point].sort((a, b) => a.date.localeCompare(b.date)));
     }
+    setDate(todayISO());
+    setWeight(''); setHeight(''); setFeeling(null); setNotes('');
+    setSavedLogId(log.id); // move to photo step
   };
 
   if (loading) {
@@ -144,11 +154,15 @@ export default function PatientHealthLogScreen() {
       {savedLogId !== null && (
         <View style={styles.formCard}>
           <Text style={styles.photoStepTitle}>{t('healthLogDetail.entrySavedAttachPhoto')}</Text>
-          <PhotoPicker
-            patientId={pid}
-            healthLogId={savedLogId}
-            onUploaded={() => { setSavedLogId(null); setShowForm(false); }}
-          />
+          {/* Photo uploads need a live connection either way — skip this step for an entry
+              that's still only local (temp id), same as if the admin just tapped Skip. */}
+          {!pidIsTemp && !isTempId(savedLogId) && (
+            <PhotoPicker
+              patientId={pid as number}
+              healthLogId={savedLogId as number}
+              onUploaded={() => { setSavedLogId(null); setShowForm(false); }}
+            />
+          )}
           <TouchableOpacity style={styles.skipBtn} onPress={() => { setSavedLogId(null); setShowForm(false); }}>
             <Text style={styles.skipBtnText}>{t('healthLog.skip')}</Text>
           </TouchableOpacity>
@@ -195,16 +209,8 @@ export default function PatientHealthLogScreen() {
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-            activeOpacity={0.8}
-          >
-            {saving
-              ? <ActivityIndicator color={colors.text.inverse} />
-              : <Text style={styles.saveBtnText}>{t('healthLog.saveEntry')}</Text>
-            }
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
+            <Text style={styles.saveBtnText}>{t('healthLog.saveEntry')}</Text>
           </TouchableOpacity>
         </View>
       )}

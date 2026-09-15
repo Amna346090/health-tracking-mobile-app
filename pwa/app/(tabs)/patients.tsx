@@ -17,14 +17,9 @@ import { api } from '../../api/client';
 import { Avatar } from '../../components/Avatar';
 import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
-
-interface PatientRow {
-  id: number;
-  userId: number;
-  dateOfBirth: string | null;
-  avatarUrl: string | null;
-  user: { firstName: string; lastName: string; email: string | null; username: string | null };
-}
+import { listPatientsCached, mergePatientsFromServer, type OfflinePatientRow as PatientRow, type PatientRow as ServerPatientRow } from '../../offline/entities/patients';
+import { sameList, byCreatedDesc } from '../../offline/util';
+import { cache, onCacheChanged } from '../../offline/cache';
 
 function PatientCard({ patient, onPress }: { patient: PatientRow; onPress: () => void }) {
   const { t, i18n } = useTranslation();
@@ -50,25 +45,44 @@ function PatientCard({ patient, onPress }: { patient: PatientRow; onPress: () =>
 export default function PatientsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [patients,  setPatients]  = useState<PatientRow[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [patients,  setPatients]  = useState<PatientRow[]>(() => byCreatedDesc(cache.listSync<PatientRow>('patients')));
+  const [loading,   setLoading]   = useState(() => cache.listSync<PatientRow>('patients').length === 0);
   const [query,     setQuery]     = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
+  // Local-only refresh — never hits the network. Reacting to a local change (e.g. a delete)
+  // with a network re-check would race the delete's own request: the re-check can return
+  // *before* the delete reaches the server, still see the old row, and put it right back.
+  // Only re-reading local storage is safe to run on every local change.
+  const refreshFromCache = useCallback(async () => {
+    const cached = byCreatedDesc(await listPatientsCached());
+    setPatients((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+  }, []);
+
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
+    // Show whatever's cached locally right away — instant, no spinner needed for repeat visits.
+    // setPatients only fires when the data actually changed, so revisiting a screen with
+    // nothing new doesn't cause a visible flash.
+    await refreshFromCache();
     try {
-      const data = await api.get<PatientRow[]>('/patients');
-      setPatients(data);
+      const data = await api.get<ServerPatientRow[]>('/patients');
+      const merged = byCreatedDesc(await mergePatientsFromServer(data));
+      setPatients((prev) => (sameList(prev, merged) ? prev : merged));
     } catch {
-      // keep state
+      // offline or request failed — keep showing the cached list
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Any change to the patients cache anywhere in the app (e.g. a delete from the dashboard
+  // screen) is reflected here immediately, without waiting for this screen to regain focus.
+  useEffect(() => onCacheChanged('patients', () => refreshFromCache()), [refreshFromCache]);
 
   const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
 

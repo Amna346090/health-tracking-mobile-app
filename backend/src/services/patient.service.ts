@@ -121,12 +121,13 @@ export async function updatePatient(id: number, input: UpdatePatientInput) {
 
 // ─── Touch-base ───────────────────────────────────────────────────────────────
 
-export async function markContacted(patientId: number) {
+export async function markContacted(patientId: number, contactedAt?: Date) {
   const profile = await prisma.patientProfile.findUnique({ where: { id: patientId } });
   if (!profile) throw new AppError('Patient not found', 404);
   return prisma.patientProfile.update({
     where: { id: patientId },
-    data: { lastContactAt: new Date() },
+    // Offline-queued "mark contacted" taps keep the time they actually happened.
+    data: { lastContactAt: contactedAt ?? new Date() },
     include: { user: { select: USER_SELECT } },
   });
 }
