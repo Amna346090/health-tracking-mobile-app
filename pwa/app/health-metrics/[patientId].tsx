@@ -108,18 +108,18 @@ export default function HealthMetricsScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => onCacheChanged('healthMetrics', () => refreshFromCache()), [refreshFromCache]);
 
-  // Saved locally and shown immediately; syncs to the server in the background.
+  // Saved locally and shown immediately (via the cache-change listener above — adding it
+  // here too would race that listener and show it twice); syncs in the background.
   async function handleSave() {
     const parsed = parseFloat(value);
     if (isNaN(parsed) || !user) { Alert.alert(t('healthMetrics.invalidNumber')); return; }
-    const metric = await createHealthMetricOffline(pid, {
+    await createHealthMetricOffline(pid, {
       type: metricType,
       value: parsed,
       unit: unit.trim() || null,
       recordedAt: date,
       documentId: attachedDoc?.id ?? null,
     }, user.id);
-    setEntries((prev) => [metric, ...prev]);
     setValue('');
     setAttachedDoc(null);
     setDate(todayISO());

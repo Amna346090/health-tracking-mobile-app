@@ -166,13 +166,14 @@ export default function AppointmentsScreen() {
       });
       setAppointments((prev) => prev.map((a) => (String(a.id) === String(updated.id) ? updated : a)));
     } else if (user) {
-      const created = await createAppointmentOffline(pid, {
+      // Shown immediately via the cache-change listener above — adding it here too would
+      // race that listener and show it twice.
+      await createAppointmentOffline(pid, {
         scheduledFor,
         reason: reason.trim() || null,
         ...(!isOwnPatient && { notes: notes.trim() || null }),
         durationMinutes: parsedDuration,
       }, user.id);
-      setAppointments((prev) => [...prev, created]);
     }
     setShowForm(false);
     setEditingId(null);

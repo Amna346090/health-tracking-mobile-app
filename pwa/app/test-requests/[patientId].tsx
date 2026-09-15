@@ -137,12 +137,13 @@ export default function TestRequestsScreen() {
       });
       setTestRequests((prev) => prev.map((r) => (String(r.id) === String(updated.id) ? updated : r)));
     } else if (user) {
-      const created = await createTestRequestOffline(pid, {
+      // Shown immediately via the cache-change listener above — adding it here too would
+      // race that listener and show it twice.
+      await createTestRequestOffline(pid, {
         name: name.trim(),
         instructions: instructions.trim() || null,
         dueDate,
       }, user.id);
-      setTestRequests((prev) => [...prev, created]);
     }
     setShowForm(false);
     setEditingId(null);

@@ -115,7 +115,8 @@ export default function PatientHealthLogScreen() {
 
   const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
 
-  // Saved locally and shown immediately; syncs to the server in the background.
+  // Saved locally and shown immediately (via the cache-change listener above — adding it
+  // here too would race that listener and show it twice); syncs in the background.
   const handleSave = async () => {
     if (!date.trim() || !user) { Alert.alert(t('healthLog.dateRequired')); return; }
     const log = await createHealthLogOffline(pid, {
@@ -125,7 +126,6 @@ export default function PatientHealthLogScreen() {
       feeling: feeling,
       notes:   notes.trim() || null,
     }, { id: user.id, firstName: user.firstName, lastName: user.lastName, role: user.role });
-    setLogs((prev) => [log, ...prev]);
     if (log.weight) {
       const point = { date: log.date.split('T')[0], weight: log.weight };
       setTrend((prev) => [...prev, point].sort((a, b) => a.date.localeCompare(b.date)));

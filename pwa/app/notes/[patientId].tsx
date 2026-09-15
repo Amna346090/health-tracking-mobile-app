@@ -83,13 +83,13 @@ export default function NotesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => onCacheChanged('notes', () => refreshFromCache()), [refreshFromCache]);
 
-  // Saved locally and shown immediately; syncs to the server in the background.
+  // Saved locally and shown immediately (via the cache-change listener above — adding it
+  // here too would race that listener and show it twice); syncs in the background.
   async function handleAdd() {
     if (!newBody.trim() || !user) return;
-    const note = await createNoteOffline(pid, newBody.trim(), user.id, {
+    await createNoteOffline(pid, newBody.trim(), user.id, {
       firstName: user.firstName, lastName: user.lastName, role: user.role,
     });
-    setNotes((prev) => [note, ...prev]);
     setNewBody('');
   }
 
