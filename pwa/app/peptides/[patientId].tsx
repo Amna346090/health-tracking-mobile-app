@@ -203,10 +203,11 @@ export default function PatientPeptidesScreen() {
     setOrderDose('');
   }
 
+  // Shown immediately via the cache-change listener above — adding it here too would race
+  // that listener and show it twice.
   async function handleSaveOrder(assignmentId: string) {
     if (!orderDate || !orderDose.trim()) return;
-    const order = await createOrderOffline(pid, assignmentId, { date: orderDate, dose: orderDose.trim() });
-    setOrders((prev) => ({ ...prev, [assignmentId]: [order, ...(prev[assignmentId] ?? [])] }));
+    await createOrderOffline(pid, assignmentId, { date: orderDate, dose: orderDose.trim() });
     setOrderFormFor(null);
   }
 
