@@ -14,9 +14,11 @@ function formatDate(iso: string, locale: string): { day: string; month: string; 
   };
 }
 
+type FlexibleHealthLog = Omit<HealthLog, 'id' | 'patientId'> & { id: string | number; patientId: string | number };
+
 interface Props {
-  log: HealthLog;
-  onPress?: (log: HealthLog) => void;
+  log: FlexibleHealthLog;
+  onPress?: (log: FlexibleHealthLog) => void;
 }
 
 export function HealthLogCard({ log, onPress }: Props) {

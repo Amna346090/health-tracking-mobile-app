@@ -14,27 +14,46 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
-import { getMedicationById, deleteMedication, type Medication, type FoodInstruction } from '../../api/medications';
+import { getMedicationById, type FoodInstruction } from '../../api/medications';
 import { useAuth } from '../../context/auth';
+import { getMedicationCached, deleteMedicationOffline, type OfflineMedication as Medication } from '../../offline/entities/medications';
+import { cache, onCacheChanged } from '../../offline/cache';
+import { sameData } from '../../offline/util';
 
 export default function MedicationDetailScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const medId = Number(id);
+  const idIsTemp = id.startsWith('tmp_');
+  const medId = idIsTemp ? id : Number(id);
 
-  const [medication, setMedication] = useState<Medication | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [medication, setMedication] = useState<Medication | null>(() => cache.getSync<Medication>('medications', medId) ?? null);
+  const [loading, setLoading] = useState(() => cache.getSync<Medication>('medications', medId) === undefined);
   const [error, setError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    getMedicationById(medId)
-      .then(setMedication)
-      .catch((e) => setError(e instanceof Error ? e.message : t('medicationDetail.failedToLoad')))
-      .finally(() => setLoading(false));
+  const refreshFromCache = React.useCallback(async () => {
+    const cached = await getMedicationCached(medId);
+    if (cached) { setMedication((prev) => (sameData(prev, cached) ? prev : cached)); setLoading(false); }
+    return cached;
   }, [medId]);
+
+  const load = React.useCallback(async () => {
+    const cached = await refreshFromCache();
+    if (idIsTemp) { setLoading(false); return; }
+    try {
+      const fresh = await getMedicationById(medId as number);
+      await cache.put('medications', fresh);
+      setMedication((prev) => (sameData(prev, fresh) ? prev : fresh));
+    } catch (e) {
+      if (!cached) setError(e instanceof Error ? e.message : t('medicationDetail.failedToLoad'));
+    } finally {
+      setLoading(false);
+    }
+  }, [medId, idIsTemp, t, refreshFromCache]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => onCacheChanged('medications', () => refreshFromCache()), [refreshFromCache]);
 
   if (loading) {
     return (
@@ -57,15 +76,8 @@ export default function MedicationDetailScreen() {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
-            setDeleting(true);
-            try {
-              await deleteMedication(medication.id);
-              router.back();
-            } catch (e) {
-              Alert.alert(t('medicationDetail.couldNotDelete'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-            } finally {
-              setDeleting(false);
-            }
+            await deleteMedicationOffline(medication.id);
+            router.back();
           },
         },
       ],
@@ -136,9 +148,9 @@ export default function MedicationDetailScreen() {
 
         {user?.role === 'ADMIN' && (
           <View style={styles.deleteRow}>
-            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} disabled={deleting}>
+            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
               <Feather name="trash-2" size={13} color={colors.danger} />
-              <Text style={styles.deleteBtnText}>{deleting ? t('medicationDetail.deleting') : t('common.delete')}</Text>
+              <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
             </TouchableOpacity>
           </View>
         )}

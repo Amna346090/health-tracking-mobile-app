@@ -9,7 +9,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -18,11 +17,12 @@ import { Button } from '../../components/Button';
 import { DateField } from '../../components/DateField';
 import { Input } from '../../components/Input';
 import { ChipPicker } from '../../components/ChipPicker';
-import { getPatientById, updatePatient } from '../../api/patients';
+import { getPatientById } from '../../api/patients';
 import { getAllProviders } from '../../api/providers';
 import type { Provider } from '../../api/providers';
 import type { Gender } from '../../api/auth';
 import { STAFF_FEATURES_ENABLED } from '../../config';
+import { getPatientCached, mergePatientFromServer, updatePatientOffline, isTempId } from '../../offline/entities/patients';
 
 interface FormValues {
   firstName: string;
@@ -45,57 +45,76 @@ export default function EditPatientScreen() {
   ];
   const router = useRouter();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
-  const pid = Number(patientId);
+  const pidIsTemp = isTempId(patientId);
+  const pid = pidIsTemp ? patientId : Number(patientId);
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [values, setValues] = useState<FormValues | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getPatientById(pid)
-      .then((p) => {
+    (async () => {
+      const cached = await getPatientCached(pid);
+      if (cached) {
         setValues({
-          firstName: p.user.firstName,
-          lastName: p.user.lastName,
-          dateOfBirth: p.dateOfBirth?.slice(0, 10) ?? '',
-          gender: p.gender,
-          healthIssue: p.healthIssue ?? '',
-          phone: p.phone ?? '',
-          address: p.address ?? '',
-          providerId: p.providerId,
+          firstName: cached.user.firstName,
+          lastName: cached.user.lastName,
+          dateOfBirth: cached.dateOfBirth?.slice(0, 10) ?? '',
+          gender: cached.gender,
+          healthIssue: cached.healthIssue ?? '',
+          phone: cached.phone ?? '',
+          address: cached.address ?? '',
+          providerId: cached.providerId,
         });
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : t('patientForm.failedToLoad')))
-      .finally(() => setLoading(false));
+        setLoading(false);
+      }
+      if (pidIsTemp) { setLoading(false); return; }
+      try {
+        const p = await getPatientById(pid as number);
+        await mergePatientFromServer(p);
+        // Only populate the form from this background refresh if it hasn't been shown yet
+        // (from cache) — once the admin can see and edit the form, a fresh fetch resolving
+        // mid-edit must never clobber what they've already typed.
+        if (!cached) {
+          setValues({
+            firstName: p.user.firstName,
+            lastName: p.user.lastName,
+            dateOfBirth: p.dateOfBirth?.slice(0, 10) ?? '',
+            gender: p.gender,
+            healthIssue: p.healthIssue ?? '',
+            phone: p.phone ?? '',
+            address: p.address ?? '',
+            providerId: p.providerId,
+          });
+        }
+      } catch (e) {
+        if (!cached) setError(e instanceof Error ? e.message : t('patientForm.failedToLoad'));
+      } finally {
+        setLoading(false);
+      }
+    })();
     if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
-  }, [pid]);
+  }, [pid, pidIsTemp]);
 
   function set(field: keyof FormValues) {
     return (text: string) => setValues((v) => (v ? { ...v, [field]: text } : v));
   }
 
+  // Saved locally and reflected immediately; syncs to the server in the background.
   async function handleSave() {
     if (!values) return;
-    setSaving(true);
-    try {
-      await updatePatient(pid, {
-        firstName: values.firstName.trim(),
-        lastName: values.lastName.trim(),
-        ...(values.dateOfBirth.trim() && { dateOfBirth: values.dateOfBirth.trim() }),
-        gender: values.gender,
-        healthIssue: values.healthIssue.trim() || null,
-        phone: values.phone.trim() || null,
-        address: values.address.trim() || null,
-        providerId: values.providerId,
-      });
-      router.back();
-    } catch (e) {
-      Alert.alert(t('patientForm.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
-    }
+    await updatePatientOffline(pid, {
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      ...(values.dateOfBirth.trim() && { dateOfBirth: values.dateOfBirth.trim() }),
+      gender: values.gender,
+      healthIssue: values.healthIssue.trim() || null,
+      phone: values.phone.trim() || null,
+      address: values.address.trim() || null,
+      providerId: values.providerId,
+    });
+    router.back();
   }
 
   if (loading) {
@@ -169,7 +188,7 @@ export default function EditPatientScreen() {
               />
             )}
 
-            <Button label={t('appointments.saveChanges')} onPress={handleSave} loading={saving} />
+            <Button label={t('appointments.saveChanges')} onPress={handleSave} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

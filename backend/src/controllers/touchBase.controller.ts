@@ -5,6 +5,7 @@ import { getOverdueOrNearingPatients } from '../services/touchBase.service';
 import { getProviderByUserId } from '../services/provider.service';
 import { assertPatientAccess } from '../middleware/patientAccess';
 import { AppError } from '../middleware/errorHandler';
+import { parseClientTimestamp } from '../lib/clientTimestamp';
 
 function parseId(raw: string): number {
   const id = parseInt(raw, 10);
@@ -16,7 +17,8 @@ export async function markContacted(req: Request, res: Response, next: NextFunct
   try {
     const patientId = parseId(req.params.patientId);
     await assertPatientAccess(req, patientId);
-    const updated = await patientService.markContacted(patientId);
+    const contactedAt = parseClientTimestamp(req.body?.clientTimestamp);
+    const updated = await patientService.markContacted(patientId, contactedAt);
     res.json({ status: 'ok', data: updated });
   } catch (err) { next(err); }
 }

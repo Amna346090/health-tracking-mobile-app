@@ -15,10 +15,12 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useAuth } from '../context/auth';
-import { getAllUsers, deleteUser, type ManagedUser } from '../api/users';
-import { ApiError } from '../api/client';
+import { getAllUsers } from '../api/users';
 import { PullToRefreshIndicator } from '../components/PullToRefreshIndicator';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { listUsersCached, mergeUsersFromServer, deleteUserOffline, type OfflineManagedUser as ManagedUser } from '../offline/entities/users';
+import { sameList } from '../offline/util';
+import { cache, onCacheChanged } from '../offline/cache';
 
 function roleBadgeColor(role: string) {
   if (role === 'ADMIN') return { bg: colors.dangerBg,   text: colors.danger };
@@ -85,25 +87,40 @@ export default function ManageUsersScreen() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
 
-  const [users,     setUsers]     = useState<ManagedUser[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [users,     setUsers]     = useState<ManagedUser[]>(() => cache.listSync<ManagedUser>('users'));
+  const [loading,   setLoading]   = useState(() => cache.listSync<ManagedUser>('users').length === 0);
   const [refreshing, setRefreshing] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const byRoleThenCreated = (list: ManagedUser[]) => [...list].sort((a, b) =>
+    a.role !== b.role ? a.role.localeCompare(b.role) : b.createdAt.localeCompare(a.createdAt));
+
+  // Local-only refresh — never hits the network. Reacting to a local change (e.g. a delete
+  // on this same screen) with a network re-check would race the delete's own request: the
+  // re-check can return *before* the delete reaches the server, still see the old row, and
+  // put it right back. Only re-reading local storage is safe to run on every local change.
+  const refreshFromCache = useCallback(async () => {
+    const cached = byRoleThenCreated(await listUsersCached());
+    setUsers((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+  }, []);
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
+    await refreshFromCache();
     try {
       const data = await getAllUsers();
-      setUsers(data);
+      const merged = byRoleThenCreated(await mergeUsersFromServer(data));
+      setUsers((prev) => (sameList(prev, merged) ? prev : merged));
     } catch {
-      // keep previous state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('users', () => refreshFromCache()), [refreshFromCache]);
 
   const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
 
@@ -124,16 +141,8 @@ export default function ManageUsersScreen() {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
-            setDeletingId(target.id);
-            try {
-              await deleteUser(target.id);
-              setUsers((prev) => prev.filter((u) => u.id !== target.id));
-            } catch (err) {
-              const message = err instanceof ApiError ? err.message : t('manageUsers.deleteFailedDefault');
-              Alert.alert(t('manageUsers.deleteFailed'), message);
-            } finally {
-              setDeletingId(null);
-            }
+            await deleteUserOffline(target.id);
+            setUsers((prev) => prev.filter((u) => String(u.id) !== String(target.id)));
           },
         },
       ],
@@ -165,15 +174,13 @@ export default function ManageUsersScreen() {
             <Text style={styles.emptyText}>{t('manageUsers.noUsersFound')}</Text>
           }
           renderItem={({ item }) => (
-            <View style={deletingId === item.id ? styles.rowDeleting : undefined}>
-              <UserRow
-                user={item}
-                isSelf={item.id === currentUser?.id}
-                onDelete={confirmDelete}
-                onResetPassword={goToResetPassword}
-                t={t}
-              />
-            </View>
+            <UserRow
+              user={item}
+              isSelf={String(item.id) === String(currentUser?.id)}
+              onDelete={confirmDelete}
+              onResetPassword={goToResetPassword}
+              t={t}
+            />
           )}
         />
       )}

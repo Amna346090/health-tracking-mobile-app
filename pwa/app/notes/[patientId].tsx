@@ -23,7 +23,13 @@ import { EmptyState } from '../../components/EmptyState';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { useAuth } from '../../context/auth';
-import { getNotes, createNote, updateNote, deleteNote, type Note } from '../../api/notes';
+import { getNotes } from '../../api/notes';
+import {
+  listNotesCached, mergeNotesFromServer, createNoteOffline, updateNoteOffline, deleteNoteOffline, isTempId,
+  type OfflineNote as Note,
+} from '../../offline/entities/notes';
+import { sameList, byCreatedDesc } from '../../offline/util';
+import { cache, onCacheChanged } from '../../offline/cache';
 
 function formatWhen(iso: string, locale: string): string {
   return new Date(iso).toLocaleString(locale, {
@@ -36,48 +42,55 @@ export default function NotesScreen() {
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const pid = Number(patientId);
+  const pidIsTemp = isTempId(patientId);
+  const pid = pidIsTemp ? patientId : Number(patientId);
   const canEdit = user?.role !== 'PATIENT';
 
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const initialNotes = () => cache.listSync<Note>('notes').filter((n) => String(n.patientId) === String(pid));
+  const [notes, setNotes] = useState<Note[]>(initialNotes);
+  const [loading, setLoading] = useState(() => initialNotes().length === 0);
 
   const [newBody, setNewBody] = useState('');
-  const [adding, setAdding] = useState(false);
 
   const [editingItem, setEditingItem] = useState<Note | null>(null);
   const [editBody, setEditBody] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const hasLoadedRef = useRef(false);
 
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    const cached = byCreatedDesc(await listNotesCached(pid));
+    setNotes((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, [pid]);
+
   const load = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
+    if (pidIsTemp) { setLoading(false); hasLoadedRef.current = true; return; }
     try {
-      setNotes(await getNotes(pid));
+      const data = await getNotes(pid as number);
+      const merged = byCreatedDesc(await mergeNotesFromServer(pid, data));
+      setNotes((prev) => (sameList(prev, merged) ? prev : merged));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       hasLoadedRef.current = true;
     }
-  }, [pid]);
+  }, [pid, pidIsTemp, refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('notes', () => refreshFromCache()), [refreshFromCache]);
 
+  // Saved locally and shown immediately; syncs to the server in the background.
   async function handleAdd() {
-    if (!newBody.trim()) return;
-    setAdding(true);
-    try {
-      const note = await createNote(pid, newBody.trim());
-      setNotes((prev) => [note, ...prev]);
-      setNewBody('');
-    } catch (e) {
-      Alert.alert(t('notes.addFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setAdding(false);
-    }
+    if (!newBody.trim() || !user) return;
+    const note = await createNoteOffline(pid, newBody.trim(), user.id, {
+      firstName: user.firstName, lastName: user.lastName, role: user.role,
+    });
+    setNotes((prev) => [note, ...prev]);
+    setNewBody('');
   }
 
   function openEdit(item: Note) {
@@ -87,16 +100,9 @@ export default function NotesScreen() {
 
   async function handleSaveEdit() {
     if (!editingItem || !editBody.trim()) return;
-    setSaving(true);
-    try {
-      const updated = await updateNote(pid, editingItem.id, editBody.trim());
-      setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
-      setEditingItem(null);
-    } catch (e) {
-      Alert.alert(t('notes.saveChangesFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
-    }
+    const updated = await updateNoteOffline(pid, editingItem.id, editBody.trim());
+    setNotes((prev) => prev.map((n) => (String(n.id) === String(updated.id) ? updated : n)));
+    setEditingItem(null);
   }
 
   function handleDelete(item: Note) {
@@ -106,15 +112,8 @@ export default function NotesScreen() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          setDeletingId(item.id);
-          try {
-            await deleteNote(pid, item.id);
-            setNotes((prev) => prev.filter((n) => n.id !== item.id));
-          } catch (e) {
-            Alert.alert(t('notes.deleteFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-          } finally {
-            setDeletingId(null);
-          }
+          await deleteNoteOffline(pid, item.id);
+          setNotes((prev) => prev.filter((n) => String(n.id) !== String(item.id)));
         },
       },
     ]);
@@ -140,11 +139,11 @@ export default function NotesScreen() {
         multiline
       />
       <View style={styles.editActions}>
-        <TouchableOpacity onPress={() => setEditingItem(null)} style={styles.cancelBtn} disabled={saving}>
+        <TouchableOpacity onPress={() => setEditingItem(null)} style={styles.cancelBtn}>
           <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Button label={saving ? t('appointments.saving') : t('appointments.saveChanges')} onPress={handleSaveEdit} loading={saving} />
+          <Button label={t('appointments.saveChanges')} onPress={handleSaveEdit} />
         </View>
       </View>
     </Card>
@@ -176,7 +175,7 @@ export default function NotesScreen() {
                   placeholderTextColor={colors.text.muted}
                   multiline
                 />
-                <Button label={adding ? t('notes.adding') : t('notes.addNote')} onPress={handleAdd} loading={adding} disabled={!newBody.trim()} />
+                <Button label={t('notes.addNote')} onPress={handleAdd} disabled={!newBody.trim()} />
               </Card>
               {EditForm}
             </View>
@@ -202,10 +201,8 @@ export default function NotesScreen() {
                 <TouchableOpacity onPress={() => openEdit(item)}>
                   <Text style={styles.actionLink}>{t('common.edit')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id}>
-                  <Text style={[styles.actionLink, { color: colors.danger }]}>
-                    {deletingId === item.id ? t('notifications.deleting') : t('common.delete')}
-                  </Text>
+                <TouchableOpacity onPress={() => handleDelete(item)}>
+                  <Text style={[styles.actionLink, { color: colors.danger }]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </View>
             )}

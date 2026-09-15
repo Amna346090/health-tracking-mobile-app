@@ -22,14 +22,24 @@ import { getWeightTrend, type FeelingStatus, type WeightDataPoint } from '../../
 import { Avatar } from '../../components/Avatar';
 import { WeightChart } from '../../components/WeightChart';
 import { Feather } from '@expo/vector-icons';
-import { markContacted } from '../../api/touchBase';
 import { getAllProviders, type Provider } from '../../api/providers';
-import { updatePatient } from '../../api/patients';
-import { deleteUser } from '../../api/users';
 import { Dropdown } from '../../components/Dropdown';
 import { STAFF_FEATURES_ENABLED } from '../../config';
 import { useAuth } from '../../context/auth';
 import { getUploadHistory, type UploadAuditLogEntry } from '../../api/uploadAudit';
+import {
+  getPatientCached,
+  getPatientCachedSync,
+  mergePatientFromServer,
+  updatePatientOffline,
+  markContactedOffline,
+  deletePatientOffline,
+  isTempId,
+  type OfflinePatientRow,
+  type PatientRow as ServerPatientRow,
+} from '../../offline/entities/patients';
+import { sameData } from '../../offline/util';
+import { onCacheChanged } from '../../offline/cache';
 
 const UPLOAD_ACTION_ICON: Record<UploadAuditLogEntry['action'], string> = {
   UPLOADED: '⬆️',
@@ -60,19 +70,7 @@ function UploadHistoryRow({ entry, t }: { entry: UploadAuditLogEntry; t: TFuncti
   );
 }
 
-interface PatientMeta {
-  id: number;
-  user: { id: number; firstName: string; lastName: string; email: string | null; username: string | null };
-  dateOfBirth: string | null;
-  gender: string | null;
-  healthIssue: string | null;
-  avatarUrl: string | null;
-  phone: string | null;
-  lastContactAt: string | null;
-  providerId: number | null;
-  touchBaseThresholdDays: number | null;
-  touchBaseRemindersPaused: boolean;
-}
+type PatientMeta = OfflinePatientRow;
 
 const TOUCH_BASE_THRESHOLD_PRESETS: { days: number }[] = [
   { days: 7 },
@@ -236,55 +234,80 @@ export default function PatientDashboardScreen() {
   const { t } = useTranslation();
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
-  const pid = Number(patientId);
+  // A patient added while offline keeps a temp id (e.g. "tmp_patient_…") until it syncs —
+  // route params are strings anyway, so we only coerce to a number once we know it's real.
+  const pidIsTemp = isTempId(patientId);
+  const pid = pidIsTemp ? patientId : Number(patientId);
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
 
-  const [patient,  setPatient]  = useState<PatientMeta | null>(null);
+  const initialPatient = () => getPatientCachedSync(pid) ?? null;
+  const [patient,  setPatient]  = useState<PatientMeta | null>(initialPatient);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [summary,  setSummary]  = useState<PatientSummary | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [trend,    setTrend]    = useState<WeightDataPoint[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [markingContacted, setMarkingContacted] = useState(false);
+  const [loading,  setLoading]  = useState(() => initialPatient() === null);
   const [uploadHistory, setUploadHistory] = useState<UploadAuditLogEntry[]>([]);
 
-  const load = useCallback(() => {
-    return Promise.all([
-      api.get<PatientMeta>(`/patients/${pid}`),
-      getSummary(pid),
-      getTimeline(pid, { limit: 5 }),
-      getWeightTrend(pid, 30),
-    ])
-      .then(([p, s, t, w]) => { setPatient(p); setSummary(s); setTimeline(t); setTrend(w); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const refreshFromCache = useCallback(async () => {
+    const cached = await getPatientCached(pid);
+    if (cached) { setPatient((prev) => (sameData(prev, cached) ? prev : cached)); setLoading(false); }
+    return cached;
   }, [pid]);
 
+  const load = useCallback(async () => {
+    await refreshFromCache();
+
+    if (pidIsTemp) {
+      // Nothing to fetch yet — this patient only exists locally until their create syncs.
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [p, s, t, w] = await Promise.all([
+        api.get<ServerPatientRow>(`/patients/${pid}`),
+        getSummary(pid as number),
+        getTimeline(pid as number, { limit: 5 }),
+        getWeightTrend(pid as number, 30),
+      ]);
+      await mergePatientFromServer(p);
+      setPatient((prev) => (sameData(prev, p) ? prev : p));
+      setSummary((prev) => (sameData(prev, s) ? prev : s));
+      setTimeline((prev) => (sameData(prev, t) ? prev : t));
+      setTrend((prev) => (sameData(prev, w) ? prev : w));
+    } catch {
+      // offline or request failed — keep showing whatever was cached
+    } finally {
+      setLoading(false);
+    }
+  }, [pid, pidIsTemp, refreshFromCache]);
+
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('patients', () => refreshFromCache()), [refreshFromCache]);
 
   useEffect(() => {
     if (STAFF_FEATURES_ENABLED) getAllProviders().then(setProviders).catch(() => {});
   }, []);
 
   useFocusEffect(useCallback(() => {
-    if (isAdmin) getUploadHistory(pid).then(setUploadHistory).catch(() => {});
-  }, [isAdmin, pid]));
+    if (isAdmin && !pidIsTemp) getUploadHistory(pid as number).then(setUploadHistory).catch(() => {});
+  }, [isAdmin, pid, pidIsTemp]));
 
+  // Local storage updates (and the screen reflects it) immediately; the real request
+  // syncs in the background whether we're online or offline right now.
   async function handleMarkContacted() {
-    setMarkingContacted(true);
-    try {
-      const result = await markContacted(pid);
-      setPatient((prev) => (prev ? { ...prev, lastContactAt: result.lastContactAt } : prev));
-    } finally {
-      setMarkingContacted(false);
-    }
+    const updated = await markContactedOffline(pid);
+    setPatient(updated);
   }
 
   async function handleSetThreshold(days: number | null) {
-    const updated = await updatePatient(pid, { touchBaseThresholdDays: days });
-    setPatient((prev) => (prev ? { ...prev, touchBaseThresholdDays: updated.touchBaseThresholdDays } : prev));
+    const updated = await updatePatientOffline(pid, { touchBaseThresholdDays: days });
+    setPatient(updated);
   }
+
+  const [deletingPatient, setDeletingPatient] = useState(false);
 
   function handleDeletePatient() {
     if (!patient) return;
@@ -297,8 +320,14 @@ export default function PatientDashboardScreen() {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
-            await deleteUser(patient.user.id);
-            router.back();
+            setDeletingPatient(true);
+            try {
+              await deletePatientOffline(patient.id, patient.user.id);
+              router.back();
+            } catch (e) {
+              setDeletingPatient(false);
+              Alert.alert(t('medicationDetail.couldNotDelete'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
+            }
           },
         },
       ],
@@ -307,8 +336,8 @@ export default function PatientDashboardScreen() {
 
   async function handleTogglePause() {
     if (!patient) return;
-    const updated = await updatePatient(pid, { touchBaseRemindersPaused: !patient.touchBaseRemindersPaused });
-    setPatient((prev) => (prev ? { ...prev, touchBaseRemindersPaused: updated.touchBaseRemindersPaused } : prev));
+    const updated = await updatePatientOffline(pid, { touchBaseRemindersPaused: !patient.touchBaseRemindersPaused });
+    setPatient(updated);
   }
 
   if (loading) {
@@ -413,13 +442,9 @@ export default function PatientDashboardScreen() {
                   <Text style={crmStyles.infoLabel}>{t('patientDashboard.lastContact')}</Text>
                   <Text style={crmStyles.infoValue}>{formatLastContact(patient.lastContactAt, t)}</Text>
                 </View>
-                <TouchableOpacity
-                  style={crmStyles.markContactedBtn}
-                  disabled={markingContacted}
-                  onPress={handleMarkContacted}
-                >
+                <TouchableOpacity style={crmStyles.markContactedBtn} onPress={handleMarkContacted}>
                   <Feather name="heart" size={12} color={colors.primary} />
-                  <Text style={crmStyles.markContactedText}>{markingContacted ? t('appointments.saving') : t('touchBase.markAsContacted')}</Text>
+                  <Text style={crmStyles.markContactedText}>{t('touchBase.markAsContacted')}</Text>
                 </TouchableOpacity>
               </View>
               {STAFF_FEATURES_ENABLED && (
@@ -557,7 +582,7 @@ export default function PatientDashboardScreen() {
         )}
 
         <View style={crmStyles.deleteRow}>
-          <TouchableOpacity style={crmStyles.deleteBtn} onPress={handleDeletePatient}>
+          <TouchableOpacity style={crmStyles.deleteBtn} onPress={handleDeletePatient} disabled={deletingPatient}>
             <Feather name="trash-2" size={13} color={colors.danger} />
             <Text style={crmStyles.deleteBtnText}>{t('common.delete')}</Text>
           </TouchableOpacity>

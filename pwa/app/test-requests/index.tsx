@@ -11,6 +11,8 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAllTestRequests, type TestRequestWithPatient, type TestRequestStatus } from '../../api/testRequests';
 import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { cache, onCacheChanged } from '../../offline/cache';
+import { sameList } from '../../offline/util';
 
 const STATUS_KEY: Record<TestRequestStatus, string> = {
   PENDING: 'testRequests.status.pending',
@@ -29,27 +31,42 @@ function formatDate(iso: string, locale: string): string {
 export default function TestRequestsQueueScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [requests, setRequests] = useState<TestRequestWithPatient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialRequests = () => cache.listSync<TestRequestWithPatient>('testRequests').filter((r) => r.patient);
+  const [requests, setRequests] = useState<TestRequestWithPatient[]>(initialRequests);
+  const [loading, setLoading] = useState(() => initialRequests().length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'overdue'>('all');
 
   const hasLoadedRef = useRef(false);
 
+  // Only meaningful for the "all" filter — "overdue" depends on the current date, not
+  // something local storage tracks, so there's no local equivalent to refresh from for it.
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    if (filter !== 'all') return 0;
+    const cached = (await cache.list<TestRequestWithPatient>('testRequests')).filter((r) => r.patient);
+    setRequests((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, [filter]);
+
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true); else if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
     try {
-      setRequests(await getAllTestRequests(filter === 'overdue' ? { overdue: true } : undefined));
+      const data = await getAllTestRequests(filter === 'overdue' ? { overdue: true } : undefined);
+      if (filter === 'all') await cache.putMany('testRequests', data);
+      setRequests((prev) => (sameList(prev, data) ? prev : data));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       setRefreshing(false);
       hasLoadedRef.current = true;
     }
-  }, [filter]);
+  }, [filter, refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('testRequests', () => refreshFromCache()), [refreshFromCache]);
 
   const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
 

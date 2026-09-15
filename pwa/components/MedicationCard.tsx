@@ -138,7 +138,7 @@ export function AssignmentCard({ item, onPress }: AssignmentCardProps) {
 
 interface CatalogCardProps {
   item: {
-    id: number;
+    id: string | number;
     name: string;
     dosage: string | null;
     form: string | null;
@@ -147,7 +147,7 @@ interface CatalogCardProps {
     instructions: string | null;
     _count: { assignments: number };
   };
-  onPress: (id: number) => void;
+  onPress: (id: string | number) => void;
 }
 
 export function CatalogMedicationCard({ item, onPress }: CatalogCardProps) {

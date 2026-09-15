@@ -9,6 +9,9 @@ import { LoadingScreen } from '../components/LoadingScreen';
 import { useNotifications } from '../hooks/useNotifications';
 import { useRealtime } from '../lib/realtime';
 import { colors } from '../theme';
+import { SyncStatusProvider } from '../offline/SyncStatusContext';
+import { SyncStatusBanner } from '../components/SyncStatusBanner';
+import { initSyncEngine } from '../offline/sync';
 
 function NavigationGuard() {
   const { user, isLoading } = useAuth();
@@ -76,9 +79,14 @@ function NavigationGuard() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    initSyncEngine();
+  }, []);
+
   const content = (
     <>
       <NavigationGuard />
+      <SyncStatusBanner />
       <StatusBar style="auto" backgroundColor={colors.bg.app} />
     </>
   );
@@ -86,13 +94,15 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        {Platform.OS === 'web' ? (
-          <View style={styles.webOuter}>
-            <View style={styles.webInner}>{content}</View>
-          </View>
-        ) : (
-          content
-        )}
+        <SyncStatusProvider>
+          {Platform.OS === 'web' ? (
+            <View style={styles.webOuter}>
+              <View style={styles.webInner}>{content}</View>
+            </View>
+          ) : (
+            content
+          )}
+        </SyncStatusProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

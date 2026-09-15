@@ -26,7 +26,13 @@ import { Button } from '../../components/Button';
 import { DateField } from '../../components/DateField';
 import { DocumentPicker } from '../../components/DocumentPicker';
 import { useAuth } from '../../context/auth';
-import { getTestRequests, submitTestRequest, createTestRequest, updateTestRequest, type TestRequest } from '../../api/testRequests';
+import { getTestRequests, submitTestRequest } from '../../api/testRequests';
+import {
+  listTestRequestsCached, mergeTestRequestsFromServer, createTestRequestOffline, updateTestRequestOffline, isTempId,
+  type OfflineTestRequest as TestRequest,
+} from '../../offline/entities/testRequests';
+import { sameList } from '../../offline/util';
+import { cache, onCacheChanged } from '../../offline/cache';
 
 const STATUS_KEY: Record<TestRequest['status'], string> = {
   PENDING: 'testRequests.status.pending',
@@ -53,37 +59,53 @@ export default function TestRequestsScreen() {
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const pid = Number(patientId);
+  const pidIsTemp = isTempId(patientId);
+  const pid = pidIsTemp ? patientId : Number(patientId);
   const isOwnPatient = user?.role === 'PATIENT' && user.patientProfile?.id === pid;
   const isStaff = user?.role !== 'PATIENT';
 
-  const [testRequests, setTestRequests] = useState<TestRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submittingId, setSubmittingId] = useState<number | null>(null);
+  const initialTestRequests = () => cache.listSync<TestRequest>('testRequests').filter((r) => String(r.patientId) === String(pid));
+  const [testRequests, setTestRequests] = useState<TestRequest[]>(initialTestRequests);
+  const [loading, setLoading] = useState(() => initialTestRequests().length === 0);
+  const [submittingId, setSubmittingId] = useState<string | number | null>(null);
 
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
   const [name, setName] = useState('');
   const [instructions, setInstructions] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const hasLoadedRef = useRef(false);
 
+  function byDueAsc(a: TestRequest, b: TestRequest) {
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  }
+
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    const cached = (await listTestRequestsCached(pid)).sort(byDueAsc);
+    setTestRequests((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, [pid]);
+
   const load = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
+    if (pidIsTemp) { setLoading(false); hasLoadedRef.current = true; return; }
     try {
-      const data = await getTestRequests(pid);
-      setTestRequests(data.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+      const data = await getTestRequests(pid as number);
+      const merged = (await mergeTestRequestsFromServer(pid, data)).sort(byDueAsc);
+      setTestRequests((prev) => (sameList(prev, merged) ? prev : merged));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       hasLoadedRef.current = true;
     }
-  }, [pid]);
+  }, [pid, pidIsTemp, refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('testRequests', () => refreshFromCache()), [refreshFromCache]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -101,35 +123,29 @@ export default function TestRequestsScreen() {
     setShowForm(true);
   }
 
+  // Saved locally and shown immediately; syncs to the server in the background.
   async function handleSaveForm() {
     if (!name.trim() || !dueDate) {
       Alert.alert(t('testRequests.missingInfoTitle'), t('testRequests.missingInfoBody'));
       return;
     }
-    setSaving(true);
-    try {
-      if (editingId !== null) {
-        const updated = await updateTestRequest(pid, editingId, {
-          name: name.trim(),
-          instructions: instructions.trim() || null,
-          dueDate,
-        });
-        setTestRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-      } else {
-        const created = await createTestRequest(pid, {
-          name: name.trim(),
-          instructions: instructions.trim() || null,
-          dueDate,
-        });
-        setTestRequests((prev) => [...prev, created]);
-      }
-      setShowForm(false);
-      setEditingId(null);
-    } catch (e) {
-      Alert.alert(t('testRequests.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
+    if (editingId !== null) {
+      const updated = await updateTestRequestOffline(pid, editingId, {
+        name: name.trim(),
+        instructions: instructions.trim() || null,
+        dueDate,
+      });
+      setTestRequests((prev) => prev.map((r) => (String(r.id) === String(updated.id) ? updated : r)));
+    } else if (user) {
+      const created = await createTestRequestOffline(pid, {
+        name: name.trim(),
+        instructions: instructions.trim() || null,
+        dueDate,
+      }, user.id);
+      setTestRequests((prev) => [...prev, created]);
     }
+    setShowForm(false);
+    setEditingId(null);
   }
 
   function handleCancelRequest(item: TestRequest) {
@@ -139,12 +155,8 @@ export default function TestRequestsScreen() {
         text: t('testRequests.cancelRequestAction'),
         style: 'destructive',
         onPress: async () => {
-          try {
-            const updated = await updateTestRequest(pid, item.id, { status: 'CANCELLED' });
-            setTestRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-          } catch (e) {
-            Alert.alert(t('testRequests.cancelFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-          }
+          const updated = await updateTestRequestOffline(pid, item.id, { status: 'CANCELLED' });
+          setTestRequests((prev) => prev.map((r) => (String(r.id) === String(updated.id) ? updated : r)));
         },
       },
     ]);
@@ -152,8 +164,8 @@ export default function TestRequestsScreen() {
 
   async function handleUploaded(requestId: number, documentId: number) {
     try {
-      const updated = await submitTestRequest(pid, requestId, documentId);
-      setTestRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      const updated = await submitTestRequest(pid as number, requestId, documentId);
+      setTestRequests((prev) => prev.map((r) => (String(r.id) === String(updated.id) ? updated : r)));
       setSubmittingId(null);
     } catch {
       // DocumentPicker already surfaced any upload error; leave the picker open on submit failure
@@ -221,9 +233,8 @@ export default function TestRequestsScreen() {
                   </View>
                   <DateField label={t('testRequests.dueDate')} value={dueDate} onChange={setDueDate} />
                   <Button
-                    label={saving ? t('appointments.saving') : editingId !== null ? t('appointments.saveChanges') : t('testRequests.requestTestScanBtn')}
+                    label={editingId !== null ? t('appointments.saveChanges') : t('testRequests.requestTestScanBtn')}
                     onPress={handleSaveForm}
-                    loading={saving}
                   />
                 </Card>
               )}
@@ -261,8 +272,8 @@ export default function TestRequestsScreen() {
                 submittingId === item.id ? (
                   <View style={{ marginTop: spacing.sm }}>
                     <DocumentPicker
-                      patientId={pid}
-                      onUploaded={(doc) => handleUploaded(item.id, doc.id)}
+                      patientId={pid as number}
+                      onUploaded={(doc) => handleUploaded(item.id as number, doc.id)}
                     />
                     <TouchableOpacity onPress={() => setSubmittingId(null)} style={{ marginTop: spacing.xs }}>
                       <Text style={styles.actionLink}>{t('common.cancel')}</Text>

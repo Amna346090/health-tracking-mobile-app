@@ -31,13 +31,17 @@ import { useAuth } from '../../context/auth';
 import {
   getMetrics,
   getMetricTrend,
-  createMetric,
   HEALTH_METRIC_TYPES,
-  type HealthMetric,
   type HealthMetricType,
   type MetricTrendPoint,
 } from '../../api/healthMetrics';
 import type { Document } from '../../api/documents';
+import {
+  listHealthMetricsCached, mergeHealthMetricsFromServer, createHealthMetricOffline, isTempId,
+  type OfflineHealthMetric as HealthMetric,
+} from '../../offline/entities/healthMetrics';
+import { sameData, sameList } from '../../offline/util';
+import { cache, onCacheChanged } from '../../offline/cache';
 
 function todayISO() {
   return new Date().toISOString().split('T')[0];
@@ -53,66 +57,73 @@ export default function HealthMetricsScreen() {
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const pid = Number(patientId);
+  const pidIsTemp = isTempId(patientId);
+  const pid = pidIsTemp ? patientId : Number(patientId);
   const isOwnPatient = user?.role === 'PATIENT' && user.patientProfile?.id === pid;
   const isStaff = user?.role === 'STAFF' || user?.role === 'ADMIN';
   const canLog = isOwnPatient || isStaff;
 
   const [metricType, setMetricType] = useState<HealthMetricType>('CHOLESTEROL_LDL');
-  const [entries, setEntries] = useState<HealthMetric[]>([]);
+  const initialEntries = () => cache.listSync<HealthMetric>('healthMetrics').filter((m) => String(m.patientId) === String(pid) && m.type === 'CHOLESTEROL_LDL');
+  const [entries, setEntries] = useState<HealthMetric[]>(initialEntries);
   const [trend, setTrend] = useState<MetricTrendPoint[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => initialEntries().length === 0);
   const [showForm, setShowForm] = useState(false);
   const [value, setValue] = useState('');
   const [unit, setUnit] = useState('mg/dL');
   const [date, setDate] = useState(todayISO());
   const [attachedDoc, setAttachedDoc] = useState<Document | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const hasLoadedRef = useRef(false);
 
+  const byRecordedDesc = (list: HealthMetric[]) => [...list].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+
+  const refreshFromCache = useCallback(async (): Promise<number> => {
+    const cached = byRecordedDesc((await listHealthMetricsCached(pid)).filter((m) => m.type === metricType));
+    setEntries((prev) => (sameList(prev, cached) ? prev : cached));
+    if (cached.length > 0) setLoading(false);
+    return cached.length;
+  }, [pid, metricType]);
+
   const load = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
+    await refreshFromCache();
+    if (pidIsTemp) { setLoading(false); hasLoadedRef.current = true; return; }
     try {
       const [entriesData, trendData] = await Promise.all([
-        getMetrics(pid, metricType),
-        getMetricTrend(pid, metricType),
+        getMetrics(pid as number, metricType),
+        getMetricTrend(pid as number, metricType),
       ]);
-      setEntries(entriesData);
-      setTrend(trendData);
+      const merged = byRecordedDesc((await mergeHealthMetricsFromServer(pid, entriesData)).filter((m) => m.type === metricType));
+      setEntries((prev) => (sameList(prev, merged) ? prev : merged));
+      setTrend((prev) => (sameData(prev, trendData) ? prev : trendData));
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was cached
     } finally {
       setLoading(false);
       hasLoadedRef.current = true;
     }
-  }, [pid, metricType]);
+  }, [pid, pidIsTemp, metricType, refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('healthMetrics', () => refreshFromCache()), [refreshFromCache]);
 
+  // Saved locally and shown immediately; syncs to the server in the background.
   async function handleSave() {
     const parsed = parseFloat(value);
-    if (isNaN(parsed)) { Alert.alert(t('healthMetrics.invalidNumber')); return; }
-    setSaving(true);
-    try {
-      const metric = await createMetric(pid, {
-        type: metricType,
-        value: parsed,
-        unit: unit.trim() || null,
-        recordedAt: date,
-        documentId: attachedDoc?.id ?? null,
-      });
-      setEntries((prev) => [metric, ...prev]);
-      setValue('');
-      setAttachedDoc(null);
-      setDate(todayISO());
-      setShowForm(false);
-      load();
-    } catch (e) {
-      Alert.alert(t('healthMetrics.saveFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
-    }
+    if (isNaN(parsed) || !user) { Alert.alert(t('healthMetrics.invalidNumber')); return; }
+    const metric = await createHealthMetricOffline(pid, {
+      type: metricType,
+      value: parsed,
+      unit: unit.trim() || null,
+      recordedAt: date,
+      documentId: attachedDoc?.id ?? null,
+    }, user.id);
+    setEntries((prev) => [metric, ...prev]);
+    setValue('');
+    setAttachedDoc(null);
+    setDate(todayISO());
+    setShowForm(false);
   }
 
   const Header = (
@@ -184,16 +195,12 @@ export default function HealthMetricsScreen() {
                   <Text style={styles.removeAttachment}>{t('common.remove')}</Text>
                 </TouchableOpacity>
               </View>
-            ) : (
-              <DocumentPicker patientId={pid} onUploaded={setAttachedDoc} />
-            )}
+            ) : !pidIsTemp ? (
+              <DocumentPicker patientId={pid as number} onUploaded={setAttachedDoc} />
+            ) : null}
           </View>
 
-          <Button
-            label={saving ? t('appointments.saving') : t('healthMetrics.saveEntry')}
-            onPress={handleSave}
-            loading={saving}
-          />
+          <Button label={t('healthMetrics.saveEntry')} onPress={handleSave} />
         </Card>
       )}
 

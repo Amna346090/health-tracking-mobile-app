@@ -15,6 +15,17 @@
     "pleaseTryAgain": "Inténtalo de nuevo.",
     "backWithArrow": "← Atrás"
   },
+  "offlineSync": {
+    "syncingChip": "Sincronizando {{count}} cambio",
+    "syncingChip_plural": "Sincronizando {{count}} cambios",
+    "issuesChip": "{{count}} problema",
+    "issuesChip_plural": "{{count}} problemas",
+    "pendingInfo": "{{count}} cambio pendiente de sincronizar",
+    "pendingInfo_plural": "{{count}} cambios pendientes de sincronizar",
+    "genericError": "Este cambio no se pudo sincronizar.",
+    "retry": "Reintentar",
+    "discard": "Descartar"
+  },
   "auth": {
     "appTagline": "Inicia sesión para continuar el seguimiento de tu salud",
     "emailOrUsername": "Correo electrónico o nombre de usuario",
@@ -413,7 +424,8 @@
     "usernameOrEmail": "Nombre de usuario / correo",
     "password": "Contraseña",
     "notAvailable": "No disponible — restablece la contraseña para establecer una.",
-    "longPressHint": "Mantén presionado un valor para copiarlo."
+    "longPressHint": "Mantén presionado un valor para copiarlo.",
+    "pendingSync": "Este paciente aún no se ha sincronizado con el servidor — las credenciales de inicio de sesión estarán disponibles aquí en cuanto vuelva a estar en línea."
   },
   "documents": {
     "pdf": "PDF",

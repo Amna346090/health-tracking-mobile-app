@@ -6,17 +6,15 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Alert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography, radius, shadows } from '../../theme';
-import { createMedication } from '../../api/medications';
 import type { MedicationForm, FoodInstruction } from '../../api/medications';
+import { createMedicationOffline } from '../../offline/entities/medications';
 import { ChipPicker } from '../../components/ChipPicker';
 
 export default function AddMedicationScreen() {
@@ -45,30 +43,24 @@ export default function AddMedicationScreen() {
   const [foodInstruction, setFoodInstruction] = useState<FoodInstruction | null>(null);
   const [instructions, setInstructions] = useState('');
   const [prescribingNotes, setPrescribingNotes] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const canSubmit = name.trim().length > 0;
 
+  // Saved to local storage and reflected immediately; syncs to the server right away if
+  // online, or as soon as the connection comes back if not.
   const handleSave = async () => {
     if (!canSubmit) return;
-    setSaving(true);
-    try {
-      const quantity = quantityPerDose.trim() ? parseInt(quantityPerDose.trim(), 10) : undefined;
-      await createMedication({
-        name: name.trim(),
-        dosage: dosage.trim() || undefined,
-        form: form ?? undefined,
-        quantityPerDose: quantity && !isNaN(quantity) ? quantity : undefined,
-        foodInstruction: foodInstruction ?? undefined,
-        instructions: instructions.trim() || undefined,
-        prescribingNotes: prescribingNotes.trim() || undefined,
-      });
-      router.back();
-    } catch (e) {
-      Alert.alert(t('medicationForm.createFailed'), e instanceof Error ? e.message : t('common.pleaseTryAgain'));
-    } finally {
-      setSaving(false);
-    }
+    const quantity = quantityPerDose.trim() ? parseInt(quantityPerDose.trim(), 10) : undefined;
+    await createMedicationOffline({
+      name: name.trim(),
+      dosage: dosage.trim() || undefined,
+      form: form ?? undefined,
+      quantityPerDose: quantity && !isNaN(quantity) ? quantity : undefined,
+      foodInstruction: foodInstruction ?? undefined,
+      instructions: instructions.trim() || undefined,
+      prescribingNotes: prescribingNotes.trim() || undefined,
+    });
+    router.back();
   };
 
   return (
@@ -131,16 +123,12 @@ export default function AddMedicationScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.saveBtn, (!canSubmit || saving) && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, !canSubmit && styles.saveBtnDisabled]}
             onPress={handleSave}
-            disabled={!canSubmit || saving}
+            disabled={!canSubmit}
             activeOpacity={0.8}
           >
-            {saving ? (
-              <ActivityIndicator color={colors.text.inverse} />
-            ) : (
-              <Text style={styles.saveBtnText}>{t('medicationForm.savePeptide')}</Text>
-            )}
+            <Text style={styles.saveBtnText}>{t('medicationForm.savePeptide')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
