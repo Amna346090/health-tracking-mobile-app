@@ -1,7 +1,7 @@
 // Auth endpoints — use plain fetch so the 401-retry loop never fires.
 // register/logout require the caller's own bearer token (staff creating a
 // patient, or a logged-in user logging out); login/refresh need none.
-import { api, getAccessToken } from './client';
+import { api, getAccessToken, fetchWithTimeout } from './client';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
@@ -41,7 +41,7 @@ interface ApiOk<T> {
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const token = getAccessToken();
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetchWithTimeout(`${BASE_URL}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

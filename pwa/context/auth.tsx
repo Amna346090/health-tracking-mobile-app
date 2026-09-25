@@ -170,6 +170,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [refreshUser]);
 
+  // Safety net: the check above only reads local storage, never the network, so it should
+  // resolve almost instantly — but if it somehow doesn't (a bad state, a stuck promise,
+  // anything unforeseen), this guarantees the app moves past the blank loading screen to the
+  // login form within a few seconds regardless, rather than sitting on a spinner forever.
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading((current) => (current ? false : current)), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Also catch edits made while the app was merely backgrounded, not closed —
   // e.g. an admin updates the patient in the CRM while their app sits in the background.
   useEffect(() => {
