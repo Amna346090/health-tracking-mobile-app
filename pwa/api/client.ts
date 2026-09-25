@@ -2,6 +2,28 @@ import * as FileSystem from 'expo-file-system';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
+// Plain fetch() never times out on its own — if the backend is asleep (e.g. Render's free
+// tier spinning back up) or simply unreachable, a request can hang indefinitely with nothing
+// to fall back to. Every request in this app goes through this wrapper so a dead/slow backend
+// fails fast instead of leaving a screen (including the initial "am I logged in?" check)
+// stuck forever.
+const REQUEST_TIMEOUT_MS = 15000;
+
+export async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error('Request timed out — the server may be unreachable.');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Module-level token store — avoids circular dependency between context ↔ client.
 // The AuthProvider writes here via setAccessToken / setRefreshCallback.
 let _accessToken: string | null = null;
@@ -37,7 +59,7 @@ async function request<T>(
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   });
 
-  let res = await fetch(`${BASE_URL}${path}`, {
+  let res = await fetchWithTimeout(`${BASE_URL}${path}`, {
     ...options,
     headers: buildHeaders(_accessToken),
   });
@@ -45,7 +67,7 @@ async function request<T>(
   if (res.status === 401 && !skipRetry && _refreshCallback) {
     const ok = await _refreshCallback();
     if (ok) {
-      res = await fetch(`${BASE_URL}${path}`, {
+      res = await fetchWithTimeout(`${BASE_URL}${path}`, {
         ...options,
         headers: buildHeaders(_accessToken),
       });
