@@ -14,7 +14,8 @@ export type EntityName =
   | 'testRequests'
   | 'notifications'
   | 'messages'
-  | 'users';
+  | 'users'
+  | 'settings';
 
 export type IdLike = string | number;
 

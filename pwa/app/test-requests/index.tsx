@@ -20,8 +20,14 @@ const STATUS_KEY: Record<TestRequestStatus, string> = {
   CANCELLED: 'testRequests.status.cancelled',
 };
 
+// Matches the backend's exact rule (backend/src/services/testRequest.service.ts): pending
+// and due before today (UTC, date-only) — not just "before this exact moment", so something
+// due today isn't wrongly flagged overdue a few hours early.
 function isOverdue(req: TestRequestWithPatient): boolean {
-  return req.status === 'PENDING' && new Date(req.dueDate).getTime() < Date.now();
+  if (req.status !== 'PENDING') return false;
+  const todayUTC = new Date();
+  todayUTC.setUTCHours(0, 0, 0, 0);
+  return new Date(req.dueDate).getTime() < todayUTC.getTime();
 }
 
 function formatDate(iso: string, locale: string): string {
@@ -39,14 +45,15 @@ export default function TestRequestsQueueScreen() {
 
   const hasLoadedRef = useRef(false);
 
-  // Only meaningful for the "all" filter — "overdue" depends on the current date, not
-  // something local storage tracks, so there's no local equivalent to refresh from for it.
+  // Local-only refresh — works for both filters now. "All" just shows everything cached;
+  // "overdue" applies the same overdue rule locally instead of needing to ask the server,
+  // so the filter works instantly and offline too.
   const refreshFromCache = useCallback(async (): Promise<number> => {
-    if (filter !== 'all') return 0;
-    const cached = (await cache.list<TestRequestWithPatient>('testRequests')).filter((r) => r.patient);
+    const all = (await cache.list<TestRequestWithPatient>('testRequests')).filter((r) => r.patient);
+    const cached = filter === 'overdue' ? all.filter(isOverdue) : all;
     setRequests((prev) => (sameList(prev, cached) ? prev : cached));
-    if (cached.length > 0) setLoading(false);
-    return cached.length;
+    if (all.length > 0) setLoading(false);
+    return all.length;
   }, [filter]);
 
   const load = useCallback(async (refresh = false) => {
@@ -54,10 +61,12 @@ export default function TestRequestsQueueScreen() {
     await refreshFromCache();
     try {
       const data = await getAllTestRequests(filter === 'overdue' ? { overdue: true } : undefined);
+      // Always cache the full picture, never just the filtered subset — that would wipe out
+      // cached requests that simply don't match today's "overdue" filter.
       if (filter === 'all') await cache.putMany('testRequests', data);
       setRequests((prev) => (sameList(prev, data) ? prev : data));
     } catch {
-      // offline or request failed — keep showing whatever was cached
+      // offline or request failed — keep showing whatever was computed from cache
     } finally {
       setLoading(false);
       setRefreshing(false);

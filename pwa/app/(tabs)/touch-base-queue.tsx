@@ -9,9 +9,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { getTouchBaseQueue, markContacted, type TouchBaseQueueItem } from '../../api/touchBase';
+import { getTouchBaseSettingsApi, type TouchBaseQueueItem } from '../../api/touchBase';
 import { PullToRefreshIndicator } from '../../components/PullToRefreshIndicator';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import {
+  getTouchBaseQueueFromCache, getTouchBaseQueueFromCacheSync, mergeTouchBaseSettingsFromServer,
+} from '../../offline/entities/touchBase';
+import { mergePatientsFromServer, markContactedOffline, type PatientRow } from '../../offline/entities/patients';
+import { api } from '../../api/client';
+import { onCacheChanged } from '../../offline/cache';
+import { sameList } from '../../offline/util';
 
 function daysSince(iso: string | null, t: TFunction): string {
   if (!iso) return t('touchBase.neverContacted');
@@ -27,37 +34,50 @@ function formatThresholdDays(days: number, t: TFunction): string {
 export default function TouchBaseQueueScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [queue, setQueue] = useState<TouchBaseQueueItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [queue, setQueue] = useState<TouchBaseQueueItem[]>(getTouchBaseQueueFromCacheSync);
+  const [loading, setLoading] = useState(() => getTouchBaseQueueFromCacheSync().length === 0);
   const [refreshing, setRefreshing] = useState(false);
-  const [contactingId, setContactingId] = useState<number | null>(null);
+
+  // Local-only refresh — recomputes the queue from what's already saved on the phone, no
+  // network call. This is what makes the queue work instantly, offline, and without racing
+  // any in-flight request when something changes locally (e.g. marking someone contacted).
+  const refreshFromCache = useCallback(async () => {
+    const computed = await getTouchBaseQueueFromCache();
+    setQueue((prev) => (sameList(prev, computed) ? prev : computed));
+    setLoading(false);
+  }, []);
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
+    await refreshFromCache();
     try {
-      setQueue(await getTouchBaseQueue());
+      const [patients, settings] = await Promise.all([
+        api.get<PatientRow[]>('/patients'),
+        getTouchBaseSettingsApi(),
+      ]);
+      await Promise.all([
+        mergePatientsFromServer(patients),
+        mergeTouchBaseSettingsFromServer(settings),
+      ]);
+      await refreshFromCache();
     } catch {
-      // keep state
+      // offline or request failed — keep showing whatever was computed from cache
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshFromCache]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onCacheChanged('patients', () => refreshFromCache()), [refreshFromCache]);
+  useEffect(() => onCacheChanged('settings', () => refreshFromCache()), [refreshFromCache]);
 
   const { pullProgress, scrollHandlers } = usePullToRefresh(() => load(true));
 
+  // Saved locally and reflected here immediately (via the cache-change listeners above);
+  // syncs to the server in the background.
   async function handleMarkContacted(patientId: number) {
-    setContactingId(patientId);
-    try {
-      await markContacted(patientId);
-      setQueue((prev) => prev.filter((item) => item.id !== patientId));
-    } catch {
-      // non-fatal
-    } finally {
-      setContactingId(null);
-    }
+    await markContactedOffline(patientId);
   }
 
   return (
@@ -104,10 +124,9 @@ export default function TouchBaseQueueScreen() {
               <View style={styles.actionsRow}>
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.contactedBtn]}
-                  disabled={contactingId === item.id}
                   onPress={() => handleMarkContacted(item.id)}
                 >
-                  <Text style={styles.contactedBtnText}>{contactingId === item.id ? t('touchBase.saving') : t('touchBase.markAsContacted')}</Text>
+                  <Text style={styles.contactedBtnText}>{t('touchBase.markAsContacted')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.messageBtn]}

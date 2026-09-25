@@ -9,10 +9,12 @@ export interface TouchBaseQueueItem {
   user: { firstName: string; lastName: string; email: string };
 }
 
-export function getTouchBaseQueue(): Promise<TouchBaseQueueItem[]> {
-  return api.get<TouchBaseQueueItem[]>('/touch-base/queue');
+export interface TouchBaseSettings {
+  id: number;
+  defaultThresholdDays: number;
+  updatedAt: string;
 }
 
-export function markContacted(patientId: number): Promise<{ lastContactAt: string }> {
-  return api.post<{ lastContactAt: string }>(`/patients/${patientId}/contact`);
+export function getTouchBaseSettingsApi(): Promise<TouchBaseSettings> {
+  return api.get<TouchBaseSettings>('/touch-base/settings');
 }
