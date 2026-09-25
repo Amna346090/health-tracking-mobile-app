@@ -165,7 +165,7 @@ export function CatalogMedicationCard({ item, onPress }: CatalogCardProps) {
           )}
         </View>
         <View style={styles.countBadge}>
-          <Text style={styles.countText}>{item._count.assignments}</Text>
+          <Text style={styles.countText}>{item._count?.assignments ?? 0}</Text>
           <Text style={styles.countLabel}>{t('medications.active')}</Text>
         </View>
       </View>

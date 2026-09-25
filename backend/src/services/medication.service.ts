@@ -39,7 +39,10 @@ export async function getMedicationById(id: number) {
 }
 
 export async function createMedication(data: CreateMedicationInput) {
-  return prisma.medication.create({ data });
+  return prisma.medication.create({
+    data,
+    include: { _count: { select: { assignments: { where: { active: true } } } } },
+  });
 }
 
 export async function updateMedication(id: number, data: Partial<CreateMedicationInput>) {

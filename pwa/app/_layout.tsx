@@ -12,6 +12,7 @@ import { colors } from '../theme';
 import { SyncStatusProvider } from '../offline/SyncStatusContext';
 import { SyncStatusBanner } from '../components/SyncStatusBanner';
 import { initSyncEngine } from '../offline/sync';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 function NavigationGuard() {
   const { user, isLoading } = useAuth();
@@ -84,11 +85,11 @@ export default function RootLayout() {
   }, []);
 
   const content = (
-    <>
+    <ErrorBoundary>
       <NavigationGuard />
       <SyncStatusBanner />
       <StatusBar style="auto" backgroundColor={colors.bg.app} />
-    </>
+    </ErrorBoundary>
   );
 
   return (
