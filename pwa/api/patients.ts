@@ -12,6 +12,7 @@ export interface PatientRow {
   address: string | null;
   lastContactAt: string | null;
   touchBaseThresholdDays: number | null;
+  thresholdSetAt: string;
   touchBaseRemindersPaused: boolean;
   providerId: number | null;
   createdAt: string;

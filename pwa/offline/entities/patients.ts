@@ -59,6 +59,7 @@ export async function createPatientOffline(input: CreatePatientInput): Promise<O
     address: null,
     lastContactAt: null,
     touchBaseThresholdDays: null,
+    thresholdSetAt: now,
     touchBaseRemindersPaused: false,
     providerId: null,
     createdAt: now,
